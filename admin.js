@@ -2,8 +2,9 @@
    管理面板 admin.js
    隱藏入口：你嘅網址 + #admin  →  例如 https://xxx.vercel.app/#admin
    兩個版面：
-     ① 管理 — 加 / 減 / 改介紹地址 / 隱藏 / 備註 / 排序 / 分類管理 / 改密碼
-     ② 總覽 — 同公開版面一樣嘅預覽（🔒 = 而家隱藏緊）
+   ① 管理 — 加 / 減 / 改介紹地址 / 隱藏 / 備註 / 排序 / 分類管理 / 改密碼
+   ② 總覽 — 同公開版面一樣嘅預覽（🔒 = 而家隱藏緊）
+   備份：📤 下載 JSON｜♻️ 上傳 backup 一鍵還原（完整覆蓋）
    Supabase 模式：登入（配置咗 adminEmail 就只使打密碼）
    未配置 Supabase：自動進入 demo 模式（數據只存喺本瀏覽器）
    ════════════════════════════════════════════════════════════════ */
@@ -221,6 +222,56 @@ const ADMIN = {
     }
   },
 
+  // 一鍵還原：上傳「備份 JSON」下載嘅檔案 → 完整覆蓋 DB / demo 資料
+  doRestore() {
+    let input = document.getElementById("restore-file");
+    if (!input) {
+      input = document.createElement("input");
+      input.type = "file";
+      input.accept = "application/json,.json";
+      input.id = "restore-file";
+      input.hidden = true;
+      document.body.appendChild(input);
+      input.addEventListener("change", () => this._onRestoreFile(input));
+    }
+    input.value = "";
+    input.click();
+  },
+
+  async _onRestoreFile(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    let backup;
+    try {
+      const text = await file.text();
+      backup = JSON.parse(text);
+    } catch {
+      alert("讀唔到呢個檔案 — 請揀「備份 JSON」下載嘅 .json 檔");
+      return;
+    }
+    if (!backup || !Array.isArray(backup.categories)) {
+      alert("備份檔格式唔啱 — 需要有 categories 陣列（同「📤 備份 JSON」下載嘅格式）");
+      return;
+    }
+    let appN = 0;
+    backup.categories.forEach((c) => (appN += (c.apps || []).length));
+    const msg =
+      `確定用「${file.name}」還原？\n\n` +
+      `會有 ${backup.categories.length} 個分類、${appN} 個 app。\n` +
+      `⚠️ 而家 DB / 本機資料會被完整覆蓋（唔係合併），不可逆。`;
+    if (!confirm(msg)) return;
+    if (!confirm("再確認一次：真係要覆蓋而家全部資料？")) return;
+    try {
+      const r = await restoreFromBackup(backup);
+      alert(`還原完成 ✅\n${r.categories} 個分類 · ${r.apps} 個 app`);
+      this.editId = null;
+      this.form = {};
+      await this.refresh();
+    } catch (e) {
+      alert("還原失敗：" + e.message);
+    }
+  },
+
   doQR() {
     const target = location.origin + location.pathname;
     window.open(
@@ -238,26 +289,31 @@ const ADMIN = {
 function loginHTML() {
   const preset = SUPABASE_CONFIG.adminEmail;
   return `
-  <div class="admin-card" style="max-width:420px">
-    <h2>🔐 管理員登入</h2>
-    <p style="font-size:13px;color:var(--muted);margin:4px 0 10px">
-      ${preset ? "帳號已預填，只需要打密碼。" : "只有已授權用戶（你自己）可以登入。"}
+  <div class="login-wrap">
+  <div class="admin-card">
+    <div class="admin-head">
+      <img class="admin-logo" src="/icons/icon-192.png" alt="" />
+      <h2>🔐 管理員登入</h2>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin:4px 0 6px;line-height:1.5">
+      ${preset ? "帳號已預填，只需要打密碼。" : "只有已授權用戶可以登入。"}
       設置方法見 README.md
     </p>
     ${
       preset
         ? `<div class="admin-lbl">帳號</div>
-           <input style="width:100%" value="${esc(preset)}" disabled />`
+           <input style="width:100%" value="${esc(preset)}" disabled autocomplete="username" />`
         : `<div class="admin-lbl">Email</div>
-           <input id="l-email" type="email" style="width:100%" placeholder="you@example.com" />`
+           <input id="l-email" type="email" style="width:100%" placeholder="you@example.com" autocomplete="username" inputmode="email" />`
     }
     <div class="admin-lbl">Password</div>
-    <input id="l-pass" type="password" style="width:100%" placeholder="••••••••" />
-    <div style="margin-top:14px;display:flex;gap:8px">
-      <button class="mini-btn" onclick="ADMIN.login()">登入</button>
-      <button class="mini-btn" onclick="ADMIN.close()">返回</button>
+    <input id="l-pass" type="password" style="width:100%" placeholder="••••••••" autocomplete="current-password" />
+    <div class="admin-actions" style="margin-top:16px">
+      <button class="mini-btn primary full" onclick="ADMIN.login()">登入</button>
+      <button class="mini-btn full" onclick="ADMIN.close()">返回展示櫃</button>
     </div>
-    <div id="l-err" style="color:#ef4444;font-size:13px;margin-top:8px"></div>
+    <div id="l-err" style="color:var(--danger);font-size:13px;margin-top:10px;min-height:1.2em"></div>
+  </div>
   </div>`;
 }
 
@@ -268,8 +324,8 @@ function manageHTML() {
   <div class="admin-card">
     <div class="admin-lbl">${ADMIN.editId ? "✏️ 編輯 app" : "＋ 新增 app"}</div>
     <div class="admin-row">
-      <input id="f-name" placeholder="名稱 *" value="${esc(f.name || "")}" />
-      <input id="f-url" placeholder="URL *（https://…vercel.app）" value="${esc(f.url || "")}" />
+      <input id="f-name" placeholder="名稱 *" value="${esc(f.name || "")}" autocomplete="off" />
+      <input id="f-url" placeholder="URL *（https://…）" value="${esc(f.url || "")}" inputmode="url" autocomplete="off" />
     </div>
     <div class="admin-row">
       <select id="f-cat">
@@ -282,25 +338,25 @@ function manageHTML() {
       <input id="f-desc" placeholder="介紹（顯示喺公開版面，可選）" value="${esc(f.description || "")}" />
     </div>
     <div class="admin-row">
-      <input id="f-icon" placeholder="圖標 emoji（可選）" value="${esc(f.icon || "")}" style="max-width:120px" />
-      <input id="f-gh" placeholder="GitHub repo（可選）" value="${esc(f.github || "")}" />
+      <input id="f-icon" placeholder="圖標 emoji" value="${esc(f.icon || "")}" style="max-width:110px" />
+      <input id="f-gh" placeholder="GitHub repo（可選）" value="${esc(f.github || "")}" inputmode="url" />
     </div>
     <div class="admin-row">
-      <input id="f-note" placeholder="內部備註（只有管理版面見到，可選）" value="${esc(f.note || "")}" />
+      <input id="f-note" placeholder="內部備註（只有管理見到）" value="${esc(f.note || "")}" />
     </div>
     <div class="admin-row">
       <label class="vis-lbl">
         <input id="f-visible" type="checkbox" ${f.visible !== false ? "checked" : ""} />
-        公開顯示（取消 = 隱藏，公眾唔見）
+        公開顯示（取消 = 隱藏）
       </label>
     </div>
-    <div class="admin-row" style="margin-top:12px">
-      <button class="mini-btn" onclick="ADMIN.submit()">💾 ${ADMIN.editId ? "儲存" : "加入"}</button>
+    <div class="admin-actions" style="margin-top:12px">
+      <button class="mini-btn primary" onclick="ADMIN.submit()">💾 ${ADMIN.editId ? "儲存" : "加入"}</button>
       ${ADMIN.editId ? '<button class="mini-btn" onclick="ADMIN.cancelEdit()">取消</button>' : ""}
     </div>
     <div class="admin-lbl">目前嘅 apps（▲▼ 排序｜隱藏/顯示即時生效）</div>
     ${listHTML()}
-    <div style="margin-top:10px">
+    <div style="margin-top:12px">
       <button class="mini-btn" onclick="ADMIN.addCat()">＋ 新增分類</button>
     </div>
   </div>`;
@@ -309,26 +365,28 @@ function manageHTML() {
 function listHTML() {
   return ADMIN.sites.categories
     .map(
-      (c, ci) => `
-    <div style="display:flex;align-items:center;gap:6px;margin:12px 0 4px">
-      <span style="font-size:13px;font-weight:700">${c.icon ? c.icon + " " : ""}${esc(c.name)}</span>
+      (c) => `
+    <div class="admin-cat-head">
+      <span>${c.icon ? c.icon + " " : ""}${esc(c.name)}</span>
       <span style="flex:1"></span>
-      <button class="mini-btn" title="分類上移" onclick='ADMIN.moveCat(${JSON.stringify(c.name)}, -1)'>▲</button>
-      <button class="mini-btn" title="分類下移" onclick='ADMIN.moveCat(${JSON.stringify(c.name)}, 1)'>▼</button>
+      <button class="mini-btn iconish" title="分類上移" aria-label="分類上移" onclick='ADMIN.moveCat(${JSON.stringify(c.name)}, -1)'>▲</button>
+      <button class="mini-btn iconish" title="分類下移" aria-label="分類下移" onclick='ADMIN.moveCat(${JSON.stringify(c.name)}, 1)'>▼</button>
     </div>
     ${c.apps
       .map(
         (a) => `
       <div class="admin-app-row">
-        <span>${a.icon || "📦"}</span>
+        <span style="font-size:18px;line-height:1">${a.icon || "📦"}</span>
         <b>${esc(a.name)}</b>
         ${a.visible === false ? '<span class="lock-tag">🔒 隱藏</span>' : ""}
-        <span class="u" title="${esc(a.note || "")}">${esc(a.url)}${a.note ? " · 📌" : ""}${a.clicks ? ` · ${a.clicks} 次打開` : ""}</span>
-        <button class="mini-btn" title="上移" onclick='ADMIN.moveApp(${JSON.stringify(a._id || "")}, -1)'>▲</button>
-        <button class="mini-btn" title="下移" onclick='ADMIN.moveApp(${JSON.stringify(a._id || "")}, 1)'>▼</button>
-        <button class="mini-btn" onclick='ADMIN.edit(${JSON.stringify(a._id || "")})'>編輯</button>
-        <button class="mini-btn" onclick='ADMIN.toggleVisible(${JSON.stringify(a._id || "")})'>${a.visible === false ? "顯示" : "隱藏"}</button>
-        <button class="mini-btn danger" onclick='ADMIN.remove(${JSON.stringify(a._id || "")})'>刪除</button>
+        <span class="u" title="${esc(a.note || "")}">${esc(a.url)}${a.note ? " · 📌" : ""}${a.clicks ? ` · ${a.clicks} 次` : ""}</span>
+        <div class="admin-app-actions">
+          <button class="mini-btn iconish" title="上移" aria-label="上移" onclick='ADMIN.moveApp(${JSON.stringify(a._id || "")}, -1)'>▲</button>
+          <button class="mini-btn iconish" title="下移" aria-label="下移" onclick='ADMIN.moveApp(${JSON.stringify(a._id || "")}, 1)'>▼</button>
+          <button class="mini-btn" onclick='ADMIN.edit(${JSON.stringify(a._id || "")})'>編輯</button>
+          <button class="mini-btn" onclick='ADMIN.toggleVisible(${JSON.stringify(a._id || "")})'>${a.visible === false ? "顯示" : "隱藏"}</button>
+          <button class="mini-btn danger" onclick='ADMIN.remove(${JSON.stringify(a._id || "")})'>刪除</button>
+        </div>
       </div>`
       )
       .join("")}`
@@ -343,14 +401,18 @@ function allViewHTML() {
   const sections = ADMIN.sites.categories
     .map(
       (c) => `
-    <div style="font-size:13px;font-weight:700;margin:14px 0 8px">${c.icon ? c.icon + " " : ""}${esc(c.name)}</div>
-    <div class="grid" style="grid-template-columns:repeat(4,1fr)">${tilesForCat(c)}</div>`
+    <div class="sec-head" style="margin-top:16px">
+      ${c.icon ? `<span class="sec-ico">${c.icon}</span>` : ""}
+      <h2>${esc(c.name)}</h2>
+      <span class="num">${c.apps.length}</span>
+    </div>
+    <div class="grid">${tilesForCat(c)}</div>`
     )
     .join("");
   return `
   <div class="admin-card">
-    <div class="banner ok">呢個就係公眾見到嘅版面（共 ${allApps.length} 個：${visibleCount} 個公開、${allApps.length - visibleCount} 個隱藏）。🔒 = 目前隱藏緊，公眾唔見。</div>
-    ${sections || '<p style="color:var(--muted);font-size:13px">仲未有任何 app</p>'}
+    <div class="banner ok">公眾版面預覽：共 ${allApps.length} 個（${visibleCount} 公開 · ${allApps.length - visibleCount} 隱藏）。🔒 = 隱藏中。</div>
+    ${sections || '<p style="color:var(--muted);font-size:13px;padding:12px 0">仲未有任何 app</p>'}
   </div>`;
 }
 
@@ -365,8 +427,8 @@ function tilesForCat(cat) {
       }
       return `
       <a class="tile" href="${esc(a.url)}" title="${esc((a.description || "") + (a.visible === false ? "（隱藏中）" : ""))}">
-        ${a.visible === false ? '<span class="lock-tag" style="position:absolute;top:-5px;right:-5px">🔒</span>' : ""}
-        <div class="tile-icon" style="background:linear-gradient(135deg,${g1},${g2})">${inner || "📦"}</div>
+        ${a.visible === false ? '<span class="lock-tag" style="position:absolute;top:2px;right:2px;z-index:2">🔒</span>' : ""}
+        <div class="tile-icon" style="background:linear-gradient(145deg,${g1},${g2})">${inner || "📦"}</div>
         <div class="tile-name">${esc(a.name)}</div>
         ${a.description ? `<div class="tile-desc">${esc(a.description)}</div>` : ""}
       </a>`;
@@ -380,10 +442,17 @@ function renderAdmin() {
 
   if (sb && !ADMIN.authed) {
     el.innerHTML = loginHTML();
+    const pass = document.getElementById("l-pass");
+    if (pass) {
+      pass.focus();
+      pass.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") ADMIN.login();
+      });
+    }
     return;
   }
   if (!ADMIN.sites) {
-    el.innerHTML = '<div class="admin-card">載入中…</div>';
+    el.innerHTML = '<div class="admin-card" style="text-align:center;color:var(--muted)">載入中…</div>';
     return;
   }
 
@@ -391,25 +460,29 @@ function renderAdmin() {
   <div class="admin-card">
     <div class="admin-head">
       <img class="admin-logo" src="/icons/icon-192.png" alt="" onclick="goldfingerClick()" />
-      <h2>⚙️ 管理面板</h2>
+      <div>
+        <h2>⚙️ 管理面板</h2>
+        <div style="font-size:12px;color:var(--muted);margin-top:-2px">加 / 改 / 隱藏 / 備份還原</div>
+      </div>
     </div>
     ${
       sb
         ? '<div class="banner ok">已連接 Supabase — 改動即時生效，所有人都見到</div>'
-        : '<div class="banner warn">⚠️ Demo 模式（未配置 Supabase）：改動只存喺你嘅瀏覽器，唔會同步。配置方法見 README.md</div>'
+        : '<div class="banner warn">⚠️ Demo 模式：改動只存喺呢部裝置，唔會同步。配置方法見 README.md</div>'
     }
     <div class="tab-bar">
-      <button class="tab-btn ${ADMIN.tab === "manage" ? "on" : ""}" onclick="ADMIN.setTab('manage')">🛠 管理</button>
-      <button class="tab-btn ${ADMIN.tab === "all" ? "on" : ""}" onclick="ADMIN.setTab('all')">👀 全部 App 總覽</button>
+      <button type="button" class="tab-btn ${ADMIN.tab === "manage" ? "on" : ""}" onclick="ADMIN.setTab('manage')">🛠 管理</button>
+      <button type="button" class="tab-btn ${ADMIN.tab === "all" ? "on" : ""}" onclick="ADMIN.setTab('all')">👀 總覽</button>
     </div>
     ${ADMIN.tab === "manage" ? manageHTML() : allViewHTML()}
-    <div style="margin-top:18px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="mini-btn" onclick="ADMIN.doExport()">📤 備份 JSON</button>
-      <button class="mini-btn" onclick="ADMIN.doQR()">🔳 QR code</button>
-      ${sb && ADMIN.authed ? '<button class="mini-btn" onclick="ADMIN.doImport()">📥 匯入 apps.json</button>' : ""}
-      <span style="flex:1"></span>
-      <button class="mini-btn" onclick="ADMIN.close()">✅ 完成，返回展示櫃</button>
-      ${sb && ADMIN.authed ? '<button class="mini-btn danger" onclick="ADMIN.logout()">登出</button>' : ""}
+    <div class="admin-actions">
+      <button type="button" class="mini-btn" onclick="ADMIN.doExport()">📤 備份</button>
+      <button type="button" class="mini-btn" onclick="ADMIN.doRestore()" title="上傳 backup 完整覆蓋">♻️ 還原</button>
+      <button type="button" class="mini-btn" onclick="ADMIN.doQR()">🔳 QR</button>
+      ${sb && ADMIN.authed ? '<button type="button" class="mini-btn" onclick="ADMIN.doImport()">📥 匯入</button>' : ""}
+      <span class="spacer"></span>
+      <button type="button" class="mini-btn primary full" onclick="ADMIN.close()">✅ 完成</button>
+      ${sb && ADMIN.authed ? '<button type="button" class="mini-btn danger" onclick="ADMIN.logout()">登出</button>' : ""}
     </div>
   </div>`;
 
