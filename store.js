@@ -5,11 +5,11 @@
 
 // ⚙️ 建好 Supabase 項目後填呢度（步驟見 README.md「Admin 設置」）
 const SUPABASE_CONFIG = {
-  url: "",        // 例如 "https://abcdefgh.supabase.co"
-  anonKey: "",    // Supabase Dashboard → Project Settings → API → anon public key
+  url: "https://visqyeskdauipodudpxz.supabase.co",
+  anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpc3F5ZXNrZGF1aXBvZHVkcHh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0MjQ5MjUsImV4cCI6MjEwNDAwMDkyNX0.Ct2jJpJUtRFiVSux774aGRdegFG8fr5mWeD1RMm_dXs",
   // 你 admin 帳號嘅 email（可以用假嘅，例如 "admin@troop"）。
   // 填咗之後，管理面板登入頁會預填 email，其他人只需要打密碼。
-  adminEmail: ""
+  adminEmail: "ai@scoutsystem.com"
 };
 
 const LS_KEY = "showcase-admin-demo";
