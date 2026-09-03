@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5" />
-<title>Scout System</title>
-<meta name="description" content="我所有 app 的分類展示櫃 — 一個入口打開全部" />
+<title>童軍小工具</title>
+<meta name="description" content="童軍小工具 — 童軍 Apps／學習圖卡／PPT／有用連結 的分類展示櫃，一個入口打開全部" />
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="icon" type="image/png" href="/icons/icon-192.png" />
 <link rel="apple-touch-icon" href="/icons/icon-192.png" />
@@ -13,7 +13,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="App 櫃" />
+<meta name="application-name" content="童軍小工具" />
+<meta name="apple-mobile-web-app-title" content="童軍小工具" />
 <meta name="format-detection" content="telephone=no" />
 <style>
   :root {
@@ -45,6 +46,7 @@
     --safe-l: env(safe-area-inset-left, 0px);
     --safe-r: env(safe-area-inset-right, 0px);
     --header-h: 0px;
+    --pnav-h: 0px;
     --chip-h: 52px;
     --ease: cubic-bezier(.22, 1, .36, 1);
     --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
@@ -222,7 +224,7 @@
   /* ── Category chips ─────────────────── */
   .chips {
     position: sticky;
-    top: var(--header-h, 0px);
+    top: calc(var(--header-h, 0px) + var(--pnav-h, 0px));
     z-index: 30;
     display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden;
     padding: 10px 2px 12px;
@@ -260,7 +262,7 @@
   #sections { min-height: 120px; }
   section {
     margin-top: 22px;
-    scroll-margin-top: calc(var(--header-h, 64px) + var(--chip-h, 52px) + 8px);
+    scroll-margin-top: calc(var(--header-h, 64px) + var(--pnav-h, 0px) + var(--chip-h, 52px) + 8px);
   }
   .sec-head {
     display: flex; align-items: center; gap: 8px;
@@ -569,6 +571,132 @@
     display: flex; align-items: center; justify-content: center;
   }
   .login-wrap .admin-card { width: 100%; max-width: 400px; margin: 0; }
+
+  /* ── 分頁導覽 ─────────────────────────── */
+  .page-nav {
+    position: sticky;
+    top: var(--header-h, 0px);
+    z-index: 35;
+    display: flex; gap: 6px; overflow-x: auto;
+    padding: 8px 2px 4px; margin: 8px -2px 0;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  .page-nav[hidden] { display: none; }
+  .page-nav::-webkit-scrollbar { display: none; }
+  .page-btn {
+    flex-shrink: 0; white-space: nowrap; cursor: pointer;
+    font-size: 13px; font-weight: 750; color: var(--muted);
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 999px; padding: 8px 13px; min-height: 38px;
+    box-shadow: var(--shadow-sm); touch-action: manipulation;
+    transition: all .18s var(--ease);
+  }
+  .page-btn:hover { color: var(--text); border-color: var(--border-strong); }
+  .page-btn.on {
+    color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-color: transparent; box-shadow: 0 5px 14px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  [data-theme="dark"] .page-btn.on { color: #0b0d12; }
+  .page-btn[data-page="__prev"], .page-btn[data-page="__next"] {
+    font-size: 17px; padding: 8px 10px; flex-shrink: 0;
+  }
+  .page-btn[data-page="__prev"][disabled], .page-btn[data-page="__next"][disabled] { opacity: .35; pointer-events: none; }
+
+  /* ── 童軍級別篩選列 ───────────────────── */
+  .tag-row {
+    display: flex; align-items: center; gap: 6px; overflow-x: auto;
+    padding: 8px 2px 4px; margin: 2px -2px 0;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .tag-row[hidden] { display: none; }
+  .tag-row::-webkit-scrollbar { display: none; }
+  .tag-row-hint {
+    font-size: 12px; color: var(--muted); font-weight: 700;
+    white-space: nowrap; padding-right: 2px;
+  }
+  .tag-chip {
+    flex-shrink: 0; white-space: nowrap; cursor: pointer;
+    font-size: 12px; font-weight: 700; color: var(--accent-text);
+    background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    border-radius: 999px; padding: 6px 12px; touch-action: manipulation;
+    transition: all .18s var(--ease);
+  }
+  .tag-chip.on {
+    color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent;
+  }
+  [data-theme="dark"] .tag-chip.on { color: #0b0d12; }
+
+  /* tile 內嘅級別小標籤 */
+  .tile-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; margin-top: 3px; }
+  .tile-tags span {
+    font-size: 8px; font-weight: 700; color: var(--accent-text);
+    background: var(--accent-soft); border-radius: 999px; padding: 1px 5px;
+  }
+  .mini-tag-row { display: inline-flex; gap: 3px; flex-wrap: wrap; }
+  .mini-tag {
+    font-size: 10px; font-weight: 700; color: var(--accent-text);
+    background: var(--accent-soft); border-radius: 999px; padding: 1px 6px;
+  }
+  .num-badge {
+    font-size: 10.5px; font-weight: 700; color: var(--muted);
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 999px; padding: 2px 8px; white-space: nowrap;
+  }
+
+  /* 管理：分頁 block */
+  .page-block {
+    border: 1px solid var(--border); border-radius: 14px;
+    padding: 12px 12px 14px; margin-top: 14px;
+    background: color-mix(in srgb, var(--bg) 40%, transparent);
+  }
+  .page-block-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .page-ico { font-size: 22px; }
+  .page-meta { flex: 1; min-width: 120px; }
+  .page-title { font-weight: 750; font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .page-on { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; user-select: none; }
+  .page-on input { width: 40px; height: 22px; accent-color: var(--accent); }
+  .page-sublabel {
+    font-size: 12.5px; font-weight: 800; letter-spacing: .02em;
+    color: var(--accent-text); margin: 4px 2px 0; text-transform: none;
+  }
+
+  /* 管理：級別 checkbox */
+  .tag-check-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tag-check {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 700; cursor: pointer; user-select: none;
+    padding: 7px 11px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg);
+    transition: all .15s;
+  }
+  .tag-check input { width: 16px; height: 16px; accent-color: var(--accent); }
+  .tag-check.on { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); color: var(--accent-text); }
+
+  /* emoji picker */
+  .emoji-panel {
+    position: fixed; inset: 0; z-index: 300; display: flex;
+    align-items: center; justify-content: center; padding: 20px;
+    background: rgba(0,0,0,.4); backdrop-filter: blur(2px);
+  }
+  .emoji-panel[hidden] { display: none; }
+  .emoji-panel-inner {
+    width: 100%; max-width: 440px; max-height: 78dvh; overflow-y: auto;
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: 18px; padding: 14px; box-shadow: var(--shadow-hover);
+  }
+  .emoji-panel-head { display: flex; align-items: center; font-weight: 750; font-size: 14px; margin-bottom: 10px; }
+  .emoji-panel-head .spacer { flex: 1; }
+  .emoji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 6px; }
+  .emoji-cell {
+    aspect-ratio: 1; font-size: 24px; border: 1px solid var(--border);
+    background: var(--bg); border-radius: 12px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .12s, background .15s, border-color .15s;
+  }
+  .emoji-cell:hover { transform: scale(1.1); border-color: var(--accent); background: var(--accent-soft); }
 </style>
 </head>
 <body>
@@ -580,8 +708,8 @@
           <img class="head-logo" src="/icons/icon-192.png" alt="Scout System" width="44" height="44" />
         </div>
         <div class="head-titles">
-          <h1 id="site-name">我的 App 展示櫃</h1>
-          <span id="site-sub">全部 app，一個入口</span>
+          <h1 id="site-name">童軍小工具</h1>
+          <span id="site-sub">一個入口 · 分類排列</span>
         </div>
         <div class="head-actions">
           <button class="install-btn" id="install-btn" type="button" aria-label="安裝 App">
@@ -592,12 +720,14 @@
       </div>
       <div class="search-wrap">
         <span class="search-ico" aria-hidden="true">🔍</span>
-        <input class="search" id="search" type="search" enterkeyhint="search" placeholder="搜尋 app…" aria-label="搜尋 app" autocomplete="off" />
+        <input class="search" id="search" type="search" enterkeyhint="search" placeholder="搜尋項目／分類／級別…" aria-label="搜尋" autocomplete="off" />
         <button class="search-clear" id="search-clear" type="button" aria-label="清除搜尋">×</button>
       </div>
     </header>
   </div>
 
+  <nav class="page-nav" id="page-nav" aria-label="分頁" hidden></nav>
+  <div class="tag-row" id="tag-row" hidden></div>
   <nav class="chips" id="chips" aria-label="分類"></nav>
   <div id="sections">
     <div class="skeleton" id="skeleton" aria-hidden="true">
@@ -613,14 +743,14 @@
   </div>
   <div class="empty" id="empty">
     <div class="empty-ico">🔎</div>
-    <b>搵唔到符合嘅 app</b>
-    <p>試下改關鍵字，或者撳「全部」睇晒</p>
+    <b>未有內容</b>
+    <p>試下改關鍵字，或者撳「全部」／轉第二個分頁睇下</p>
   </div>
 
   <footer>
-    <div class="tip">💡 <b>提示：</b>喺瀏覽器選單選「加入主畫面 / 安裝 App」（Android 可撳右上角「安裝」），呢個展示櫃就會變成電話桌面嘅一個 App。之後所有應用由呢度入。</div>
+    <div class="tip">💡 <b>提示：</b>喺瀏覽器選單選「加入主畫面 / 安裝 App」（Android 可撳右上角「安裝」），呢個「童軍小工具」就會變成電話桌面嘅一個 App。所有童軍工具、圖卡、簡報同連結都由呢度入。</div>
     <span class="foot-meta" id="foot-count">載入中…</span>
-    <div style="margin-top:16px">© 2026 Scout System · 由 <a href="https://vercel.com" target="_blank" rel="noopener">Vercel</a> 提供部署</div>
+    <div style="margin-top:16px">© 2026 童軍小工具 · 由 <a href="https://vercel.com" target="_blank" rel="noopener">Vercel</a> 提供部署</div>
   </footer>
 </div>
 
@@ -633,12 +763,12 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="store.js"></script>
 <script src="admin.js"></script>
+<script src="app.js"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════
-   ⚙️  配置已經搬去同層嘅 apps.json — 加新 app 只需改嗰個檔案
+   啟動 boot：主題／安裝 PWA／返回頂部／金手指／路由
+   （公開版面邏輯喺 app.js，管理面板喺 admin.js）
    ════════════════════════════════════════════════════════════════ */
-
-// 主題
 const themeBtn = document.getElementById("theme-btn");
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
@@ -650,15 +780,16 @@ function applyTheme(t) {
 }
 applyTheme(localStorage.getItem("theme") ||
   (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
-themeBtn.onclick = () =>
+themeBtn.onclick = () => {
   applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+  if (!isAdminRoute() && typeof rerenderPublic === "function") rerenderPublic();
+};
 
-// Sticky topbar 高度（chips 要 sticky 喺 header 下面）
 const topbar = document.getElementById("topbar");
 const toTopBtn = document.getElementById("to-top");
 function measureHeader() {
-  if (!topbar) return;
-  document.documentElement.style.setProperty("--header-h", topbar.offsetHeight + "px");
+  if (topbar) document.documentElement.style.setProperty("--header-h", topbar.offsetHeight + "px");
+  if (typeof measurePanes === "function") measurePanes();
 }
 measureHeader();
 window.addEventListener("resize", measureHeader);
@@ -673,9 +804,7 @@ toTopBtn.onclick = () => window.scrollTo({ top: 0, behavior: "smooth" });
 const installBtn = document.getElementById("install-btn");
 let deferredPrompt = null;
 window.addEventListener("beforeinstallprompt", (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  installBtn.style.display = "flex";
+  e.preventDefault(); deferredPrompt = e; installBtn.style.display = "flex";
 });
 installBtn.onclick = async () => {
   if (!deferredPrompt) return;
@@ -684,253 +813,11 @@ installBtn.onclick = async () => {
   deferredPrompt = null;
   installBtn.style.display = "none";
 };
-window.addEventListener("appinstalled", () => {
-  installBtn.style.display = "none";
-  deferredPrompt = null;
-});
-
-// 圖標背景配色（按名稱 hash 穩定取色）
-const PALETTE = [
-  ["#dbeafe", "#93c5fd"], ["#fee2e2", "#fca5a5"], ["#dcfce7", "#86efac"],
-  ["#fef9c3", "#fde047"], ["#fae8ff", "#e879f9"], ["#e0f2fe", "#7dd3fc"],
-  ["#ffedd5", "#fdba74"], ["#f3e8ff", "#c4b5fd"], ["#ccfbf1", "#5eead4"],
-  ["#fce7f3", "#f9a8d4"]
-];
-const PALETTE_DARK = [
-  ["#1e3a5f", "#2563eb"], ["#4c1d1d", "#ef4444"], ["#14532d", "#22c55e"],
-  ["#422006", "#eab308"], ["#4a044e", "#d946ef"], ["#0c4a6e", "#0ea5e9"],
-  ["#431407", "#f97316"], ["#2e1065", "#8b5cf6"], ["#134e4a", "#14b8a6"],
-  ["#500724", "#ec4899"]
-];
-function tileBg(name) {
-  let h = 0;
-  for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  const dark = document.documentElement.dataset.theme === "dark";
-  const pal = dark ? PALETTE_DARK : PALETTE;
-  return pal[h % pal.length];
-}
-function esc(s) {
-  return String(s ?? "").replace(/[&<>"']/g, c => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  }[c]));
-}
-function faviconUrl(url) {
-  try { return "https://www.google.com/s2/favicons?domain=" + new URL(url).hostname + "&sz=64"; }
-  catch { return null; }
-}
-
-// 最近使用
-const RECENT_KEY = "showcase-recent";
-function getRecent() { try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; } }
-function addRecent(app) {
-  let r = getRecent().filter((x) => x.url !== app.url);
-  r.unshift({ name: app.name, url: app.url, icon: app.icon || null, cat: "最近", description: app.description || null });
-  r = r.slice(0, 8);
-  localStorage.setItem(RECENT_KEY, JSON.stringify(r));
-}
-function openApp(app) {
-  addRecent(app);
-  trackClick(app._id);
-  window.location.href = app.url;
-}
-
-function iconHTML(app) {
-  const [c1, c2] = tileBg(app.name);
-  let inner = "";
-  if (app.icon) {
-    if (/^https?:\/\//i.test(app.icon)) {
-      inner = `<img src="${esc(app.icon)}" alt="" loading="lazy" decoding="async" onerror="this.remove()" />`;
-    } else {
-      inner = esc(app.icon);
-    }
-  } else {
-    const fav = faviconUrl(app.url);
-    if (fav) inner = `<img src="${esc(fav)}" alt="" loading="lazy" decoding="async" onerror="this.remove()" />`;
-  }
-  return `<div class="tile-icon" style="background:linear-gradient(145deg,${c1},${c2})">${inner || "📦"}</div>`;
-}
-
-const REG = [];
-const chipsEl = document.getElementById("chips");
-const sectionsEl = document.getElementById("sections");
-const emptyEl = document.getElementById("empty");
-const searchEl = document.getElementById("search");
-const searchClear = document.getElementById("search-clear");
-const footCount = document.getElementById("foot-count");
-
-let flat = [];
-let activeChip = "all";
-let SITES = null;
-
-function tileHTML(idx, delay) {
-  const app = REG[idx];
-  const d = Math.min(delay || 0, 12) * 30;
-  return `
-  <a class="tile" href="${esc(app.url)}" title="${esc(app.description || app.name)}"
-     style="animation-delay:${d}ms"
-     onclick="event.preventDefault(); openApp(REG[${idx}])">
-    ${app.github ? `<span class="gh-badge" title="GitHub repo" onclick="event.preventDefault(); event.stopPropagation(); window.open('${esc(app.github)}','_blank')">GH</span>` : ""}
-    ${iconHTML(app)}
-    <div class="tile-name">${esc(app.name)}</div>
-    ${app.description ? `<div class="tile-desc">${esc(app.description)}</div>` : ""}
-  </a>`;
-}
-
-function sectionHTML(title, icon, apps, id) {
-  if (!apps.length) return "";
-  const start = REG.length;
-  apps.forEach((a) => REG.push(a));
-  const tiles = apps.map((_, i) => tileHTML(start + i, i)).join("");
-  return `
-  <section id="${id}">
-    <div class="sec-head">
-      ${icon ? `<span class="sec-ico">${icon}</span>` : ""}
-      <h2>${esc(title)}</h2>
-      <span class="num">${apps.length}</span>
-    </div>
-    <div class="grid">${tiles}</div>
-  </section>`;
-}
-
-function setActiveChip(id) {
-  activeChip = id;
-  chipsEl.querySelectorAll(".chip").forEach((el) => {
-    el.classList.toggle("on", el.dataset.chip === id);
-  });
-}
-
-function jumpTo(id) {
-  setActiveChip(id);
-  if (id === "all") {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    return;
-  }
-  const el = document.getElementById(id);
-  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function render() {
-  if (!SITES) return;
-  REG.length = 0;
-  const q = searchEl.value.trim().toLowerCase();
-  searchClear.classList.toggle("show", !!q);
-  const match = (a) => {
-    if (!q) return true;
-    const hay = [a.name, a.cat, a.description, a.note].filter(Boolean).join(" ").toLowerCase();
-    return hay.includes(q);
-  };
-  let html = "";
-
-  if (!q) {
-    const recent = getRecent();
-    if (recent.length) html += sectionHTML("最近使用", "🕘", recent, "recent");
-  }
-
-  const visible = (a) => a.visible !== false;
-  const cats = SITES.categories
-    .map((c, i) => ({ c, i, shown: c.apps.filter(visible).filter(match) }))
-    .filter((x) => x.shown.length);
-
-  html += cats.map((x) => sectionHTML(x.c.name, x.c.icon, x.shown, "cat-" + x.i)).join("");
-  sectionsEl.innerHTML = html;
-  emptyEl.style.display = html ? "none" : "block";
-
-  chipsEl.innerHTML =
-    `<button type="button" class="chip ${!q && activeChip === "all" ? "on" : ""}" data-chip="all" onclick="jumpTo('all')">⌂ 全部</button>` +
-    cats.map((x) =>
-      `<button type="button" class="chip ${!q && activeChip === ("cat-" + x.i) ? "on" : ""}" data-chip="cat-${x.i}" onclick="jumpTo('cat-${x.i}')">${esc((x.c.icon ? x.c.icon + " " : "") + x.c.name)}</button>`
-    ).join("");
-
-  measureHeader();
-  watchSections();
-}
-
-// IntersectionObserver：滾動自動高亮 chip
-let _io = null;
-function watchSections() {
-  if (_io) _io.disconnect();
-  if (!("IntersectionObserver" in window)) return;
-  const secs = sectionsEl.querySelectorAll("section[id]");
-  if (!secs.length) return;
-  _io = new IntersectionObserver(
-    (entries) => {
-      if (searchEl.value.trim()) return;
-      const visible = entries
-        .filter((e) => e.isIntersecting)
-        .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-      if (!visible.length) return;
-      const id = visible[0].target.id;
-      if (id && id !== activeChip) {
-        activeChip = id;
-        chipsEl.querySelectorAll(".chip").forEach((el) => {
-          el.classList.toggle("on", el.dataset.chip === id);
-        });
-        const on = chipsEl.querySelector(".chip.on");
-        if (on && on.scrollIntoView) {
-          on.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-        }
-      }
-    },
-    {
-      rootMargin: "-30% 0px -55% 0px",
-      threshold: [0.1, 0.35, 0.6]
-    }
-  );
-  secs.forEach((s) => _io.observe(s));
-}
-
-async function main() {
-  flat = [];
-  try {
-    const { sites } = await loadSites();
-    SITES = sites;
-    document.getElementById("site-name").textContent = SITES.name;
-    document.getElementById("site-sub").textContent = SITES.sub;
-    let total = 0;
-    SITES.categories.forEach((cat) =>
-      cat.apps.forEach((a) => {
-        if (a.visible !== false) {
-          flat.push({ ...a, cat: cat.name });
-          total++;
-        }
-      })
-    );
-    // 顯示全部（含隱藏）計數只喺 admin；公開只計可見
-    footCount.textContent = `共 ${total} 個 app · ${SITES.categories.length} 個分類`;
-    render();
-  } catch (e) {
-    sectionsEl.innerHTML = "";
-    emptyEl.style.display = "block";
-    emptyEl.querySelector("b").textContent = "載入失敗";
-    emptyEl.querySelector("p").textContent = e.message || "請稍後再試";
-    footCount.textContent = "載入失敗";
-  }
-}
-
-searchEl.addEventListener("input", () => {
-  activeChip = "all";
-  render();
-});
-searchClear.addEventListener("click", () => {
-  searchEl.value = "";
-  searchEl.focus();
-  activeChip = "all";
-  render();
-});
-
-// 主題切換後重繪（tile 漸變色要跟 dark palette）
-const _themeClick = themeBtn.onclick;
-themeBtn.onclick = () => {
-  _themeClick();
-  if (SITES) render();
-};
-
-main();
+window.addEventListener("appinstalled", () => { installBtn.style.display = "none"; deferredPrompt = null; });
 
 // 金手指：登入後連點 Logo 20 次 → 開啟改密碼
 const GOLDENFINGER_TAPS = 20;
-let _gfCount = 0;
-let _gfLast = 0;
+let _gfCount = 0, _gfLast = 0;
 function goldfingerClick() {
   const now = Date.now();
   _gfCount = now - _gfLast < 900 ? _gfCount + 1 : 1;
@@ -949,14 +836,19 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").catch(() => {});
 }
 
-window.addEventListener("hashchange", () => {
-  if (isAdminRoute()) ADMIN.init();
-  else {
+// 路由：管理面板 / 公開版面
+function goRoute() {
+  if (isAdminRoute()) {
+    document.getElementById("admin-panel").hidden = false;
+    ADMIN.init();
+  } else {
     document.getElementById("admin-panel").hidden = true;
     main();
   }
-});
-if (isAdminRoute()) ADMIN.init();
+}
+goRoute();
+window.addEventListener("hashchange", () => { measureHeader(); goRoute(); });
 </script>
+
 </body>
 </html>

@@ -1,187 +1,201 @@
-# App 展示櫃
+# 童軍小工具（前身：App 展示櫃）
 
-一個 PWA 展示櫃，將你所有 app 分類排放，一個入口打開全部。
-可以「加入主畫面」安裝做手機 App，之後唔使逐个 app 加落桌面。
+一個 PWA「分類展示櫃」：將 童軍 Apps／學習圖卡／簡報／有用連結 全部用**分頁**分開，
+每個分頁內再按**分類**排列，一個入口打開全部。可以「加入主畫面」裝做手機 App。
+
+每個「項目」基本上都係一個**連結**（App、圖卡、PPT、網站都可以係一條 link），
+可以揀 1–5 個 **童軍級別標籤**（小童軍／幼童軍／童軍／深資童軍／樂行童軍），
+公開版用戶可以按自己嘅級別篩選睇咩。
+
+## 四個分頁
+
+| 分頁 id | 顯示名 | 預設 | 內容 |
+|---|---|---|---|
+| `apps` | 小工具 Apps | ✅ 開放 | 童軍 app（含三分類：電子進度紀錄 / 小工具 / 小遊戲） |
+| `cards` | 學習圖卡 | 關閉 | 學習圖卡（全部用連結） |
+| `ppt` | PPT 簡報 | 關閉 | 簡報（全部用連結） |
+| `links` | 有用連結 | 關閉 | 其他有用連結 |
+
+> 分頁同分頁入面嘅**每個項目**都可以獨立開放／關閉：
+> 後台「開放分頁」✓ → 該分頁先喺公開版出現；
+> 每個項目再各自 ✓「公開顯示」，先至逐個顯示。
+> 圖卡／PPT／連結 都係透過後台加一條**連結**上去。
 
 ## 檔案結構
 
 | 檔案 | 用途 |
 |---|---|
-| `index.html` | 頁面本體（一般唔使改） |
-| `apps.json` | 示例/備用清單（配置好 Supabase 後以 DB 為準） |
-| `store.js` | ⭐ 數據層 — **Supabase 配置填呢度**（`SUPABASE_CONFIG`） |
+| `index.html` | 頁面本體（樣式＋啟動 boot；一般唔使改） |
+| `apps.json` | 預設模板／備用清單（配置好 Supabase 後以 DB 為準） |
+| `store.js` | ⭐ 數據層 — **Supabase 配置填呢度**（`SUPABASE_CONFIG`）；兼預設模板 `makeDefaultSite()` |
 | `admin.js` | 管理面板邏輯 |
+| `app.js` | 公開版面渲染（分頁＋分類＋級別篩選） |
 | `manifest.webmanifest` | PWA 配置 |
-| `sw.js` | Service worker（離線可開展示櫃） |
+| `sw.js` | Service worker（離線可開） |
 | `icons/` | 桌面圖標 |
 
 ## 部署（Vercel）
 
-1. 將成個資料夾 push 上 GitHub repo
-2. [vercel.com](https://vercel.com) → Add New → Project → Import repo → Deploy
-3. 完成。之後每次 push 都自動重新部署
+1. 成個資料夾 push 上 GitHub repo
+2. vercel.com → Add New → Project → Import repo → Deploy
+3. 完成。之後每次 push 自動重新部署
 
-## 加新 app（前端直接加，唔使改 Git）
+## 管理員點用（網址尾加 `#admin`）
 
-1. 打開你嘅網站，網址尾加 `#admin` → 例如 `https://xxx.vercel.app/#admin`
-2. 登入（Supabase 模式；配置咗 `adminEmail` 之後其他人只使打密碼）
-3. 填 名稱 + URL + 分類（可加介紹、emoji、GitHub、內部備註、隱藏開關）→「加入」
-4. 改完「完成」— 公眾頁面即時見到，唔使重新部署
+登入後兩個分頁：
 
-### 管理面板功能
+- **🛠 管理**
+  - 頂部表單：**＋ 新增項目** —— 揀 **分頁** ＋ **分類**，填 名稱＋連結，
+    㨂 **童軍級別**（可多選）、介紹、emoji 圖示（有揀選器）、GitHub、內部備註、
+    「公開顯示」開關。揀「＋ 呢頁新分類…」可以直接喺該分頁開新分類。
+  - 「分頁＋分類＋項目 管理」：
+    - 每個分頁一個 block，右上 **開放/關閉** 開關控制成個分頁
+    - 分類列有 ▲▼排序、**改名**、**🎨 emoji**、**刪分類**（連帶刪入面所有項目）
+    - 每頁可以「＋ 呢頁加分類」（用 emoji 揀選器揀 icon）
+    - 每頁嘅項目逐行 ▲▼／編輯／隱藏／刪除
+- **👀 總覽** —— 同公開版一樣嘅預覽，檢查公眾見到咩
 
-| 功能 | 說明 |
-|---|---|
-| ＋ 加入 / 編輯 / 刪除 | 名稱、URL、分類、介紹（顯示喺公開版面）、emoji、GitHub、內部備註（只有 admin 見到）、隱藏開關 |
-| ▲▼ App 排序 | 每個 app 可以用 ▲▼ 喺分類內排序 |
-| 分類管理 | 「＋ 新增分類」直接開新分類；每個分類都有 ▲▼ 排序 |
-| 隱藏 / 顯示 | 隱藏咗 app 公開版面唔見；「全部 App 總覽」版面會帶 🔒 標記 |
-| 👀 全部 App 總覽 | 同公開版面一樣嘅預覽，方便你檢查「公眾見到咩」 |
-| 點擊統計 | 每個 app 被打開嘅次數（管理版面 list 見到） |
-| 金手指改密碼（隱藏） | 登入後**連點 Logo 20 次**先至開啟改密碼 — 冇任何按鈕或提示，其他有密碼嘅人唔會知呢個功能存在 |
-| 📤 備份 JSON | 一鍵下載成個清單做 backup |
-| ♻️ 還原備份 | 上傳之前下載嘅 backup 檔 → **完整覆蓋** DB（或 demo 本機資料）；會問兩次先執行 |
-| 📥 匯入 apps.json | （Supabase）由網站自己嘅 `apps.json` 補未存在嘅 app，按 URL 判重，**唔會**覆蓋已有資料 |
-| 🔳 QR code | 生成展示櫃 URL 嘅 QR 圖，貼公告版俾隊員掃碼「加入主畫面」 |
+其他按鈕：📤 備份｜♻️ 還原（完整覆蓋）｜🔳 QR｜**⚠️ 一鍵重設**｜登出
 
-> 入口係隱藏嘅：冇人知道 `#admin` 就睇唔到管理面板；
-> Supabase 模式仲要登入先入到去。
+### ⚠️ 一鍵重設（清空 + 建立預設模板）
 
-## Admin 帳號同密碼
+登入後撳「一鍵重設」會**完整清空** DB／本機嘅所有分類同項目，並建立預設模板：
 
-- **帳號（email）可以用假嘅**。Supabase Auth 用 email 做帳號 ID，但唔會真係發送任何
-  email（建用戶時勾「自動確認」）。例如用 `admin@troop` 做帳號就係。
-- **共用帳號**：所有需要用嘅人（你、副隊長…）都用同一個帳號。
-  配置咗 `store.js` 嘅 `adminEmail` 之後，登入頁會預填帳號，其他人只需要打密碼。
-- **收回權限 = 改密碼**。改完只把新密碼俾你要俾嘅人；舊密碼即時失效
-  （已經登入嘅 session 約 1 小時內自動到期）。
-- **改密碼嘅方法（金手指，隱藏）**：
-  1. **連點 Logo 20 次**（兩次之間隔超過 1 秒會重新計數）— 喺公開版面嘅左上角 Logo，
-     或者管理面板入面嘅 Logo，登入咗先有效。成功就會彈出改密碼提示。
-     呢個功能完全冇按鈕冇提示，知道嘅人先至用得到。
-  2. 或者 Supabase Dashboard → Authentication → Users → 你嘅帳號 → 重置
-- 密碼**唔喺你嘅靜態代碼入面**，佢放喺 Supabase 嘅用戶資料庫，
-  所以改密碼同網站部署完全無關。
+- 4 個分頁（Apps 開放；圖卡／PPT／連結 關閉，等你之後逐個開）
+- `apps` 分頁三分類：**電子進度紀錄 / 小工具 / 小遊戲**（全部空，等你加內容）
 
-## Admin 設置（Supabase，免費）
+> 因為而家後台連「刪分類」都做到，你可以自己逐個刪；
+> 但最乾淨係直接「一鍵重設」。會問兩次先執行，不可逆。
 
-未配置時入 `#admin` 係 **demo 模式**：改動只存喺你自己瀏覽器。
-想真正生效（所有人即時見到），照下列步驟：
+### 童軍級別標籤（用戶篩選）
 
-1. 去 [supabase.com](https://supabase.com) 建免費項目
-2. **加你自己嘅帳號**：Dashboard → Authentication → Users → Add user
-   - Email 可以填假嘅（例如 `admin@troop`），勾「**Auto-confirm user**」（唔會真發 email）
-   - 設好密碼 — 呢個就係管理面板嘅登入密碼
-3. **建 table**：Dashboard → SQL Editor → 貼以下 SQL → Run
+- 固定五個：小童軍、幼童軍、童軍、深資童軍、樂行童軍
+- 加項目時可㨂多個；公開版該分頁下方會出現「適用級別」一排按鈕，
+  撳一個就只顯示啱嗰個級別嘅項目
+- 項目右上 / tile 下會顯示細級別標籤
 
-   ```sql
-   create table categories (
-     name text primary key,
-     icon text,
-     sort_order int not null default 0
-   );
+### 金手指改密碼（隱藏）
 
-   create table apps (
-     id uuid primary key default gen_random_uuid(),
-     name text not null,
-     url text not null,
-     description text,
-     icon text,
-     github text,
-     note text,
-     category text not null default '其他',
-     visible boolean not null default true,
-     clicks int not null default 0,
-     sort_order int not null default 0,
-     created_at timestamptz not null default now()
-   );
+登入後連點 Logo 20 次開改密碼（冇任何按鈕提示）。或去
+Supabase Dashboard → Authentication → Users → 重置。
 
-   alter table categories enable row level security;
-   alter table apps enable row level security;
+## ⚙️ 首次建表 / 舊站升級（Supabase）
 
-   -- 任何人都可以讀
-   create policy "public read apps" on apps for select using (true);
-   create policy "public read categories" on categories for select using (true);
+> 未行下面 SQL 前，後台/公開版會自動當「apps 單頁」運作（舊資料會塞入 apps 分頁），
+> 唔會整冧個站；行完 SQL 後再入 `#admin` 撳一次「一鍵重設」就有乾淨嘅新版。
 
-   -- 只有登入咗嘅用戶（你）可以增刪改
-   create policy "admin insert apps" on apps for insert to authenticated with check (true);
-   create policy "admin update apps" on apps for update to authenticated using (true);
-   create policy "admin delete apps" on apps for delete to authenticated using (true);
-   create policy "admin insert categories" on categories for insert to authenticated with check (true);
-   create policy "admin update categories" on categories for update to authenticated using (true);
-   create policy "admin delete categories" on categories for delete to authenticated using (true);
+Supabase → SQL Editor → 貼以下 SQL → Run（冚辦掂，可直接連跑）：
 
-   -- 公開頁面每次打開 app 會調用（只加數，無敏感操作）
-   create or replace function bump_clicks(p_id uuid)
-   returns void
-   language sql
-   security definer
-   set search_path = public
-   as $$
-     update apps set clicks = clicks + 1 where id = p_id;
-   $$;
-   ```
+```sql
+-- 0) 先保證三張表存在（全新 / 已存在都唔會整爛）
+create table if not exists pages (
+  id text primary key,
+  label text not null,
+  icon text,
+  enabled boolean not null default true,
+  sort_order int not null default 0
+);
+create table if not exists categories (
+  name text not null,
+  icon text,
+  page text not null default 'apps',
+  sort_order int not null default 0
+);
+create table if not exists apps (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  url text not null,
+  description text,
+  icon text,
+  github text,
+  note text,
+  category text not null default '其他',
+  page text not null default 'apps',
+  tags text[],
+  visible boolean not null default true,
+  clicks int not null default 0,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
 
-   > 如果你之前已經建過舊版 table，改貼以下嘅就行（再補 `categories` table 同 `bump_clicks`）：
-   >
-   > ```sql
-   > alter table apps add column description text;
-   > alter table apps add column note text;
-   > alter table apps add column visible boolean not null default true;
-   > alter table apps add column clicks int not null default 0;
-   > create table if not exists categories (
-   >   name text primary key, icon text, sort_order int not null default 0
-   > );
-   > alter table categories enable row level security;
-   > create policy "public read categories" on categories for select using (true);
-   > create policy "admin insert categories" on categories for insert to authenticated with check (true);
-   > create policy "admin update categories" on categories for update to authenticated using (true);
-   > create policy "admin delete categories" on categories for delete to authenticated using (true);
-   > ```
+-- 1) 舊表補新欄位（分頁 + 童軍級別標籤）
+alter table categories add column if not exists page text not null default 'apps';
+alter table apps add column if not exists page text not null default 'apps';
+alter table apps add column if not exists tags text[];
 
-4. **填配置**：將項目資料填入 `store.js` 頂部嘅 `SUPABASE_CONFIG`：
+-- 2) 分類改用「(page, name)」組合主鍵，先可以每個分頁獨立用同名分類
+alter table categories drop constraint if exists categories_pkey;
+alter table categories add primary key (page, name);
 
-   ```js
-   const SUPABASE_CONFIG = {
-     url: "https://xxxx.supabase.co",   // Project Settings → API → Project URL
-     anonKey: "eyJhbGciOi...",          // anon public key
-     adminEmail: "admin@troop"          // 第 2 步建用戶時用嘅 email（假嘅都得）
-   };
-   ```
+-- 3) 開啟 RLS（冚 bar）
+alter table pages enable row level security;
+alter table categories enable row level security;
+alter table apps enable row level security;
 
-5. Push → 自動部署。入 `#admin` 打密碼登入就得
-6. （第一次）將 `apps.json` 入面嘅現有 app 用管理面板加埋去 DB，之後全部喺前端管理
+-- 4) 讀寫權限：任何人都可讀；只有登入嘅 admin 可寫
+drop policy if exists "public read pages" on pages;
+create policy "public read pages" on pages for select using (true);
+drop policy if exists "public read categories" on categories;
+create policy "public read categories" on categories for select using (true);
+drop policy if exists "public read apps" on apps;
+create policy "public read apps" on apps for select using (true);
 
-安全說明：`anon key` 係公開嘅（設計上就係俾前端用），真正嘅保護來自
-Row Level Security — 未登入嘅人只能讀，寫唔到。
-`bump_clicks` 係 `security definer`（任何人可調用），但它只能加點擊數，
-冇其他副作用。
+drop policy if exists "admin insert pages" on pages;
+create policy "admin insert pages" on pages for insert to authenticated with check (true);
+drop policy if exists "admin update pages" on pages;
+create policy "admin update pages" on pages for update to authenticated using (true);
+drop policy if exists "admin delete pages" on pages;
+create policy "admin delete pages" on pages for delete to authenticated using (true);
 
-## 單一登入（SSO）路線圖 — 之後先至需要
+drop policy if exists "admin insert categories" on categories;
+create policy "admin insert categories" on categories for insert to authenticated with check (true);
+drop policy if exists "admin update categories" on categories;
+create policy "admin update categories" on categories for update to authenticated using (true);
+drop policy if exists "admin delete categories" on categories;
+create policy "admin delete categories" on categories for delete to authenticated using (true);
 
-而家個展示櫃公眾免登入，SSO 只係之後想**童軍 app 之間登入一次全通行**先至要搞。
-`vercel.app` 喺 Public Suffix List 入面，各 `xxx.vercel.app` 之間 browser 唔會共享
-cookie，所以要有以下其中一個方法：
+drop policy if exists "admin insert apps" on apps;
+create policy "admin insert apps" on apps for insert to authenticated with check (true);
+drop policy if exists "admin update apps" on apps;
+create policy "admin update apps" on apps for update to authenticated using (true);
+drop policy if exists "admin delete apps" on apps;
+create policy "admin delete apps" on apps for delete to authenticated using (true);
 
-### 方案 A：自訂域名 + 子域 SSO（推薦）
+-- 5) 點擊數（公開頁每次打開項目會調用）
+create or replace function bump_clicks(p_id uuid)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update apps set clicks = clicks + 1 where id = p_id;
+$$;
+```
 
-1. 買域名（例如 `yourtroop.org.hk`），DNS 指去 Vercel，加 wildcard `*.yourtroop.org.hk`
-2. 每個 app 部署去自己子域（`tasks.yourtroop.org.hk`…）
-3. session cookie 設 `Domain=.yourtroop.org.hk` → 所有子域共享
-4. 認證：
-   - **Vercel Authentication**（app 係 Next.js 時最省力，Vercel 內建）
-   - **Supabase Auth**（免費，任何 framework 都得 — 同展示櫃 admin 用同一個項目就得）
-5. 新 app 只要部署去新子域，自動享有 SSO，零額外代碼
+### 建 admin 帳號（如果未建）
 
-### 方案 B：JWT 交棒（保持 vercel.app 都可行）
+Dashboard → Authentication → Users → Add user → 填假 email（例 `ai@scoutsystem.com`）、
+勾 **Auto-confirm user**、設密碼。呢個密碼就係管理面板登入密碼。
 
-1. 展示櫃（或獨立 login 頁）做登入入口
-2. 撳 app 時簽發短命 signed JWT，經 URL 交棒俾目標 app
-3. 每個 app 加一段 middleware 驗證 JWT
-4. **所有 app 共享同一個 env var：`JWT_SECRET`**（簽名 key）
+### 填配置
 
-### 童軍情境提示
+將項目資料填入 `store.js` 頂部 `SUPABASE_CONFIG`（現已預填）：
 
-如果使用者係隊員（未必有 email / Google 帳號），可以唔使外部供應商：
-Supabase 放一張 `scouts` table（編號 + PIN hash），展示櫃做「隊員編號 + PIN」
-登入頁，登入後發 JWT 交棒俾各 app。簡便、小朋友用得順手。
+```js
+const SUPABASE_CONFIG = {
+  url: "https://xxxx.supabase.co",
+  anonKey: "eyJhbGci...",
+  adminEmail: "ai@scoutsystem.com"
+};
+```
+
+部署後入 `#admin` 打密碼登入 → 撳一次「⚠️ 一鍵重設」建立預設模板 → 開始加內容。
+
+安全說明：`anon key` 係公開嘅；真正保護嚟自 Row Level Security ——
+未登入只能讀，寫唔到。
+
+## Admin 帳號同密碼備忘
+
+- 密碼**唔喺**靜態代碼入面，喺 Supabase 用戶資料庫，同部署無關。
+- 共用帳號：所有人都用同一個（`ai@scoutsystem.com`），登入頁自動預填，只打密碼。
+- 收回權限 = 改密碼（舊 session 約 1 小時內自動到期）。

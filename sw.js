@@ -1,6 +1,6 @@
 // 簡單 offline cache：展示櫃本體可以離線打開（app 本身當然要上網）
-const CACHE = 'showcase-v9';
-const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/icons/icon-192.png', '/icons/icon-512.png'];
+const CACHE = 'scout-tools-v10';
+const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));

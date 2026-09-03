@@ -1,6 +1,13 @@
 /* ════════════════════════════════════════════════════════════════
    數據層 store.js
    讀取優先序：Supabase（已配置）→ localStorage（demo）→ apps.json
+
+   ── 新版結構（多分頁）────────────────────────────────────
+   全站改名「童軍小工具」，含 4 個可分頁（每頁可獨立開放/關閉）：
+     apps  (小工具/Apps)   cards(學習圖卡)   ppt(簡報)   links(有用連結)
+   每個分頁有自己嘅一套分類；每頁入面嘅項目(全部係「連結」)逐個
+   可開/關。每個項目可揀 童軍級別標籤（小童軍/幼童軍/童軍/深資童軍/樂行童軍）
+   方便用戶篩選適合自己嘅內容。
    ════════════════════════════════════════════════════════════════ */
 
 // ⚙️ 建好 Supabase 項目後填呢度（步驟見 README.md「Admin 設置」）
@@ -15,6 +22,17 @@ const SUPABASE_CONFIG = {
 const LS_KEY = "showcase-admin-demo";
 let _sb = null;
 
+// 童軍級別標籤（固定，唔可以喺後台加減）
+const SCOUT_TAGS = ["小童軍", "幼童軍", "童軍", "深資童軍", "樂行童軍"];
+
+// 分類 emoji 建議清單（admin 揀選用）
+const CATEGORY_EMOJI = [
+  "🧭","📊","📈","📋","🗂️","🧰","🔧","🛠️","🎮","🎲","🧩","🃏",
+  "📖","🖼️","🎨","🧠","📽️","📺","🔗","🌐","💡","⭐","🎖️","🏅",
+  "⛺","🔥","🧗","🚣","🏕️","🗺️","🧭","📱","💻","📚","✏️","📝",
+  "📷","🎬","🎵","🗓️","✅","🔍","🧪","⚽","🏊","🚴"
+];
+
 function getSB() {
   if (SUPABASE_CONFIG.url && typeof window.supabase !== "undefined") {
     if (!_sb) _sb = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
@@ -22,7 +40,31 @@ function getSB() {
   return _sb;
 }
 
+// ── 預設模板（一鍵重設 & apps.json fallback 用）──────────────
+function makeDefaultSite() {
+  return {
+    name: "童軍小工具",
+    sub: "一個入口 · 分類排列 童軍 Apps／圖卡／簡報／有用連結",
+    pages: [
+      {
+        id: "apps", label: "小工具 Apps", icon: "🧰", enabled: true,
+        categories: [
+          { name: "電子進度紀錄", icon: "🧭", apps: [] },
+          { name: "小工具", icon: "🧰", apps: [] },
+          { name: "小遊戲", icon: "🎮", apps: [] }
+        ]
+      },
+      { id: "cards", label: "學習圖卡", icon: "🃏", enabled: false, categories: [] },
+      { id: "ppt",   label: "PPT 簡報", icon: "📽️", enabled: false, categories: [] },
+      { id: "links", label: "有用連結", icon: "🔗", enabled: false, categories: [] }
+    ]
+  };
+}
+
 function rowsToApp(r) {
+  const tags = Array.isArray(r.tags)
+    ? r.tags
+    : (typeof r.tags === "string" && r.tags ? r.tags.split(",") : []);
   return {
     name: r.name,
     url: r.url,
@@ -31,95 +73,168 @@ function rowsToApp(r) {
     github: r.github || null,
     note: r.note || null,
     visible: r.visible !== false,
+    tags: tags.map((t) => t.trim()).filter(Boolean),
     clicks: r.clicks || 0,
     sort_order: r.sort_order ?? 0,
-    _id: r.id
+    _id: r.id,
+    page: r.page || "apps"
   };
+}
+
+// 將「apps + categories」rows 組合成 pages 結構
+function buildSites(pagesData, catsData, appsData) {
+  const pageMap = new Map();
+  (pagesData || []).forEach((p, i) => {
+    const obj = {
+      id: p.id,
+      label: p.label || p.id,
+      icon: p.icon || "",
+      enabled: p.enabled !== false,
+      sort: p.sort_order ?? i,
+      categories: []
+    };
+    pageMap.set(p.id, obj);
+  });
+  // 確保四個預設頁都存在（即使 DB 未有某頁）
+  makeDefaultSite().pages.forEach((dp) => {
+    if (!pageMap.has(dp.id)) pageMap.set(dp.id, { id: dp.id, label: dp.label, icon: dp.icon, enabled: false, categories: [] });
+  });
+
+  const catByKey = new Map(); // `${page}::${name}`
+  const catByName = new Map(); // legacy: name
+  const ensureCat = (pageId, name, icon, order) => {
+    const key = pageId + "::" + name;
+    let c = catByKey.get(key);
+    if (!c) {
+      c = { name, icon: icon || "", apps: [] };
+      catByKey.set(key, c);
+      if (!pageMap.has(pageId)) {
+        pageMap.set(pageId, { id: pageId, label: pageId, icon: "", enabled: false, categories: [] });
+      }
+      pageMap.get(pageId).categories.push(c);
+    }
+    return c;
+  };
+
+  (catsData || []).forEach((c, i) => {
+    const page = c.page || "apps";
+    const key = page + "::" + c.name;
+    if (!catByKey.has(key)) {
+      const obj = { name: c.name, icon: c.icon || "", apps: [] };
+      catByKey.set(key, obj);
+      if (!pageMap.has(page)) pageMap.set(page, { id: page, label: page, icon: "", enabled: false, categories: [] });
+      pageMap.get(page).categories.push(obj);
+      catByName.set(c.name, obj);
+    }
+  });
+  (appsData || []).forEach((r) => {
+    const page = r.page || "apps";
+    const cat = catByKey.get(page + "::" + r.category) || ensureCat(page, r.category, "", 0);
+    cat.apps.push(rowsToApp(r));
+  });
+  const pages = [...pageMap.values()].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+  return { pages };
 }
 
 async function loadSites() {
   const sb = getSB();
   if (sb) {
+    const pagesRes = await sb.from("pages").select("*").order("sort_order");
+    const newSchema = !pagesRes.error && pagesRes.data;
+    if (newSchema) {
+      const [catsRes, appsRes] = await Promise.all([
+        sb.from("categories").select("*").order("sort_order"),
+        sb.from("apps").select("*").order("sort_order").order("created_at")
+      ]);
+      const cats = !catsRes.error ? catsRes.data || [] : [];
+      const apps = !appsRes.error ? appsRes.data || [] : [];
+      const sites = makeDefaultSite();
+      const built = buildSites(pagesRes.data, cats, apps);
+      sites.pages = built.pages;
+      return { source: "supabase", sites };
+    }
+    // 舊 schema（未行 migration）→ legacy 單頁 fallback，唔會整冧個站
     const [catsRes, appsRes] = await Promise.all([
       sb.from("categories").select("*").order("sort_order"),
       sb.from("apps").select("*").order("sort_order").order("created_at")
     ]);
-    if (!appsRes.error && appsRes.data) {
-      const catList = [];
-      const byName = new Map();
-      if (!catsRes.error && catsRes.data) {
-        for (const c of catsRes.data) {
-          const obj = { name: c.name, icon: c.icon || "", apps: [] };
-          catList.push(obj);
-          byName.set(c.name, obj);
-        }
-      }
-      for (const r of appsRes.data) {
-        let c = byName.get(r.category);
-        if (!c) {
-          c = { name: r.category, icon: "", apps: [] };
-          catList.push(c);
-          byName.set(c.name, c);
-        }
-        c.apps.push(rowsToApp(r));
-      }
-      return {
-        source: "supabase",
-        sites: { name: "我的 App 展示櫃", sub: "全部 app，一個入口", categories: catList }
-      };
-    }
+    const cats = !catsRes.error ? catsRes.data || [] : [];
+    const apps = !appsRes.error ? appsRes.data || [] : [];
+    const sites = makeDefaultSite();
+    sites.pages = buildSites(null, cats, apps).pages;
+    return { source: "supabase", sites };
   }
   try {
     const ls = JSON.parse(localStorage.getItem(LS_KEY));
-    if (ls && ls.categories) return { source: "demo", sites: ls };
+    if (ls && (ls.pages || ls.categories)) {
+      return { source: "demo", sites: normalizeSites(ls) };
+    }
   } catch {}
   const res = await fetch("apps.json", { cache: "no-cache" });
-  const sites = await res.json();
-  return { source: "json", sites };
+  const json = await res.json();
+  return { source: "json", sites: normalizeSites(json) };
 }
 
-// ── 分類確保存在（Supabase） ─────────────────────────────────
-async function ensureCategory(name, icon) {
+// 將舊格式 { categories: [...] } 轉成新版 pages（demo/apps.json 兼容）
+function normalizeSites(raw) {
+  const sites = makeDefaultSite();
+  if (raw.name) sites.name = raw.name;
+  if (raw.sub) sites.sub = raw.sub;
+  if (raw.pages && Array.isArray(raw.pages)) {
+    sites.pages = raw.pages.map((p) => ({
+      id: p.id || p.page || "apps",
+      label: p.label || p.id || "未命名",
+      icon: p.icon || "",
+      enabled: p.enabled !== false,
+      categories: (p.categories || []).map((c) => ({
+        name: c.name, icon: c.icon || "",
+        apps: (c.apps || []).map((a, ai) => normalizeApp(a, ai, c.name, p.id || p.page || "apps"))
+      }))
+    }));
+    return sites;
+  }
+  // legacy categories 單頁包裝
+  const allCats = [];
+  const page = { id: "apps", label: "小工具 Apps", icon: "🧰", enabled: true, categories: allCats };
+  (raw.categories || []).forEach((c) => {
+    allCats.push({
+      name: c.name, icon: c.icon || "",
+      apps: (c.apps || []).map((a, ai) => normalizeApp(a, ai, c.name, "apps"))
+    });
+  });
+  sites.pages = [page];
+  return sites;
+}
+
+function normalizeApp(a, i, catName, page) {
+  return {
+    name: a.name,
+    url: a.url,
+    description: a.description || null,
+    icon: a.icon || null,
+    github: a.github || null,
+    note: a.note || null,
+    visible: a.visible !== false,
+    tags: Array.isArray(a.tags) ? a.tags.filter(Boolean) : [],
+    clicks: a.clicks || 0,
+    sort_order: a.sort_order ?? i,
+    _id: a._id || "demo-" + Date.now() + "-" + i + "-" + Math.random().toString(36).slice(2, 6),
+    page
+  };
+}
+
+// ── 分類確保存在（Supabase）──────────────────────────────────
+async function ensureCategory(page, name, icon) {
   const sb = getSB();
   if (!sb) return;
-  const { data: exists } = await sb.from("categories").select("name").eq("name", name).maybeSingle();
+  const { data: exists } = await sb.from("categories").select("name").eq("name", name).eq("page", page).maybeSingle();
   if (exists) return;
-  const { count } = await sb.from("categories").select("*", { count: "exact", head: true });
-  await sb.from("categories").insert({ name, icon: icon || "", sort_order: count || 0 });
+  const { count } = await sb.from("categories").select("*", { count: "exact", head: true }).eq("page", page);
+  await sb.from("categories").insert({ name, icon: icon || "", page, sort_order: count || 0 });
 }
 
-// ── 首次匯入：apps.json → DB（只補尚未存在嘅 app，按 URL 判重） ──
-async function importFromJson() {
-  const sb = getSB();
-  if (!sb) throw new Error("只可以喺 Supabase 模式用");
-  const res = await fetch("apps.json", { cache: "no-cache" });
-  const sites = await res.json();
-  const { data: existing } = await sb.from("apps").select("url");
-  const have = new Set((existing || []).map((r) => r.url));
-  let added = 0;
-  for (const c of sites.categories) {
-    await ensureCategory(c.name, c.icon);
-    for (const a of c.apps) {
-      if (have.has(a.url)) continue;
-      const { error } = await sb.from("apps").insert({
-        name: a.name,
-        url: a.url,
-        description: a.description || null,
-        icon: a.icon || null,
-        github: a.github || null,
-        category: c.name,
-        visible: true
-      });
-      if (error) throw error;
-      added++;
-    }
-  }
-  return added;
-}
-
-// ── Admin 寫入 ────────────────────────────────────────────────
-async function adminSaveApp(app, id) {
-  const payload = {
+function appPayload(app) {
+  return {
     name: app.name,
     url: app.url,
     description: app.description || null,
@@ -127,35 +242,36 @@ async function adminSaveApp(app, id) {
     github: app.github || null,
     note: app.note || null,
     category: app.category,
+    page: app.page || "apps",
+    tags: Array.isArray(app.tags) ? app.tags : [],
     visible: app.visible !== false
   };
+}
+
+// ── Admin 寫入（新增/編輯 item）──────────────────────────────
+async function adminSaveApp(app, id) {
+  const payload = appPayload(app);
   const sb = getSB();
   if (sb) {
-    await ensureCategory(app.category, "");
+    await ensureCategory(app.page, app.category, "");
     const { error } = id
       ? await sb.from("apps").update(payload).eq("id", id)
       : await sb.from("apps").insert(payload);
     if (error) throw error;
     return;
   }
-  // demo 模式：整份寫入 localStorage
   const { sites } = await loadSites();
   if (id) {
-    for (const c of sites.categories) {
+    for (const p of sites.pages) for (const c of p.categories) {
       const i = c.apps.findIndex((a) => a._id === id);
       if (i >= 0) c.apps[i] = { ...c.apps[i], ...payload };
     }
   } else {
-    let cat = sites.categories.find((c) => c.name === app.category);
-    if (!cat) {
-      cat = { name: app.category, icon: "", apps: [] };
-      sites.categories.push(cat);
-    }
-    cat.apps.push({
-      ...payload,
-      clicks: 0,
-      _id: "demo-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8)
-    });
+    let page = sites.pages.find((p) => p.id === app.page);
+    if (!page) { page = { id: app.page, label: app.page, icon: "", enabled: true, categories: [] }; sites.pages.push(page); }
+    let cat = page.categories.find((c) => c.name === app.category);
+    if (!cat) { cat = { name: app.category, icon: "", apps: [] }; page.categories.push(cat); }
+    cat.apps.push({ ...payload, clicks: 0, _id: "demo-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) });
   }
   localStorage.setItem(LS_KEY, JSON.stringify(sites));
 }
@@ -168,34 +284,102 @@ async function adminDeleteApp(id) {
     return;
   }
   const { sites } = await loadSites();
-  sites.categories.forEach((c) => (c.apps = c.apps.filter((a) => a._id !== id)));
-  sites.categories = sites.categories.filter((c) => c.apps.length);
+  sites.pages.forEach((p) => p.categories.forEach((c) => (c.apps = c.apps.filter((a) => a._id !== id))));
+  sites.pages = sites.pages.filter((p) => p.categories.some((c) => c.apps.length) || p.enabled);
+  // 避免整頁變空但 enabled=false 被刪——改為只刪空且 disabled 嘅頁以外的空分類
+  sites.pages.forEach((p) => (p.categories = p.categories.filter((c) => c.apps.length)));
+  sites.pages = sites.pages.filter((p) => p.categories.length || p.enabled);
   localStorage.setItem(LS_KEY, JSON.stringify(sites));
 }
 
-// ── 分類：新增 / 排序 ─────────────────────────────────────────
-async function adminAddCategory(name, icon) {
+// ── 分類：新增 ───────────────────────────────────────────────
+async function adminAddCategory(page, name, icon) {
   name = (name || "").trim();
   if (!name) throw new Error("分類名稱必填");
   const sb = getSB();
   if (sb) {
-    const { data: exists } = await sb.from("categories").select("name").eq("name", name).maybeSingle();
-    if (exists) throw new Error("分類已經存在");
-    const { count } = await sb.from("categories").select("*", { count: "exact", head: true });
-    const { error } = await sb.from("categories").insert({ name, icon: icon || "", sort_order: count || 0 });
+    const { data: exists } = await sb.from("categories").select("name").eq("name", name).eq("page", page).maybeSingle();
+    if (exists) throw new Error("呢個分頁已經有「" + name + "」");
+    const { count } = await sb.from("categories").select("*", { count: "exact", head: true }).eq("page", page);
+    const { error } = await sb.from("categories").insert({ name, icon: icon || "", page, sort_order: count || 0 });
     if (error) throw error;
     return;
   }
   const { sites } = await loadSites();
-  if (sites.categories.some((c) => c.name === name)) throw new Error("分類已經存在");
-  sites.categories.push({ name, icon: icon || "", apps: [] });
+  const pg = sites.pages.find((p) => p.id === page);
+  if (pg && pg.categories.some((c) => c.name === name)) throw new Error("呢個分頁已經有「" + name + "」");
+  (pg || sites.pages.find((p) => p.id === "apps") || sites.pages[0]).categories.push({ name, icon: icon || "", apps: [] });
   localStorage.setItem(LS_KEY, JSON.stringify(sites));
 }
 
-async function adminMoveCategory(name, dir) {
+// ── 分類：改名 ───────────────────────────────────────────────
+async function adminRenameCategory(page, oldName, newName) {
+  newName = (newName || "").trim();
+  if (!newName) throw new Error("分類名稱必填");
+  if (oldName === newName) return;
   const sb = getSB();
   if (sb) {
-    const { data } = await sb.from("categories").select("*").order("sort_order");
+    const { data: dup } = await sb.from("categories").select("name").eq("page", page).eq("name", newName).maybeSingle();
+    if (dup) throw new Error("呢個分頁已經有「" + newName + "」");
+    const { error } = await sb.from("categories").update({ name: newName }).eq("page", page).eq("name", oldName);
+    if (error) throw error;
+    // 同步更新該分類下所有項目嘅 category
+    const { data: appList } = await sb.from("apps").select("id").eq("page", page).eq("category", oldName);
+    if (appList && appList.length) {
+      const { error: e2 } = await sb.from("apps").update({ category: newName }).eq("page", page).eq("category", oldName);
+      if (e2) throw e2;
+    }
+    return;
+  }
+  const { sites } = await loadSites();
+  for (const p of sites.pages) {
+    if (p.id !== page) continue;
+    if (p.categories.some((c) => c.name === newName)) throw new Error("呢個分頁已經有「" + newName + "」");
+    const c = p.categories.find((x) => x.name === oldName);
+    if (c) c.name = newName;
+  }
+  localStorage.setItem(LS_KEY, JSON.stringify(sites));
+}
+
+// ── 分類：改 icon ────────────────────────────────────────────
+async function adminSetCategoryIcon(page, name, icon) {
+  const sb = getSB();
+  if (sb) {
+    const { error } = await sb.from("categories").update({ icon: icon || "" }).eq("page", page).eq("name", name);
+    if (error) throw error;
+    return;
+  }
+  const { sites } = await loadSites();
+  const pg = sites.pages.find((p) => p.id === page);
+  const c = pg && pg.categories.find((x) => x.name === name);
+  if (c) c.icon = icon || "";
+  localStorage.setItem(LS_KEY, JSON.stringify(sites));
+}
+
+// ── 分類：刪除（連帶佢入面所有項目一齊刪）────────────────────
+async function adminDeleteCategory(page, name) {
+  const sb = getSB();
+  if (sb) {
+    const { data: appList } = await sb.from("apps").select("id").eq("page", page).eq("category", name);
+    if (appList && appList.length) {
+      const { error: e1 } = await sb.from("apps").delete().eq("page", page).eq("category", name);
+      if (e1) throw e1;
+    }
+    const { error } = await sb.from("categories").delete().eq("page", page).eq("name", name);
+    if (error) throw error;
+    return;
+  }
+  const { sites } = await loadSites();
+  const pg = sites.pages.find((p) => p.id === page);
+  if (pg) pg.categories = pg.categories.filter((c) => c.name !== name);
+  localStorage.setItem(LS_KEY, JSON.stringify(sites));
+}
+
+// ── 分類：頁內排序 ───────────────────────────────────────────
+async function adminMoveCategory(page, name, dir) {
+  const sb = getSB();
+  if (sb) {
+    const { data } = await sb.from("categories").select("*").eq("page", page).order("sort_order");
     if (!data || data.length < 2) return;
     const ordered = data.map((c) => c.name);
     const i = ordered.indexOf(name);
@@ -205,20 +389,36 @@ async function adminMoveCategory(name, dir) {
     for (let k = 0; k < ordered.length; k++) {
       const cur = data.find((c) => c.name === ordered[k]);
       if (cur.sort_order !== k) {
-        await sb.from("categories").update({ sort_order: k }).eq("name", cur.name);
+        await sb.from("categories").update({ sort_order: k }).eq("name", cur.name).eq("page", cur.page);
       }
     }
     return;
   }
   const { sites } = await loadSites();
-  const i = sites.categories.findIndex((c) => c.name === name);
+  const pg = sites.pages.find((p) => p.id === page);
+  if (!pg) return;
+  const i = pg.categories.findIndex((c) => c.name === name);
   const j = i + dir;
-  if (i < 0 || j < 0 || j >= sites.categories.length) return;
-  [sites.categories[i], sites.categories[j]] = [sites.categories[j], sites.categories[i]];
+  if (i < 0 || j < 0 || j >= pg.categories.length) return;
+  [pg.categories[i], pg.categories[j]] = [pg.categories[j], pg.categories[i]];
   localStorage.setItem(LS_KEY, JSON.stringify(sites));
 }
 
-// ── App 排序（分類之內） ──────────────────────────────────────
+// ── 分頁：開關（開放/關閉成個分頁）──────────────────────────
+async function adminSetPageEnabled(id, enabled) {
+  const sb = getSB();
+  if (sb) {
+    const { error } = await sb.from("pages").update({ enabled: enabled !== false }).eq("id", id);
+    if (error) throw error;
+    return;
+  }
+  const { sites } = await loadSites();
+  const pg = sites.pages.find((p) => p.id === id);
+  if (pg) pg.enabled = enabled !== false;
+  localStorage.setItem(LS_KEY, JSON.stringify(sites));
+}
+
+// ── App 排序（分類之內）──────────────────────────────────────
 async function adminMoveApp(id, dir) {
   const sb = getSB();
   if (sb) {
@@ -226,7 +426,7 @@ async function adminMoveApp(id, dir) {
     if (!all) return;
     const app = all.find((a) => a.id === id);
     if (!app) return;
-    const siblings = all.filter((a) => a.category === app.category);
+    const siblings = all.filter((a) => a.category === app.category && a.page === app.page);
     const i = siblings.findIndex((a) => a.id === id);
     const j = i + dir;
     if (i < 0 || j < 0 || j >= siblings.length) return;
@@ -239,7 +439,7 @@ async function adminMoveApp(id, dir) {
     return;
   }
   const { sites } = await loadSites();
-  for (const c of sites.categories) {
+  for (const p of sites.pages) for (const c of p.categories) {
     const i = c.apps.findIndex((a) => a._id === id);
     if (i < 0) continue;
     const j = i + dir;
@@ -251,7 +451,47 @@ async function adminMoveApp(id, dir) {
   }
 }
 
-// ── 改密碼（只喺管理面板、登入咗先可以用） ─────────────────────
+// ── 一鍵重設：清空 DB/local 再建立預設模板 ───────────────────
+async function resetToDefault() {
+  const sb = getSB();
+  const def = makeDefaultSite();
+  if (!sb) {
+    localStorage.setItem(LS_KEY, JSON.stringify(def));
+    return { categories: 3, items: 0, pages: 4 };
+  }
+  // 1) 刪全部 items
+  const { data: oldApps } = await sb.from("apps").select("id");
+  if (oldApps && oldApps.length) {
+    const { error } = await sb.from("apps").delete().in("id", oldApps.map((r) => r.id));
+    if (error) throw error;
+  }
+  // 2) 刪全部 categories
+  const { data: oldCats } = await sb.from("categories").select("name");
+  if (oldCats && oldCats.length) {
+    const { error } = await sb.from("categories").delete().in("name", oldCats.map((r) => r.name));
+    if (error) throw error;
+  }
+  // 3) pages（先刪再建，確保 4 頁齊）
+  const { error: delPages } = await sb.from("pages").delete().gte("sort_order", -1);
+  if (delPages && !/does not exist/i.test(delPages.message)) { /* 若 table 未有就當係新 */ }
+  let catCount = 0;
+  for (let pi = 0; pi < def.pages.length; pi++) {
+    const p = def.pages[pi];
+    const { error: pe } = await sb.from("pages").insert({
+      id: p.id, label: p.label, icon: p.icon || "", enabled: p.enabled, sort_order: pi
+    });
+    if (pe && !/duplicate/i.test(pe.message)) throw pe;
+    for (const c of p.categories) {
+      const { error: ce } = await sb.from("categories").insert({
+        name: c.name, icon: c.icon || "", page: p.id, sort_order: catCount++
+      });
+      if (ce && !/duplicate/i.test(ce.message)) throw ce;
+    }
+  }
+  return { categories: 3, items: 0, pages: def.pages.length };
+}
+
+// ── 改密碼 ──────────────────────────────────────────────────
 async function adminChangePassword(next) {
   const sb = getSB();
   if (!sb) throw new Error("demo 模式冇帳號");
@@ -259,12 +499,11 @@ async function adminChangePassword(next) {
   if (error) throw error;
 }
 
-// ── 點擊統計（公開頁面每次打開 app 時調用） ─────────────────────
+// ── 點擊統計（公開頁面每次打開 item 時調用）────────────────────
 function trackClick(id) {
   if (!id) return;
   const sb = getSB();
   if (sb) {
-    // 用 REST + keepalive：頁面跳走之前都會送出
     fetch(SUPABASE_CONFIG.url + "/rest/v1/rpc/bump_clicks", {
       method: "POST",
       keepalive: true,
@@ -277,11 +516,10 @@ function trackClick(id) {
     }).catch(() => {});
     return;
   }
-  // demo 模式
   try {
     const ls = JSON.parse(localStorage.getItem(LS_KEY));
     if (ls) {
-      for (const c of ls.categories) {
+      for (const p of ls.pages || []) for (const c of p.categories || []) {
         const a = c.apps.find((x) => x._id === id);
         if (a) a.clicks = (a.clicks || 0) + 1;
       }
@@ -295,103 +533,65 @@ function exportSites(sites) {
   const blob = new Blob([JSON.stringify(sites, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "showcase-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+  a.download = "scout-tools-backup-" + new Date().toISOString().slice(0, 10) + ".json";
   a.click();
   URL.revokeObjectURL(a.href);
 }
 
-// ── 由備份檔一鍵還原（完整覆蓋，唔係合併） ───────────────────
-// backup 格式同 exportSites 輸出一樣：{ name?, sub?, categories: [{ name, icon, apps: [...] }] }
+// ── 由備份檔一鍵還原（完整覆蓋，唔係合併）────────────────────
 async function restoreFromBackup(backup) {
-  if (!backup || !Array.isArray(backup.categories)) {
-    throw new Error("備份檔格式唔啱 — 需要有 categories 陣列（同「備份 JSON」下載嘅格式）");
-  }
-
+  const sites = normalizeSites(backup);
   const sb = getSB();
   if (!sb) {
-    // demo 模式：直接寫 localStorage
-    const sites = {
-      name: backup.name || "我的 App 展示櫃",
-      sub: backup.sub || "全部 app，一個入口",
-      categories: backup.categories.map((c, ci) => ({
-        name: c.name,
-        icon: c.icon || "",
-        apps: (c.apps || []).map((a, ai) => ({
-          name: a.name,
-          url: a.url,
-          description: a.description || null,
-          icon: a.icon || null,
-          github: a.github || null,
-          note: a.note || null,
-          visible: a.visible !== false,
-          clicks: a.clicks || 0,
-          sort_order: a.sort_order ?? ai,
-          _id: a._id || "demo-" + Date.now() + "-" + ai + "-" + Math.random().toString(36).slice(2, 6)
-        }))
-      }))
-    };
     localStorage.setItem(LS_KEY, JSON.stringify(sites));
-    let n = 0;
-    sites.categories.forEach((c) => (n += c.apps.length));
-    return { categories: sites.categories.length, apps: n };
+    let n = 0, c = 0;
+    sites.pages.forEach((p) => { c += p.categories.length; p.categories.forEach((x) => (n += x.apps.length)); });
+    return { pages: sites.pages.length, categories: c, items: n };
   }
-
-  // Supabase：清晒再寫返（真正還原）
-  // 1) 刪全部 apps
-  const { data: oldApps, error: listAppsErr } = await sb.from("apps").select("id");
-  if (listAppsErr) throw listAppsErr;
+  // 清空
+  const { data: oldApps } = await sb.from("apps").select("id");
   if (oldApps && oldApps.length) {
-    const { error } = await sb.from("apps").delete().in(
-      "id",
-      oldApps.map((r) => r.id)
-    );
+    const { error } = await sb.from("apps").delete().in("id", oldApps.map((r) => r.id));
     if (error) throw error;
   }
-
-  // 2) 刪全部 categories
-  const { data: oldCats, error: listCatsErr } = await sb.from("categories").select("name");
-  if (listCatsErr) throw listCatsErr;
+  const { data: oldCats } = await sb.from("categories").select("name");
   if (oldCats && oldCats.length) {
-    const { error } = await sb.from("categories").delete().in(
-      "name",
-      oldCats.map((r) => r.name)
-    );
+    const { error } = await sb.from("categories").delete().in("name", oldCats.map((r) => r.name));
     if (error) throw error;
   }
-
-  // 3) 寫入分類（保留順序）
-  let appCount = 0;
-  for (let ci = 0; ci < backup.categories.length; ci++) {
-    const c = backup.categories[ci];
-    if (!c || !c.name) continue;
-    const { error: catErr } = await sb.from("categories").insert({
-      name: c.name,
-      icon: c.icon || "",
-      sort_order: ci
+  // 清空 pages，再按 backup 重建
+  try {
+    const { data: oldPages } = await sb.from("pages").select("id");
+    if (oldPages && oldPages.length) {
+      const { error } = await sb.from("pages").delete().in("id", oldPages.map((r) => r.id));
+      if (error) throw error;
+    }
+  } catch {}
+  let catCount = 0, itemCount = 0;
+  for (let pi = 0; pi < sites.pages.length; pi++) {
+    const p = sites.pages[pi];
+    const { error: pe } = await sb.from("pages").insert({
+      id: p.id, label: p.label, icon: p.icon || "", enabled: p.enabled !== false, sort_order: pi
     });
-    if (catErr) throw catErr;
-
-    // 4) 寫入該分類嘅 apps
-    const apps = c.apps || [];
-    for (let ai = 0; ai < apps.length; ai++) {
-      const a = apps[ai];
-      if (!a || !a.name || !a.url) continue;
-      const { error: appErr } = await sb.from("apps").insert({
-        name: a.name,
-        url: a.url,
-        description: a.description || null,
-        icon: a.icon || null,
-        github: a.github || null,
-        note: a.note || null,
-        category: c.name,
-        visible: a.visible !== false,
-        clicks: typeof a.clicks === "number" ? a.clicks : 0,
-        sort_order: a.sort_order ?? ai
+    if (pe && !/duplicate/i.test(pe.message)) throw pe;
+    for (const c of p.categories) {
+      const { error: ce } = await sb.from("categories").insert({
+        name: c.name, icon: c.icon || "", page: p.id, sort_order: catCount++
       });
-      if (appErr) throw appErr;
-      appCount++;
+      if (ce && !/duplicate/i.test(ce.message)) throw ce;
+      for (const a of c.apps) {
+        if (!a.name || !a.url) continue;
+        const { error: ae } = await sb.from("apps").insert({
+          name: a.name, url: a.url, description: a.description || null,
+          icon: a.icon || null, github: a.github || null, note: a.note || null,
+          category: c.name, page: p.id, tags: a.tags || [],
+          visible: a.visible !== false, clicks: typeof a.clicks === "number" ? a.clicks : 0,
+          sort_order: a.sort_order ?? itemCount
+        });
+        if (ae) throw ae;
+        itemCount++;
+      }
     }
   }
-
-  return { categories: backup.categories.length, apps: appCount };
+  return { pages: sites.pages.length, categories: sites.pages.reduce((n, p) => n + p.categories.length, 0), items: itemCount };
 }
