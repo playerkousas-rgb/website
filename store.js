@@ -299,3 +299,99 @@ function exportSites(sites) {
   a.click();
   URL.revokeObjectURL(a.href);
 }
+
+// ── 由備份檔一鍵還原（完整覆蓋，唔係合併） ───────────────────
+// backup 格式同 exportSites 輸出一樣：{ name?, sub?, categories: [{ name, icon, apps: [...] }] }
+async function restoreFromBackup(backup) {
+  if (!backup || !Array.isArray(backup.categories)) {
+    throw new Error("備份檔格式唔啱 — 需要有 categories 陣列（同「備份 JSON」下載嘅格式）");
+  }
+
+  const sb = getSB();
+  if (!sb) {
+    // demo 模式：直接寫 localStorage
+    const sites = {
+      name: backup.name || "我的 App 展示櫃",
+      sub: backup.sub || "全部 app，一個入口",
+      categories: backup.categories.map((c, ci) => ({
+        name: c.name,
+        icon: c.icon || "",
+        apps: (c.apps || []).map((a, ai) => ({
+          name: a.name,
+          url: a.url,
+          description: a.description || null,
+          icon: a.icon || null,
+          github: a.github || null,
+          note: a.note || null,
+          visible: a.visible !== false,
+          clicks: a.clicks || 0,
+          sort_order: a.sort_order ?? ai,
+          _id: a._id || "demo-" + Date.now() + "-" + ai + "-" + Math.random().toString(36).slice(2, 6)
+        }))
+      }))
+    };
+    localStorage.setItem(LS_KEY, JSON.stringify(sites));
+    let n = 0;
+    sites.categories.forEach((c) => (n += c.apps.length));
+    return { categories: sites.categories.length, apps: n };
+  }
+
+  // Supabase：清晒再寫返（真正還原）
+  // 1) 刪全部 apps
+  const { data: oldApps, error: listAppsErr } = await sb.from("apps").select("id");
+  if (listAppsErr) throw listAppsErr;
+  if (oldApps && oldApps.length) {
+    const { error } = await sb.from("apps").delete().in(
+      "id",
+      oldApps.map((r) => r.id)
+    );
+    if (error) throw error;
+  }
+
+  // 2) 刪全部 categories
+  const { data: oldCats, error: listCatsErr } = await sb.from("categories").select("name");
+  if (listCatsErr) throw listCatsErr;
+  if (oldCats && oldCats.length) {
+    const { error } = await sb.from("categories").delete().in(
+      "name",
+      oldCats.map((r) => r.name)
+    );
+    if (error) throw error;
+  }
+
+  // 3) 寫入分類（保留順序）
+  let appCount = 0;
+  for (let ci = 0; ci < backup.categories.length; ci++) {
+    const c = backup.categories[ci];
+    if (!c || !c.name) continue;
+    const { error: catErr } = await sb.from("categories").insert({
+      name: c.name,
+      icon: c.icon || "",
+      sort_order: ci
+    });
+    if (catErr) throw catErr;
+
+    // 4) 寫入該分類嘅 apps
+    const apps = c.apps || [];
+    for (let ai = 0; ai < apps.length; ai++) {
+      const a = apps[ai];
+      if (!a || !a.name || !a.url) continue;
+      const { error: appErr } = await sb.from("apps").insert({
+        name: a.name,
+        url: a.url,
+        description: a.description || null,
+        icon: a.icon || null,
+        github: a.github || null,
+        note: a.note || null,
+        category: c.name,
+        visible: a.visible !== false,
+        clicks: typeof a.clicks === "number" ? a.clicks : 0,
+        sort_order: a.sort_order ?? ai
+      });
+      if (appErr) throw appErr;
+      appCount++;
+    }
+  }
+
+  return { categories: backup.categories.length, apps: appCount };
+}
