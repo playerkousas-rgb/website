@@ -30,10 +30,6 @@ function esc(s) {
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   }[c]));
 }
-function faviconUrl(url) {
-  try { return "https://www.google.com/s2/favicons?domain=" + new URL(url).hostname + "&sz=64"; }
-  catch { return null; }
-}
 
 // ── 最近使用（只記「小工具 Apps」分頁）────────────────────────
 const RECENT_KEY = "showcase-recent";
@@ -55,15 +51,16 @@ function iconHTML(app) {
   let inner = "";
   if (app.icon) {
     if (/^https?:\/\//i.test(app.icon)) {
-      inner = `<img src="${esc(app.icon)}" alt="" loading="lazy" decoding="async" onerror="this.remove()" />`;
+      // 自訂圖片網址；載入失敗就退返 Logo
+      inner = `<img src="${esc(app.icon)}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${SITE_LOGO}'" />`;
     } else {
       inner = esc(app.icon);
     }
   } else {
-    const fav = faviconUrl(app.url);
-    if (fav) inner = `<img src="${esc(fav)}" alt="" loading="lazy" decoding="async" onerror="this.remove()" />`;
+    // 冇揀 icon → 預設用我哋嘅 Logo
+    inner = `<img src="${SITE_LOGO}" alt="" loading="lazy" decoding="async" />`;
   }
-  return `<div class="tile-icon" style="background:linear-gradient(145deg,${c1},${c2})">${inner || "📦"}</div>`;
+  return `<div class="tile-icon" style="background:linear-gradient(145deg,${c1},${c2})">${inner}</div>`;
 }
 
 // ── 公開版面狀態 ─────────────────────────────────────────────
@@ -155,7 +152,7 @@ function sectionHTML(title, icon, apps, id) {
   return `
   <section id="${id}">
     <div class="sec-head">
-      ${icon ? `<span class="sec-ico">${icon}</span>` : ""}
+      ${icon ? `<span class="sec-ico">${icon}</span>` : `<img class="sec-ico-logo" src="${SITE_LOGO}" alt="" />`}
       <h2>${esc(title)}</h2>
       <span class="num">${apps.length}</span>
     </div>
@@ -280,7 +277,6 @@ async function main() {
     const { sites } = await loadSites();
     SITES = sites;
     document.getElementById("site-name").textContent = sites.name;
-    document.getElementById("site-sub").textContent = sites.sub;
     renderPages();
     const pages = enabledPages();
     const total = pages.reduce((n, p) => n + p.categories.reduce((m, c) => m + c.apps.filter((a) => a.visible !== false).length, 0), 0);

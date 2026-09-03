@@ -22,6 +22,9 @@ const SUPABASE_CONFIG = {
 const LS_KEY = "showcase-admin-demo";
 let _sb = null;
 
+// 全站 Logo（項目／分類冇揀 icon 時嘅預設圖示）
+const SITE_LOGO = "/icons/icon-192.png";
+
 // 童軍級別標籤（固定，唔可以喺後台加減）
 const SCOUT_TAGS = ["小童軍", "幼童軍", "童軍", "深資童軍", "樂行童軍"];
 
@@ -44,7 +47,6 @@ function getSB() {
 function makeDefaultSite() {
   return {
     name: "童軍小工具",
-    sub: "一個入口 · 分類排列 童軍 Apps／圖卡／簡報／有用連結",
     pages: [
       {
         id: "apps", label: "小工具 Apps", icon: "🧰", enabled: true,
@@ -179,7 +181,6 @@ async function loadSites() {
 function normalizeSites(raw) {
   const sites = makeDefaultSite();
   if (raw.name) sites.name = raw.name;
-  if (raw.sub) sites.sub = raw.sub;
   if (raw.pages && Array.isArray(raw.pages)) {
     sites.pages = raw.pages.map((p) => ({
       id: p.id || p.page || "apps",
