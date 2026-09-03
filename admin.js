@@ -1,12 +1,14 @@
 /* ════════════════════════════════════════════════════════════════
-   管理面板 admin.js
-   隱藏入口：你嘅網址 + #admin  →  例如 https://xxx.vercel.app/#admin
+   管理面板 admin.js（童軍小工具 · 多分頁）
+   隱藏入口：你嘅網址 + #admin
    兩個版面：
-   ① 管理 — 加 / 減 / 改介紹地址 / 隱藏 / 備註 / 排序 / 分類管理 / 改密碼
-   ② 總覽 — 同公開版面一樣嘅預覽（🔒 = 而家隱藏緊）
-   備份：📤 下載 JSON｜♻️ 上傳 backup 一鍵還原（完整覆蓋）
-   Supabase 模式：登入（配置咗 adminEmail 就只使打密碼）
-   未配置 Supabase：自動進入 demo 模式（數據只存喺本瀏覽器）
+   ① 管理 — 分頁開/關、每頁加分類、改/刪分類、每頁加/改/刪項目、
+            童軍級別標籤、排序、公開顯示(逐個開/關)、改密碼
+   ② 總覽 — 同公開版面一樣嘅預覽（🔒 = 隱藏緊）
+   額外：
+   ♻️ 一鍵重設 —— 清空 DB/local 再建立「預設模板」（4分頁 + 三分類）
+   📤 備份｜♻️ 還原（完整覆蓋）
+   Supabase 模式：登入；未配置自動入 demo 模式（存本瀏覽器）
    ════════════════════════════════════════════════════════════════ */
 
 function isAdminRoute() {
@@ -23,6 +25,7 @@ const ADMIN = {
   editId: null,
   form: {},
   sites: null,
+  _listener: false,
 
   async init() {
     document.getElementById("admin-panel").hidden = false;
@@ -31,7 +34,11 @@ const ADMIN = {
       const { data } = await sb.auth.getSession();
       this.authed = !!data?.session;
     } else {
-      this.authed = true; // demo 模式
+      this.authed = true;
+    }
+    if (!this._listener) {
+      this._listener = true;
+      document.getElementById("admin-content").addEventListener("click", (e) => ADMIN.onAction(e));
     }
     await this.refresh();
   },
@@ -42,187 +49,165 @@ const ADMIN = {
     renderAdmin();
   },
 
-  setTab(t) {
-    this.tab = t;
-    renderAdmin();
-  },
+  setTab(t) { this.tab = t; renderAdmin(); },
 
   async login() {
     const sb = getSB();
     const email = SUPABASE_CONFIG.adminEmail || val("l-email");
-    if (!email) {
-      document.getElementById("l-err").textContent = "請填 email";
-      return;
-    }
+    if (!email) { document.getElementById("l-err").textContent = "請填 email"; return; }
     const { error } = await sb.auth.signInWithPassword({ email, password: val("l-pass") });
-    if (error) {
-      document.getElementById("l-err").textContent = error.message;
-      return;
-    }
+    if (error) { document.getElementById("l-err").textContent = error.message; return; }
     this.authed = true;
     await this.refresh();
   },
-
   async logout() {
     await getSB().auth.signOut();
     this.authed = false;
     renderAdmin();
   },
-
   async changePassword() {
     const p1 = prompt("新密碼（至少 8 個字符）：");
     if (!p1) return;
-    if (p1.length < 8) {
-      alert("密碼要至少 8 個字符");
-      return;
-    }
+    if (p1.length < 8) { alert("密碼要至少 8 個字符"); return; }
     const p2 = prompt("請再輸入一次新密碼：");
-    if (p1 !== p2) {
-      alert("兩次輸入唔同");
-      return;
-    }
-    try {
-      await adminChangePassword(p1);
-      alert("改咗密碼 ✅ 而家可以把新密碼俾其他需要用嘅人");
-    } catch (e) {
-      alert("改密碼失敗：" + e.message + "\n（都可以喺 Supabase Dashboard → Authentication → Users 改）");
-    }
+    if (p1 !== p2) { alert("兩次輸入唔同"); return; }
+    try { await adminChangePassword(p1); alert("改咗密碼 ✅"); }
+    catch (e) { alert("改密碼失敗：" + e.message + "\n（可以去 Supabase Dashboard → Authentication → Users 改）"); }
   },
 
-  async submit() {
-    const name = val("f-name");
-    const url = val("f-url");
-    const catSel = val("f-cat");
-    const category = catSel === "__new__" ? val("f-cat-new") : catSel;
-    const visEl = document.getElementById("f-visible");
-    if (!name || !url || !category) {
-      alert("名稱、URL、分類都係必填");
-      return;
-    }
-    try {
-      await adminSaveApp(
-        {
-          name,
-          url,
-          description: val("f-desc"),
-          icon: val("f-icon"),
-          github: val("f-gh"),
-          note: val("f-note"),
-          category,
-          visible: visEl ? visEl.checked : true
-        },
-        this.editId
-      );
-      this.editId = null;
-      this.form = {};
-      await this.refresh();
-    } catch (e) {
-      alert("保存失敗：" + e.message);
-    }
-  },
-
+  // ── 資料輔助 ─────────────────────────────
   findApp(id) {
-    for (const c of this.sites.categories) {
+    for (const p of this.sites.pages) for (const c of p.categories) {
       const a = c.apps.find((x) => x._id === id);
-      if (a) return { ...a, category: c.name };
+      if (a) return { ...a, category: c.name, page: p.id };
     }
     return null;
+  },
+  catsOfPage(pageId) {
+    const p = this.sites.pages.find((x) => x.id === pageId);
+    return p ? p.categories : [];
   },
 
   edit(id) {
     const a = this.findApp(id);
-    if (a) {
-      this.editId = id;
-      this.form = a;
-      this.tab = "manage";
-      renderAdmin();
-      window.scrollTo({ top: 0 });
-    }
+    if (a) { this.editId = id; this.form = a; this.tab = "manage"; renderAdmin(); window.scrollTo({ top: 0 }); }
+  },
+  cancelEdit() { this.editId = null; this.form = {}; renderAdmin(); },
+
+  // 新增/儲存項目（含分頁 + 分類 + 標籤）
+  submit() {
+    const pageSel = document.getElementById("f-page");
+    const page = pageSel ? pageSel.value : this.form.page || "apps";
+    const catSel = document.getElementById("f-cat");
+    const category = catSel && catSel.value === "__new__"
+      ? val("f-cat-new") : (catSel ? catSel.value : this.form.category);
+    const name = val("f-name");
+    const url = val("f-url");
+    if (!name || !url || !category || !page) { alert("名稱、URL、分頁、分類都係必填"); return; }
+    const tags = SCOUT_TAGS.filter((t) => {
+      const el = document.getElementById("tag-" + t);
+      return el && el.checked;
+    });
+    const visEl = document.getElementById("f-visible");
+    try {
+      adminSaveApp({
+        name, url, page, category, tags,
+        description: val("f-desc"), icon: val("f-icon"),
+        github: val("f-gh"), note: val("f-note"),
+        visible: visEl ? visEl.checked : true
+      }, this.editId).then(() => {
+        this.editId = null; this.form = {};
+        return this.refresh();
+      }).catch((e) => alert("保存失敗：" + e.message));
+    } catch (e) { alert("保存失敗：" + e.message); }
   },
 
-  cancelEdit() {
-    this.editId = null;
-    this.form = {};
-    renderAdmin();
+  async removeItem(id) {
+    const a = this.findApp(id);
+    if (!a || !confirm(`確定刪除「${a.name}」？呢個操作不可逆。`)) return;
+    try {
+      await adminDeleteApp(id);
+      if (this.editId === id) { this.editId = null; this.form = {}; }
+      await this.refresh();
+    } catch (e) { alert("刪除失敗：" + e.message); }
   },
-
   async toggleVisible(id) {
     const a = this.findApp(id);
     if (!a) return;
     try {
       await adminSaveApp({ ...a, visible: a.visible === false }, id);
-      if (this.editId === id) {
-        this.editId = null;
-        this.form = {};
-      }
+      if (this.editId === id) { this.editId = null; this.form = {}; }
       await this.refresh();
-    } catch (e) {
-      alert("操作失敗：" + e.message);
-    }
+    } catch (e) { alert("操作失敗：" + e.message); }
   },
-
-  async remove(id) {
-    const a = this.findApp(id);
-    if (!a || !confirm(`確定刪除「${a.name}」？呢個操作不可逆。`)) return;
-    try {
-      await adminDeleteApp(id);
-      if (this.editId === id) {
-        this.editId = null;
-        this.form = {};
-      }
-      await this.refresh();
-    } catch (e) {
-      alert("刪除失敗：" + e.message);
-    }
-  },
-
-  // 排序
   async moveApp(id, dir) {
-    try {
-      await adminMoveApp(id, dir);
-      await this.refresh();
-    } catch (e) {
-      alert("排序失敗：" + e.message);
-    }
+    try { await adminMoveApp(id, dir); await this.refresh(); }
+    catch (e) { alert("排序失敗：" + e.message); }
   },
 
-  async moveCat(name, dir) {
-    try {
-      await adminMoveCategory(name, dir);
-      await this.refresh();
-    } catch (e) {
-      alert("分類排序失敗：" + e.message);
-    }
-  },
-
-  async addCat() {
+  // ── 分類動作 ─────────────────────────────
+  addCatFlow(page) {
     const name = prompt("新分類名稱：");
     if (!name || !name.trim()) return;
-    const icon = prompt("分類圖標（emoji，可留空）：") || "";
+    openEmojiPicker((emoji) => {
+      adminAddCategory(page, name.trim(), emoji || "")
+        .then(() => this.refresh())
+        .catch((e) => alert("新增分類失敗：" + e.message));
+    });
+  },
+  async renameCat(page, name) {
+    const nn = prompt("改名做（重新輸入）：", name);
+    if (!nn || !nn.trim() || nn.trim() === name) return;
+    try { await adminRenameCategory(page, name, nn.trim()); await this.refresh(); }
+    catch (e) { alert("改名失敗：" + e.message); }
+  },
+  async setCatIcon(page, name) {
+    openEmojiPicker(async (emoji) => {
+      try { await adminSetCategoryIcon(page, name, emoji || ""); await this.refresh(); }
+      catch (e) { alert("改 icon 失敗：" + e.message); }
+    });
+  },
+  async deleteCat(page, name) {
+    const pg = this.sites.pages.find((p) => p.id === page);
+    const c = pg && pg.categories.find((x) => x.name === name);
+    const n = c ? c.apps.length : 0;
+    if (!confirm(`確定刪除分類「${name}」？\n${n ? "連帶佢入面 " + n + " 個項目一齊刪。\n" : ""}呢個操作不可逆。`)) return;
+    try { await adminDeleteCategory(page, name); await this.refresh(); }
+    catch (e) { alert("刪除失敗：" + e.message); }
+  },
+  async moveCat(page, name, dir) {
+    try { await adminMoveCategory(page, name, dir); await this.refresh(); }
+    catch (e) { alert("分類排序失敗：" + e.message); }
+  },
+
+  // ── 分頁開關 ─────────────────────────────
+  async togglePage(id) {
+    const pg = this.sites.pages.find((p) => p.id === id);
+    if (!pg) return;
+    try { await adminSetPageEnabled(id, !pg.enabled); await this.refresh(); }
+    catch (e) { alert("開關分頁失敗：" + e.message); }
+  },
+
+  // ── 一鍵重設 ─────────────────────────────
+  async resetAll() {
+    const msg = "一鍵重設會：\n\n" +
+      "1) 刪走現時 DB / 本機 嘅所有項目同分類\n" +
+      "2) 建立「預設模板」：\n" +
+      "   · 小工具 Apps 分頁（開放）＋ 三分類：電子進度紀錄 / 小工具 / 小遊戲\n" +
+      "   · 學習圖卡、PPT 簡報、有用連結 三分頁（暫關閉，之後逐個開）\n\n" +
+      "⚠️ 不可逆，會完整覆蓋而家所有資料。確定要繼續？";
+    if (!confirm(msg)) return;
+    if (!confirm("再確認一次：真係要清空全部資料並重設？")) return;
     try {
-      await adminAddCategory(name, icon);
+      const r = await resetToDefault();
+      alert(`重設完成 ✅\n${r.pages} 個分頁 · ${r.categories} 個分類（已清空，可以開始加內容）`);
+      this.editId = null; this.form = {};
       await this.refresh();
-    } catch (e) {
-      alert("新增分類失敗：" + e.message);
-    }
+    } catch (e) { alert("重設失敗：" + e.message + "\n（可能需要先去 Supabase 執行 README 嘅 migration SQL）"); }
   },
 
-  doExport() {
-    if (this.sites) exportSites(this.sites);
-  },
-
-  async doImport() {
-    if (!confirm("由 apps.json 匯入所有尚未存在嘅 app 入 DB？（按 URL 判重，唔會重複）")) return;
-    try {
-      const n = await importFromJson();
-      alert(`匯入咗 ${n} 個 app`);
-      await this.refresh();
-    } catch (e) {
-      alert("匯入失敗：" + e.message);
-    }
-  },
-
-  // 一鍵還原：上傳「備份 JSON」下載嘅檔案 → 完整覆蓋 DB / demo 資料
+  // ── 備份 / 還原 ─────────────────────────
+  doExport() { if (this.sites) exportSites(this.sites); },
   doRestore() {
     let input = document.getElementById("restore-file");
     if (!input) {
@@ -237,55 +222,87 @@ const ADMIN = {
     input.value = "";
     input.click();
   },
-
   async _onRestoreFile(input) {
     const file = input.files && input.files[0];
     if (!file) return;
     let backup;
-    try {
-      const text = await file.text();
-      backup = JSON.parse(text);
-    } catch {
-      alert("讀唔到呢個檔案 — 請揀「備份 JSON」下載嘅 .json 檔");
+    try { backup = JSON.parse(await file.text()); }
+    catch { alert("讀唔到呢個檔案 — 請揀「📤 備份」下載嘅 .json 檔"); return; }
+    if (!backup || !(Array.isArray(backup.pages) || Array.isArray(backup.categories))) {
+      alert("備份檔格式唔啱 — 需要 pages/categories 陣列（同「📤 備份」下載嘅格式）");
       return;
     }
-    if (!backup || !Array.isArray(backup.categories)) {
-      alert("備份檔格式唔啱 — 需要有 categories 陣列（同「📤 備份 JSON」下載嘅格式）");
-      return;
-    }
-    let appN = 0;
-    backup.categories.forEach((c) => (appN += (c.apps || []).length));
-    const msg =
-      `確定用「${file.name}」還原？\n\n` +
-      `會有 ${backup.categories.length} 個分類、${appN} 個 app。\n` +
-      `⚠️ 而家 DB / 本機資料會被完整覆蓋（唔係合併），不可逆。`;
-    if (!confirm(msg)) return;
+    let cN = 0, iN = 0;
+    const pages = backup.pages || [{ categories: backup.categories }];
+    pages.forEach((p) => (p.categories || []).forEach((c) => { cN++; iN += (c.apps || []).length; }));
+    if (!confirm(`確定用「${file.name}」還原？\n會有 ${pages.length} 個分頁、${cN} 個分類、${iN} 個項目。\n⚠️ 現有資料會被完整覆蓋（唔係合併），不可逆。`)) return;
     if (!confirm("再確認一次：真係要覆蓋而家全部資料？")) return;
     try {
       const r = await restoreFromBackup(backup);
-      alert(`還原完成 ✅\n${r.categories} 個分類 · ${r.apps} 個 app`);
-      this.editId = null;
-      this.form = {};
+      alert(`還原完成 ✅\n${r.pages} 個分頁 · ${r.categories} 個分類 · ${r.items} 個項目`);
+      this.editId = null; this.form = {};
       await this.refresh();
-    } catch (e) {
-      alert("還原失敗：" + e.message);
-    }
+    } catch (e) { alert("還原失敗：" + e.message); }
   },
 
   doQR() {
     const target = location.origin + location.pathname;
-    window.open(
-      "https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=" + encodeURIComponent(target),
-      "_blank"
-    );
+    window.open("https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=" + encodeURIComponent(target), "_blank");
   },
+  close() { history.replaceState(null, "", location.pathname + location.search); location.reload(); },
 
-  close() {
-    history.replaceState(null, "", location.pathname + location.search);
-    location.reload();
+  // ── 委派動作 ─────────────────────────────
+  onAction(e) {
+    const t = e.target.closest("[data-act]");
+    if (!t) return;
+    const act = t.dataset.act;
+    const p = t.dataset.page, n = t.dataset.name, d = t.dataset.dir, id = t.dataset.id;
+    if (act === "page-toggle") { this.togglePage(p); }
+    else if (act === "page-addcat") { this.addCatFlow(p); }
+    else if (act === "cat-rename") { this.renameCat(p, n); }
+    else if (act === "cat-icon") { this.setCatIcon(p, n); }
+    else if (act === "cat-del") { this.deleteCat(p, n); }
+    else if (act === "cat-move") { this.moveCat(p, n, Number(d)); }
+    else if (act === "item-edit") { this.edit(id); }
+    else if (act === "item-hide") { this.toggleVisible(id); }
+    else if (act === "item-del") { this.removeItem(id); }
+    else if (act === "item-move") { this.moveApp(id, Number(d)); }
+    else if (act === "reset") { this.resetAll(); }
   }
 };
 
+/* ── Emoji 揀選 ─────────────────────────────────────────── */
+let EMOJI_CB = null;
+function openEmojiPicker(cb) {
+  EMOJI_CB = cb;
+  let panel = document.getElementById("emoji-panel");
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = "emoji-panel";
+    panel.className = "emoji-panel";
+    panel.innerHTML = `
+      <div class="emoji-panel-inner">
+        <div class="emoji-panel-head">揀個 emoji <span class="spacer"></span><button type="button" class="mini-btn iconish" data-emoji-close="1">×</button></div>
+        <div class="emoji-grid">${CATEGORY_EMOJI.map((x) => `<button type="button" class="emoji-cell" data-emoji="${x}">${x}</button>`).join("")}</div>
+        <div style="margin-top:8px"><button type="button" class="mini-btn" data-emoji-none="1">不用 emoji（用預設）</button></div>
+      </div>`;
+    panel.addEventListener("click", (e) => {
+      const cell = e.target.closest("[data-emoji]");
+      const none = e.target.closest("[data-emoji-none]");
+      const close = e.target.closest("[data-emoji-close]");
+      if (cell && EMOJI_CB) { const cb = EMOJI_CB; EMOJI_CB = null; panel.hidden = true; cb(cell.dataset.emoji); }
+      else if (none && EMOJI_CB) { const cb = EMOJI_CB; EMOJI_CB = null; panel.hidden = true; cb(""); }
+      else if (close) { EMOJI_CB = null; panel.hidden = true; }
+    });
+    document.body.appendChild(panel);
+  }
+  panel.hidden = false;
+}
+function pickIntoInput(inputId) {
+  openEmojiPicker((emoji) => { const el = document.getElementById(inputId); if (el) el.value = emoji; });
+}
+
+/* ── 登入頁 ─────────────────────────────────────────────── */
 function loginHTML() {
   const preset = SUPABASE_CONFIG.adminEmail;
   return `
@@ -295,17 +312,10 @@ function loginHTML() {
       <img class="admin-logo" src="/icons/icon-192.png" alt="" />
       <h2>🔐 管理員登入</h2>
     </div>
-    <p style="font-size:13px;color:var(--muted);margin:4px 0 6px;line-height:1.5">
-      ${preset ? "帳號已預填，只需要打密碼。" : "只有已授權用戶可以登入。"}
-      設置方法見 README.md
-    </p>
-    ${
-      preset
-        ? `<div class="admin-lbl">帳號</div>
-           <input style="width:100%" value="${esc(preset)}" disabled autocomplete="username" />`
-        : `<div class="admin-lbl">Email</div>
-           <input id="l-email" type="email" style="width:100%" placeholder="you@example.com" autocomplete="username" inputmode="email" />`
-    }
+    <p style="font-size:13px;color:var(--muted);margin:4px 0 6px;line-height:1.5">${preset ? "帳號已預填，只需要打密碼。" : "只有已授權用戶可以登入。"}</p>
+    ${preset
+      ? `<div class="admin-lbl">帳號</div><input style="width:100%" value="${esc(preset)}" disabled autocomplete="username" />`
+      : `<div class="admin-lbl">Email</div><input id="l-email" type="email" style="width:100%" placeholder="you@example.com" autocomplete="username" inputmode="email" />`}
     <div class="admin-lbl">Password</div>
     <input id="l-pass" type="password" style="width:100%" placeholder="••••••••" autocomplete="current-password" />
     <div class="admin-actions" style="margin-top:16px">
@@ -317,125 +327,177 @@ function loginHTML() {
   </div>`;
 }
 
-function manageHTML() {
+/* ── 新增/編輯項目 表單 ─────────────────────────────────── */
+function tagCheckHTML(checkedTags) {
+  return `<div class="tag-check-wrap">` +
+    SCOUT_TAGS.map((t) => {
+      const on = Array.isArray(checkedTags) && checkedTags.includes(t);
+      return `<label class="tag-check ${on ? "on" : ""}">
+        <input type="checkbox" id="tag-${esc(t)}" ${on ? "checked" : ""} />${esc(t)}</label>`;
+    }).join("") + `</div>`;
+}
+
+function formHTML() {
   const f = ADMIN.form;
-  const cats = ADMIN.sites.categories.map((c) => c.name);
+  const edit = !!ADMIN.editId;
+  const pages = ADMIN.sites.pages;
+  // 編輯時用 item 本身分頁；新增用第一個開放/Apps 分頁
+  const selPage = f.page || (pages.find((p) => p.id === "apps") ? "apps" : pages[0].id);
+  const cats = ADMIN.catsOfPage(selPage);
+  const catInList = cats.some((c) => c.name === f.category);
   return `
   <div class="admin-card">
-    <div class="admin-lbl">${ADMIN.editId ? "✏️ 編輯 app" : "＋ 新增 app"}</div>
+    <div class="admin-lbl">${edit ? "✏️ 編輯項目" : "＋ 新增項目"}</div>
     <div class="admin-row">
       <input id="f-name" placeholder="名稱 *" value="${esc(f.name || "")}" autocomplete="off" />
-      <input id="f-url" placeholder="URL *（https://…）" value="${esc(f.url || "")}" inputmode="url" autocomplete="off" />
+      <input id="f-url" placeholder="連結 URL *（https://…）" value="${esc(f.url || "")}" inputmode="url" autocomplete="off" />
     </div>
     <div class="admin-row">
-      <select id="f-cat">
-        ${cats.map((c) => `<option value="${esc(c)}" ${f.category === c ? "selected" : ""}>${esc(c)}</option>`).join("")}
-        <option value="__new__" ${f.category === "__new__" ? "selected" : ""}>＋ 新分類…</option>
+      <select id="f-page">
+        ${pages.map((p) => `<option value="${esc(p.id)}" ${p.id === selPage ? "selected" : ""}>${esc((p.icon ? p.icon + " " : "") + p.label)}${p.enabled ? "" : "（關閉中）"}</option>`).join("")}
       </select>
-      <input id="f-cat-new" placeholder="新分類名稱" style="display:${f.category === "__new__" ? "" : "none"}" value="${esc(f.category === "__new__" ? f.newCat || "" : "")}" />
+      <select id="f-cat">
+        ${cats.map((c) => `<option value="${esc(c.name)}" ${(!edit && f.category === c.name) || (edit && c.name === f.category) ? "selected" : ""}>${esc(c.name)}</option>`).join("")}
+        <option value="__new__" ${f.category === "__new__" ? "selected" : ""}>＋ 呢頁新分類…</option>
+      </select>
+    </div>
+    <input id="f-cat-new" placeholder="新分類名稱（喺揀定嘅分頁開新分類）" style="display:${f.category === "__new__" ? "" : "none"};margin-top:8px;min-height:44px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--bg);color:var(--text);width:100%" value="${esc(edit && !catInList ? f.category : "")}" />
+    <div class="admin-lbl">適用童軍級別（可多選，公開版可篩選）</div>
+    ${tagCheckHTML(f.tags)}
+    <div class="admin-lbl">介紹（公開版面顯示，可選）</div>
+    <input id="f-desc" placeholder="介紹…" value="${esc(f.description || "")}" />
+    <div class="admin-lbl">圖示</div>
+    <div class="admin-row">
+      <input id="f-icon" placeholder="emoji 或圖片網址" value="${esc(f.icon || "")}" style="flex:2" />
+      <button class="mini-btn" onclick="pickIntoInput('f-icon')">🎨 揀 emoji</button>
     </div>
     <div class="admin-row">
-      <input id="f-desc" placeholder="介紹（顯示喺公開版面，可選）" value="${esc(f.description || "")}" />
-    </div>
-    <div class="admin-row">
-      <input id="f-icon" placeholder="圖標 emoji" value="${esc(f.icon || "")}" style="max-width:110px" />
       <input id="f-gh" placeholder="GitHub repo（可選）" value="${esc(f.github || "")}" inputmode="url" />
-    </div>
-    <div class="admin-row">
       <input id="f-note" placeholder="內部備註（只有管理見到）" value="${esc(f.note || "")}" />
     </div>
-    <div class="admin-row">
-      <label class="vis-lbl">
-        <input id="f-visible" type="checkbox" ${f.visible !== false ? "checked" : ""} />
-        公開顯示（取消 = 隱藏）
-      </label>
-    </div>
+    <label class="vis-lbl"><input id="f-visible" type="checkbox" ${f.visible !== false ? "checked" : ""} /> 公開顯示（取消 = 收埋呢個項目）</label>
     <div class="admin-actions" style="margin-top:12px">
-      <button class="mini-btn primary" onclick="ADMIN.submit()">💾 ${ADMIN.editId ? "儲存" : "加入"}</button>
-      ${ADMIN.editId ? '<button class="mini-btn" onclick="ADMIN.cancelEdit()">取消</button>' : ""}
-    </div>
-    <div class="admin-lbl">目前嘅 apps（▲▼ 排序｜隱藏/顯示即時生效）</div>
-    ${listHTML()}
-    <div style="margin-top:12px">
-      <button class="mini-btn" onclick="ADMIN.addCat()">＋ 新增分類</button>
+      <button class="mini-btn primary" onclick="ADMIN.submit()">💾 ${edit ? "儲存" : "加入"}</button>
+      ${edit ? '<button class="mini-btn" onclick="ADMIN.cancelEdit()">取消</button>' : ""}
     </div>
   </div>`;
 }
 
-function listHTML() {
-  return ADMIN.sites.categories
-    .map(
-      (c) => `
-    <div class="admin-cat-head">
-      <span>${c.icon ? c.icon + " " : ""}${esc(c.name)}</span>
-      <span style="flex:1"></span>
-      <button class="mini-btn iconish" title="分類上移" aria-label="分類上移" onclick='ADMIN.moveCat(${JSON.stringify(c.name)}, -1)'>▲</button>
-      <button class="mini-btn iconish" title="分類下移" aria-label="分類下移" onclick='ADMIN.moveCat(${JSON.stringify(c.name)}, 1)'>▼</button>
+/* ── 分頁 + 分類 + 項目 管理列 ──────────────────────────── */
+function itemRowHTML(a) {
+  const tags = a.tags && a.tags.length ? a.tags.map((t) => `<span class="mini-tag">${esc(t)}</span>`).join("") : "";
+  return `
+  <div class="admin-app-row">
+    <span style="font-size:18px;line-height:1">${a.icon || "📦"}</span>
+    <b>${esc(a.name)}</b>
+    ${a.visible === false ? '<span class="lock-tag">🔒 隱藏</span>' : ""}
+    ${tags ? `<span class="mini-tag-row">${tags}</span>` : ""}
+    <span class="u" title="${esc(a.note || "")}">${esc(a.url)}${a.note ? " · 📌" : ""}${a.clicks ? ` · ${a.clicks} 次` : ""}</span>
+    <div class="admin-app-actions">
+      <button class="mini-btn iconish" data-act="item-move" data-id="${a._id}" data-dir="-1" title="上移">▲</button>
+      <button class="mini-btn iconish" data-act="item-move" data-id="${a._id}" data-dir="1" title="下移">▼</button>
+      <button class="mini-btn" data-act="item-edit" data-id="${a._id}">編輯</button>
+      <button class="mini-btn" data-act="item-hide" data-id="${a._id}">${a.visible === false ? "顯示" : "隱藏"}</button>
+      <button class="mini-btn danger" data-act="item-del" data-id="${a._id}">刪除</button>
     </div>
-    ${c.apps
-      .map(
-        (a) => `
-      <div class="admin-app-row">
-        <span style="font-size:18px;line-height:1">${a.icon || "📦"}</span>
-        <b>${esc(a.name)}</b>
-        ${a.visible === false ? '<span class="lock-tag">🔒 隱藏</span>' : ""}
-        <span class="u" title="${esc(a.note || "")}">${esc(a.url)}${a.note ? " · 📌" : ""}${a.clicks ? ` · ${a.clicks} 次` : ""}</span>
-        <div class="admin-app-actions">
-          <button class="mini-btn iconish" title="上移" aria-label="上移" onclick='ADMIN.moveApp(${JSON.stringify(a._id || "")}, -1)'>▲</button>
-          <button class="mini-btn iconish" title="下移" aria-label="下移" onclick='ADMIN.moveApp(${JSON.stringify(a._id || "")}, 1)'>▼</button>
-          <button class="mini-btn" onclick='ADMIN.edit(${JSON.stringify(a._id || "")})'>編輯</button>
-          <button class="mini-btn" onclick='ADMIN.toggleVisible(${JSON.stringify(a._id || "")})'>${a.visible === false ? "顯示" : "隱藏"}</button>
-          <button class="mini-btn danger" onclick='ADMIN.remove(${JSON.stringify(a._id || "")})'>刪除</button>
-        </div>
-      </div>`
-      )
-      .join("")}`
-    )
-    .join("");
+  </div>`;
+}
+
+function pageGroupHTML(p) {
+  const cats = p.categories;
+  const itemCount = cats.reduce((n, c) => n + c.apps.length, 0);
+  const hidden = cats.reduce((n, c) => n + c.apps.filter((a) => a.visible === false).length, 0);
+  const catHTML = cats.map((c) => `
+    <div class="admin-cat-head">
+      <span>${c.icon ? c.icon + " " : "🗂️ "}${esc(c.name)}</span>
+      <span class="num-badge">${c.apps.length}</span>
+      <span style="flex:1"></span>
+      <button class="mini-btn iconish" data-act="cat-move" data-page="${esc(p.id)}" data-name="${esc(c.name)}" data-dir="-1" title="分類上移">▲</button>
+      <button class="mini-btn iconish" data-act="cat-move" data-page="${esc(p.id)}" data-name="${esc(c.name)}" data-dir="1" title="分類下移">▼</button>
+      <button class="mini-btn" data-act="cat-rename" data-page="${esc(p.id)}" data-name="${esc(c.name)}">改名</button>
+      <button class="mini-btn" data-act="cat-icon" data-page="${esc(p.id)}" data-name="${esc(c.name)}">🎨 emoji</button>
+      <button class="mini-btn danger" data-act="cat-del" data-page="${esc(p.id)}" data-name="${esc(c.name)}">刪分類</button>
+    </div>
+    ${c.apps.map(itemRowHTML).join("") || '<div style="color:var(--muted);font-size:12.5px;padding:6px 12px">（呢個分類仲未有任何項目）</div>'}
+  `).join("");
+
+  return `
+  <div class="page-block">
+    <div class="page-block-head">
+      <span class="page-ico">${p.icon || "📄"}</span>
+      <div class="page-meta">
+        <div class="page-title">${esc(p.label)} <span class="num-badge">${cats.length} 分類 · ${itemCount} 項${hidden ? " · 🔒" + hidden : ""}</span></div>
+        <div style="font-size:11.5px;color:var(--muted)">id: ${esc(p.id)}</div>
+      </div>
+      <span style="flex:1"></span>
+      <label class="page-on">
+        <input type="checkbox" ${p.enabled ? "checked" : ""} onchange="ADMIN.togglePage('${esc(p.id)}')" />
+        <span>${p.enabled ? "開放中" : "已關閉"}</span>
+      </label>
+    </div>
+    ${catHTML}
+    <button class="mini-btn" style="margin-top:10px" data-act="page-addcat" data-page="${esc(p.id)}">＋ 呢頁加分類</button>
+  </div>`;
+}
+
+function manageHTML() {
+  return `
+  ${formHTML()}
+  <div class="admin-card">
+    <div class="admin-lbl">分頁 ＋ 分類 ＋ 項目 管理</div>
+    <div class="banner" style="background:var(--accent-soft);color:var(--accent-text);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)">
+      每頁可獨立「開放 / 關閉」（✓開放先至會喺公開版出現）。關閉咗嘅分頁內容仍然保留，隨時可以開返。<br/>
+      分類只屬某一個分頁 —— 改/刪分類、加項目都要先揀啱分頁。項目可揀童軍級別標籤，公開版畀用戶篩選。
+    </div>
+    ${ADMIN.sites.pages.map(pageGroupHTML).join("")}
+  </div>`;
+}
+
+/* ── 總覽 ───────────────────────────────────────────────── */
+function tilesForCat(cat) {
+  return cat.apps.map((a) => {
+    const [g1, g2] = tileBg(a.name);
+    let inner = "";
+    if (a.icon) { if (/^https?:/i.test(a.icon)) inner = `<img src="${esc(a.icon)}" alt="" />`; else inner = esc(a.icon); }
+    return `
+    <a class="tile" href="${esc(a.url)}" title="${esc((a.description || "") + (a.visible === false ? "（隱藏中）" : ""))}" target="_blank" rel="noopener">
+      ${a.visible === false ? '<span class="lock-tag" style="position:absolute;top:2px;right:2px;z-index:2">🔒</span>' : ""}
+      <div class="tile-icon" style="background:linear-gradient(145deg,${g1},${g2})">${inner || "📦"}</div>
+      <div class="tile-name">${esc(a.name)}</div>
+      ${(a.tags && a.tags.length) ? `<div class="tile-tags">${a.tags.map((t) => `<span>${esc(t)}</span>`).join("")}</div>` : ""}
+      ${a.description ? `<div class="tile-desc">${esc(a.description)}</div>` : ""}
+    </a>`;
+  }).join("");
 }
 
 function allViewHTML() {
-  const allApps = [];
-  ADMIN.sites.categories.forEach((c) => c.apps.forEach((a) => allApps.push(a)));
-  const visibleCount = allApps.filter((a) => a.visible !== false).length;
-  const sections = ADMIN.sites.categories
-    .map(
-      (c) => `
-    <div class="sec-head" style="margin-top:16px">
-      ${c.icon ? `<span class="sec-ico">${c.icon}</span>` : ""}
-      <h2>${esc(c.name)}</h2>
-      <span class="num">${c.apps.length}</span>
-    </div>
-    <div class="grid">${tilesForCat(c)}</div>`
-    )
-    .join("");
+  let total = 0, pub = 0, hidden = 0;
+  const enabled = ADMIN.sites.pages.filter((p) => p.enabled);
+  const html = enabled.map((p) => {
+    const catsHtml = p.categories.map((c) => {
+      const shown = c.apps.filter((a) => a.visible !== false);
+      total += shown.length; hidden += c.apps.length - shown.length; pub += shown.length;
+      return shown.length ? `
+      <div class="sec-head" style="margin-top:14px">
+        ${c.icon ? `<span class="sec-ico">${c.icon}</span>` : ""}
+        <h2>${esc(c.name)}</h2><span class="num">${shown.length}</span>
+      </div>
+      <div class="grid">${tilesForCat({ ...c, apps: shown })}</div>` : "";
+    }).join("");
+    return catsHtml
+      ? `<div class="page-sublabel">${esc((p.icon ? p.icon + " " : "") + p.label)}</div>${catsHtml}`
+      : `<div class="page-sublabel">${esc((p.icon ? p.icon + " " : "") + p.label)} <span style="color:var(--muted)">（未有內容）</span></div>`;
+  }).join("");
+
   return `
   <div class="admin-card">
-    <div class="banner ok">公眾版面預覽：共 ${allApps.length} 個（${visibleCount} 公開 · ${allApps.length - visibleCount} 隱藏）。🔒 = 隱藏中。</div>
-    ${sections || '<p style="color:var(--muted);font-size:13px;padding:12px 0">仲未有任何 app</p>'}
+    <div class="banner ok">公眾版面預覽：${pub} 公開 · ${hidden} 隱藏（🔒）· ${ADMIN.sites.pages.filter((p) => p.enabled).length} 個開放分頁。</div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:4px">關閉咗嘅分頁唔會顯示喺下面。</div>
+    ${html || '<p style="color:var(--muted);font-size:13px;padding:12px 0">所有分頁都未開放／未有內容</p>'}
   </div>`;
 }
 
-function tilesForCat(cat) {
-  return cat.apps
-    .map((a) => {
-      const [g1, g2] = tileBg(a.name);
-      let inner = "";
-      if (a.icon) {
-        if (/^https?:\/\//i.test(a.icon)) inner = `<img src="${esc(a.icon)}" alt="" />`;
-        else inner = esc(a.icon);
-      }
-      return `
-      <a class="tile" href="${esc(a.url)}" title="${esc((a.description || "") + (a.visible === false ? "（隱藏中）" : ""))}">
-        ${a.visible === false ? '<span class="lock-tag" style="position:absolute;top:2px;right:2px;z-index:2">🔒</span>' : ""}
-        <div class="tile-icon" style="background:linear-gradient(145deg,${g1},${g2})">${inner || "📦"}</div>
-        <div class="tile-name">${esc(a.name)}</div>
-        ${a.description ? `<div class="tile-desc">${esc(a.description)}</div>` : ""}
-      </a>`;
-    })
-    .join("");
-}
-
+/* ── 主渲染 ─────────────────────────────────────────────── */
 function renderAdmin() {
   const el = document.getElementById("admin-content");
   const sb = getSB();
@@ -443,12 +505,7 @@ function renderAdmin() {
   if (sb && !ADMIN.authed) {
     el.innerHTML = loginHTML();
     const pass = document.getElementById("l-pass");
-    if (pass) {
-      pass.focus();
-      pass.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") ADMIN.login();
-      });
-    }
+    if (pass) { pass.focus(); pass.addEventListener("keydown", (e) => { if (e.key === "Enter") ADMIN.login(); }); }
     return;
   }
   if (!ADMIN.sites) {
@@ -462,14 +519,12 @@ function renderAdmin() {
       <img class="admin-logo" src="/icons/icon-192.png" alt="" onclick="goldfingerClick()" />
       <div>
         <h2>⚙️ 管理面板</h2>
-        <div style="font-size:12px;color:var(--muted);margin-top:-2px">加 / 改 / 隱藏 / 備份還原</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:-2px">分頁／分類／項目管理 · 童軍小工具</div>
       </div>
     </div>
-    ${
-      sb
-        ? '<div class="banner ok">已連接 Supabase — 改動即時生效，所有人都見到</div>'
-        : '<div class="banner warn">⚠️ Demo 模式：改動只存喺呢部裝置，唔會同步。配置方法見 README.md</div>'
-    }
+    ${sb
+      ? '<div class="banner ok">已連接 Supabase — 改動即時生效，所有人都見到</div>'
+      : '<div class="banner warn">⚠️ Demo 模式：改動只存喺呢部裝置。配置方法見 README.md</div>'}
     <div class="tab-bar">
       <button type="button" class="tab-btn ${ADMIN.tab === "manage" ? "on" : ""}" onclick="ADMIN.setTab('manage')">🛠 管理</button>
       <button type="button" class="tab-btn ${ADMIN.tab === "all" ? "on" : ""}" onclick="ADMIN.setTab('all')">👀 總覽</button>
@@ -479,17 +534,29 @@ function renderAdmin() {
       <button type="button" class="mini-btn" onclick="ADMIN.doExport()">📤 備份</button>
       <button type="button" class="mini-btn" onclick="ADMIN.doRestore()" title="上傳 backup 完整覆蓋">♻️ 還原</button>
       <button type="button" class="mini-btn" onclick="ADMIN.doQR()">🔳 QR</button>
-      ${sb && ADMIN.authed ? '<button type="button" class="mini-btn" onclick="ADMIN.doImport()">📥 匯入</button>' : ""}
+      <button type="button" class="mini-btn danger" onclick="ADMIN.resetAll()" title="清空所有並建立預設模板">⚠️ 一鍵重設</button>
       <span class="spacer"></span>
       <button type="button" class="mini-btn primary full" onclick="ADMIN.close()">✅ 完成</button>
       ${sb && ADMIN.authed ? '<button type="button" class="mini-btn danger" onclick="ADMIN.logout()">登出</button>' : ""}
     </div>
   </div>`;
 
-  const sel = document.getElementById("f-cat");
-  if (sel) {
-    sel.onchange = (e) => {
-      document.getElementById("f-cat-new").style.display = e.target.value === "__new__" ? "" : "none";
+  // 新增/編輯項目：分頁 → 分類 連動
+  const pageSel = document.getElementById("f-page");
+  const catSel = document.getElementById("f-cat");
+  if (pageSel) {
+    pageSel.onchange = () => {
+      const page = pageSel.value;
+      const cats = ADMIN.catsOfPage(page);
+      catSel.innerHTML = cats.map((c) => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join("") +
+        '<option value="__new__">＋ 呢頁新分類…</option>';
+      catSel.onchange();
+    };
+  }
+  if (catSel) {
+    catSel.onchange = () => {
+      const nc = document.getElementById("f-cat-new");
+      if (nc) nc.style.display = catSel.value === "__new__" ? "" : "none";
     };
   }
 }

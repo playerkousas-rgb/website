@@ -1,7 +1,7 @@
 {
-  "name": "Scout System",
-  "short_name": "Scout",
-  "description": "Scout System — 我所有 app 的分類展示櫃，一個入口打開全部",
+  "name": "童軍小工具",
+  "short_name": "童軍工具",
+  "description": "童軍小工具 — 童軍 Apps／學習圖卡／PPT／有用連結 的分類展示櫃，一個入口打開全部",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -9,7 +9,7 @@
   "background_color": "#f2f4f8",
   "theme_color": "#2563eb",
   "lang": "zh-HK",
-  "categories": ["utilities", "productivity"],
+  "categories": ["utilities", "education"],
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
