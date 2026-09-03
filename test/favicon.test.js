@@ -56,6 +56,31 @@ const SITES = {
       "/": { status: 200, html: '<html><head><link rel="icon" href="/i.svg"></head></html>' },
       "/i.svg": { status: 200, body: Buffer.from("<svg/>"), type: "image/svg+xml" }
     }
+  },
+  // MINI GAME（出門玩）嗰種：冇 <link rel=icon>、冇 /favicon.ico，icon 只喺 manifest
+  "manifest.test": {
+    paths: {
+      "/": { status: 200, html: '<html><head><link rel="manifest" href="/manifest.webmanifest"></head></html>' },
+      "/manifest.webmanifest": {
+        status: 200,
+        body: '{"name":"出門玩","icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}',
+        type: "application/manifest+json"
+      },
+      "/icon.svg": { status: 200, body: Buffer.from("<svg>diece</svg>"), type: "image/svg+xml" }
+    }
+  },
+  // 連 <link rel=manifest> 都冇、但預設位置 /manifest.webmanifest 有
+  "manifest2.test": {
+    paths: {
+      "/": { status: 200, html: "<html><head></head></html>" },
+      "/manifest.webmanifest": {
+        status: 200,
+        body: '{"icons":[{"src":"/m.png","sizes":"192x192","type":"image/png"},{"src":"/m.svg","sizes":"any","type":"image/svg+xml"}]}',
+        type: "application/manifest+json"
+      },
+      "/m.png": { status: 200, body: Buffer.from("MANIFESTPNG"), type: "image/png" },
+      "/m.svg": { status: 200, body: Buffer.from("<svg/>"), type: "image/svg+xml" }
+    }
   }
 };
 
@@ -128,6 +153,18 @@ const { resolveFavicon, safeHost, iconCandidates } = require("../api/favicon.js"
   r = await resolveFavicon("svg.test");
   assert.equal(r.via, "link"); assert.equal(r.type, "image/svg+xml");
   console.log("✓ SVG icon（無 type 屬性）");
+
+  // 6a) MINI GAME 嗰種：冇 link、冇 favicon.ico，icon 只喺 manifest
+  r = await resolveFavicon("manifest.test");
+  assert.equal(r.via, "manifest"); assert.equal(r.type, "image/svg+xml");
+  assert.equal(r.buf.toString(), "<svg>diece</svg>");
+  console.log("✓ PWA manifest icon（無 <link rel=icon>／無 favicon.ico → 讀 manifest 嘅 icon.svg）");
+
+  // 6b) 連 <link rel=manifest> 都冇、但預設位置有 manifest；多個 icon 應揀 PNG(192)
+  r = await resolveFavicon("manifest2.test");
+  assert.equal(r.via, "manifest"); assert.equal(r.type, "image/png");
+  assert.equal(r.buf.toString(), "MANIFESTPNG");
+  console.log("✓ 預設位置 manifest + 多 icon 揀 PNG(192)");
 
   // 7) safeHost 防 SSRF
   assert.equal(safeHost("127.0.0.1"), null);
