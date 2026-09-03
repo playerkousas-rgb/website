@@ -32,16 +32,36 @@ function esc(s) {
   }[c]));
 }
 
-// 攞外部 App 嘅圖示（64px）：
-//   - 有 GitHub repo 網址（github 欄或 url 欄）→ 直接用 repo 主人嘅 GitHub 頭像，
-//     有辨識度得嚟又唔使個站有 favicon；
-//   - 否則用該網站 favicon（Google s2）。
-// 失敗嗰陣 caller 會退返 SITE_LOGO。
-function faviconUrl(app) {
+// 攞外部 App 嘅圖示（64px）候選 chain，逐個試，失敗行落下一個：
+//   1) 有 GitHub repo 網址（github 欄或 url 欄）→ repo 主人嘅 GitHub 頭像
+//      （有辨識度，又唔使個站有 favicon）；
+//   2) 我哋自己 /api/favicon —— 用 Chrome 分頁標籤嗰個原理：伺服器端攞該站 HTML
+//      讀 <link rel="icon">（瀏覽器受 CORS 限制讀唔到別站 HTML，所以要放伺服器做），
+//      冇 link 就試 /favicon.ico；
+//   3) Google s2 —— 備援（自己 API 未部署／被封／本地純靜態跑嗰陣）；
+//   4) 全站 Logo。
+function faviconCandidates(app) {
+  const out = [];
   const repo = String(app.github || app.url || "").match(/github\.com\/([^/?#]+)/i);
-  if (repo) return "https://github.com/" + repo[1] + ".png?size=64";
-  try { return "https://www.google.com/s2/favicons?domain=" + new URL(app.url || app.github).hostname + "&sz=64"; }
-  catch { return null; }
+  if (repo) out.push("https://github.com/" + repo[1] + ".png?size=64");
+  const raw = app.url || app.github || "";
+  let host = null;
+  if (raw) { try { host = new URL(raw).hostname; } catch { host = null; } }
+  if (host) {
+    out.push("/api/favicon?host=" + encodeURIComponent(host));
+    out.push("https://www.google.com/s2/favicons?domain=" + host + "&sz=64");
+  }
+  out.push(SITE_LOGO);
+  return out;
+}
+
+// <img> onerror：沿 data-favchain 行去下一個候選
+function favImgOnErr(img) {
+  let chain = [];
+  try { chain = JSON.parse(img.dataset.favchain || "[]"); } catch { chain = []; }
+  const i = Number(img.dataset.fi || 0);
+  if (i + 1 < chain.length) { img.dataset.fi = String(i + 1); img.src = chain[i + 1]; }
+  else img.onerror = null; // 最後一個（全站 Logo）都失敗 → 停止重試
 }
 
 // 渲染 item 嘅圖示 HTML（公開 tile / 後台列表 / 總覽預覽 共用）
@@ -62,9 +82,9 @@ function appIconHTML(app, size) {
   if (src === "emoji") return esc(app.icon);
   if (src === "upload") return `<img${cls} src="${esc(app.icon)}" alt=""${lazy} onerror="${fallback}" />`;
   if (src === "favicon") {
-    const fav = faviconUrl(app);
-    if (fav) return `<img${cls} src="${esc(fav)}" alt=""${lazy} onerror="${fallback}" />`;
-    return `<img${cls} src="${SITE_LOGO}" alt=""${lazy} />`;
+    // chain：(GitHub 頭像) → 自己 /api/favicon → Google s2 → 全站 Logo
+    const chain = faviconCandidates(app);
+    return `<img${cls} src="${esc(chain[0])}" alt=""${lazy} data-favchain="${esc(JSON.stringify(chain))}" onerror="favImgOnErr(this)" />`;
   }
   // "none" → 直接用全站 Logo
   return `<img${cls} src="${SITE_LOGO}" alt=""${lazy} />`;
