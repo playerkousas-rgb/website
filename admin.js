@@ -443,7 +443,7 @@ function iconSourceHTML(f) {
       <span class="iso-hint">${hint}</span>
     </label>`;
   return `<div class="icon-src-row">
-    ${opt("favicon", "🌐 App 自帶 Logo", "用該網站嘅 favicon")}
+    ${opt("favicon", "🌐 App 自帶 Logo", "有 GitHub repo 用 repo 頭像，否則用該網站 favicon")}
     ${opt("emoji", "😀 Emoji", "由你揀一個字符")}
     ${opt("upload", "🖼 圖片網址", "貼一張 https 圖片 URL")}
     ${opt("none", "🚫 不用", "直接用我哋全站 Logo")}

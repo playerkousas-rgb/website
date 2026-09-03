@@ -63,7 +63,7 @@
 
 | 選項 | 行為 | 適用場景 |
 |---|---|---|
-| 🌐 **App 自帶 Logo**（預設） | 自動攞該網站嘅 favicon（Google s2，64px）；攞唔到就退我哋全站 Logo | 對外連結到自己嘅 Vercel/網站，最方便 |
+| 🌐 **App 自帶 Logo**（預設） | GitHub repo 欄（或 URL 本身係 github.com）有填 → 用 repo 主人嘅 GitHub 頭像（64px）；否則自動攞該網站 favicon（Google s2）；攞唔到就退我哋全站 Logo | 對外連結到自己嘅 Vercel/網站，最方便 |
 | 😀 **Emoji** | 由你揀一個字符 | 自家內部工具、快速標記 |
 | 🖼 **圖片網址** | 貼一張 https 圖片連結 | 想用特定 PNG / 設計過嘅 logo |
 | 🚫 **不用** | 直接用我哋全站 Logo | 想統一一個 brand |

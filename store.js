@@ -32,10 +32,15 @@ function esc(s) {
   }[c]));
 }
 
-// 攞外部 App 嘅 favicon（用 Google s2，64px）。
+// 攞外部 App 嘅圖示（64px）：
+//   - 有 GitHub repo 網址（github 欄或 url 欄）→ 直接用 repo 主人嘅 GitHub 頭像，
+//     有辨識度得嚟又唔使個站有 favicon；
+//   - 否則用該網站 favicon（Google s2）。
 // 失敗嗰陣 caller 會退返 SITE_LOGO。
-function faviconUrl(url) {
-  try { return "https://www.google.com/s2/favicons?domain=" + new URL(url).hostname + "&sz=64"; }
+function faviconUrl(app) {
+  const repo = String(app.github || app.url || "").match(/github\.com\/([^/?#]+)/i);
+  if (repo) return "https://github.com/" + repo[1] + ".png?size=64";
+  try { return "https://www.google.com/s2/favicons?domain=" + new URL(app.url || app.github).hostname + "&sz=64"; }
   catch { return null; }
 }
 
@@ -57,7 +62,7 @@ function appIconHTML(app, size) {
   if (src === "emoji") return esc(app.icon);
   if (src === "upload") return `<img${cls} src="${esc(app.icon)}" alt=""${lazy} onerror="${fallback}" />`;
   if (src === "favicon") {
-    const fav = faviconUrl(app.url);
+    const fav = faviconUrl(app);
     if (fav) return `<img${cls} src="${esc(fav)}" alt=""${lazy} onerror="${fallback}" />`;
     return `<img${cls} src="${SITE_LOGO}" alt=""${lazy} />`;
   }
