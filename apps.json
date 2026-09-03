@@ -1,0 +1,112 @@
+{
+  "name": "Scout System",
+  "sub": "全部 app，一個入口",
+  "categories": [
+    {
+      "name": "工作",
+      "icon": "💼",
+      "apps": [
+        {
+          "name": "任務管理",
+          "url": "https://tasks.vercel.app",
+          "icon": "✅",
+          "github": "https://github.com/your-name/tasks",
+          "description": "隊員任務同排班一覽"
+        },
+        {
+          "name": "日報記錄",
+          "url": "https://daily-log.vercel.app",
+          "icon": "📊",
+          "github": "https://github.com/your-name/daily-log"
+        },
+        {
+          "name": "會議筆記",
+          "url": "https://notes.vercel.app",
+          "icon": "📝"
+        },
+        {
+          "name": "排期表",
+          "url": "https://schedule.vercel.app",
+          "icon": "🗓",
+          "github": "https://github.com/your-name/schedule"
+        }
+      ]
+    },
+    {
+      "name": "生活",
+      "icon": "🏠",
+      "apps": [
+        {
+          "name": "食譜",
+          "url": "https://recipe.vercel.app",
+          "icon": "🍜",
+          "github": "https://github.com/your-name/recipe-app",
+          "description": "自家食譜收藏同搜尋"
+        },
+        {
+          "name": "預算",
+          "url": "https://budget.vercel.app",
+          "icon": "💰"
+        },
+        {
+          "name": "健身記錄",
+          "url": "https://gym.vercel.app",
+          "icon": "💪",
+          "github": "https://github.com/your-name/gym-tracker"
+        },
+        {
+          "name": "旅行計劃",
+          "url": "https://travel.vercel.app",
+          "icon": "✈️"
+        }
+      ]
+    },
+    {
+      "name": "娛樂",
+      "icon": "🎮",
+      "apps": [
+        {
+          "name": "小遊戲",
+          "url": "https://games.vercel.app",
+          "icon": "🎲",
+          "github": "https://github.com/your-name/minigames",
+          "description": "營火時間玩嘅輕量小遊戲"
+        },
+        {
+          "name": "影音清單",
+          "url": "https://media.vercel.app",
+          "icon": "🎬"
+        },
+        {
+          "name": "詞條收藏",
+          "url": "https://words.vercel.app",
+          "icon": "📚"
+        }
+      ]
+    },
+    {
+      "name": "工具",
+      "icon": "🔧",
+      "apps": [
+        {
+          "name": "計算機",
+          "url": "https://calc.vercel.app",
+          "icon": "🧮",
+          "description": "快速計算，支援百分比"
+        },
+        {
+          "name": "單位換算",
+          "url": "https://unit.vercel.app",
+          "icon": "📐",
+          "github": "https://github.com/your-name/unit-convert"
+        },
+        {
+          "name": "QR 生成",
+          "url": "https://qr.vercel.app",
+          "icon": "📱",
+          "description": "生成 QR code 貼相紙/公報"
+        }
+      ]
+    }
+  ]
+}

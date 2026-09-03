@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Scout System</title>
+<meta name="description" content="我所有 app 的分類展示櫃 — 一個入口打開全部" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="icon" type="image/png" href="/icons/icon-192.png" />
+<link rel="apple-touch-icon" href="/icons/icon-192.png" />
+<meta name="theme-color" content="#2563eb" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="App 櫃" />
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --bg-card: #ffffff;
+    --text: #1a1d21;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --accent: #2563eb;
+    --accent-soft: #eff4ff;
+    --shadow: 0 1px 2px rgba(16,24,40,.05), 0 4px 14px rgba(16,24,40,.07);
+    --shadow-hover: 0 6px 18px rgba(16,24,40,.14);
+  }
+  [data-theme="dark"] {
+    --bg: #0f1115;
+    --bg-card: #171a20;
+    --text: #e6e8eb;
+    --muted: #9aa1ab;
+    --border: #262b34;
+    --accent: #60a5fa;
+    --accent-soft: #16233a;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.35);
+    --shadow-hover: 0 6px 18px rgba(0,0,0,.5);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang HK",
+      "Microsoft JhengHei", "Noto Sans TC", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.5;
+    -webkit-tap-highlight-color: transparent;
+    transition: background .25s, color .25s;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 16px 48px; }
+
+  /* ── Header ─────────────────────────── */
+  header { padding: 22px 0 6px; }
+  .head-row { display: flex; align-items: center; gap: 10px; }
+  .head-logo-wrap { flex-shrink: 0; cursor: default; -webkit-user-select: none; user-select: none; }
+  .head-logo { width: 42px; height: 42px; border-radius: 12px; box-shadow: var(--shadow); display: block; }
+  .head-titles h1 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+  .head-titles span { font-size: 12px; color: var(--muted); }
+  .head-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .icon-btn {
+    width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border);
+    background: var(--bg-card); color: var(--text); font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .icon-btn:hover { transform: scale(1.06); }
+  .install-btn {
+    display: none; align-items: center; gap: 6px;
+    border: none; border-radius: 999px; padding: 9px 15px; cursor: pointer;
+    background: var(--accent); color: #fff; font-size: 13px; font-weight: 700;
+  }
+  .install-btn:hover { filter: brightness(1.08); }
+  .search {
+    margin-top: 14px; width: 100%; padding: 11px 16px; border-radius: 14px;
+    font-size: 15px; border: 1px solid var(--border);
+    background: var(--bg-card); color: var(--text); outline: none;
+  }
+  .search:focus { border-color: var(--accent); }
+
+  /* ── Category chips ─────────────────── */
+  .chips {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; gap: 8px; overflow-x: auto;
+    padding: 12px 4px; margin: 0 -4px;
+    background: var(--bg); scrollbar-width: none;
+  }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0; white-space: nowrap; cursor: pointer;
+    font-size: 13px; font-weight: 600; color: var(--muted);
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 999px; padding: 7px 14px;
+    transition: all .15s;
+  }
+  .chip:hover { color: var(--text); border-color: var(--accent); }
+
+  /* ── Sections ───────────────────────── */
+  section { margin-top: 26px; scroll-margin-top: 64px; }
+  .sec-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .sec-head h2 { font-size: 16px; font-weight: 700; }
+  .sec-head .num { font-size: 12px; color: var(--muted); }
+  .grid {
+    display: grid; gap: 18px 10px;
+    grid-template-columns: repeat(4, 1fr);
+  }
+  @media (min-width: 560px) { .grid { grid-template-columns: repeat(6, 1fr); } }
+  @media (min-width: 860px) { .grid { grid-template-columns: repeat(8, 1fr); } }
+
+  /* ── App tile ───────────────────────── */
+  .tile { text-align: center; cursor: pointer; position: relative; }
+  .tile:active .tile-icon { transform: scale(.92); }
+  .tile-icon {
+    width: 58px; height: 58px; margin: 0 auto 7px; border-radius: 15px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 27px; box-shadow: var(--shadow); position: relative;
+    transition: transform .12s, box-shadow .12s;
+  }
+  .tile:hover .tile-icon { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
+  .tile-icon img { width: 36px; height: 36px; object-fit: contain; border-radius: 6px; }
+  .tile-name {
+    font-size: 12px; color: var(--text); line-height: 1.25;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    word-break: break-all;
+  }
+  .gh-badge {
+    position: absolute; top: -5px; right: -5px; z-index: 2;
+    font-size: 9px; font-weight: 700; letter-spacing: .03em;
+    background: #111827; color: #fff; border-radius: 999px; padding: 2.5px 5.5px;
+    cursor: pointer; border: 2px solid var(--bg);
+  }
+
+  .empty { text-align: center; color: var(--muted); padding: 48px 0; display: none; }
+  footer { text-align: center; color: var(--muted); font-size: 12.5px; padding-top: 40px; line-height: 1.8; }
+  footer .tip {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 12px 16px; margin: 0 auto 18px; max-width: 480px; text-align: left;
+  }
+
+  .tile-desc {
+    font-size: 10.5px; color: var(--muted); line-height: 1.3; margin-top: 2px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+
+  /* ── Admin panel ──────────────────── */
+  [hidden] { display: none !important; }
+  #admin-panel { position: fixed; inset: 0; background: var(--bg); z-index: 100; overflow-y: auto; padding: 0 16px 48px; }
+  .admin-card {
+    max-width: 660px; margin: 24px auto; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: 16px; padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .admin-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .admin-logo { width: 40px; height: 40px; border-radius: 10px; cursor: default; -webkit-user-select: none; user-select: none; }
+  .admin-card h2 { font-size: 17px; margin-bottom: 6px; }
+  .admin-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .admin-card input, .admin-card select {
+    flex: 1; min-width: 130px; padding: 9px 12px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 14px;
+  }
+  .admin-card input:focus, .admin-card select:focus { border-color: var(--accent); outline: none; }
+  .admin-lbl { font-size: 12px; color: var(--muted); margin-top: 12px; font-weight: 700; }
+  .admin-app-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .admin-app-row .u { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .mini-btn {
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    border-radius: 9px; padding: 5px 12px; font-size: 12.5px; cursor: pointer;
+  }
+  .mini-btn:hover { border-color: var(--accent); }
+  .mini-btn.danger { color: #ef4444; }
+  .banner { font-size: 12.5px; border-radius: 10px; padding: 9px 12px; margin: 10px 0; line-height: 1.5; }
+  .banner.warn { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+  .banner.ok { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+  [data-theme="dark"] .banner.warn { background: #2a2008; border-color: #6b5510; color: #fcd34d; }
+  [data-theme="dark"] .banner.ok { background: #0a2018; border-color: #14532d; color: #6ee7b7; }
+  .tab-bar { display: flex; gap: 8px; margin: 12px 0 4px; }
+  .tab-btn {
+    border: 1px solid var(--border); background: var(--bg); color: var(--muted);
+    border-radius: 10px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .tab-btn.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+  .lock-tag {
+    display: inline-block; font-size: 10px; font-weight: 700; color: #92400e;
+    background: #fef3c7; border-radius: 999px; padding: 1px 7px;
+  }
+  [data-theme="dark"] .lock-tag { background: #422e08; color: #fcd34d; }
+  .vis-lbl { font-size: 13.5px; color: var(--text); display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .vis-lbl input { width: 17px; height: 17px; accent-color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="head-row">
+      <div class="head-logo-wrap" onclick="goldfingerClick()"><img class="head-logo" src="/icons/icon-192.png" alt="Scout System" /></div>
+      <div class="head-titles">
+        <h1 id="site-name">我的 App 展示櫃</h1>
+        <span id="site-sub">全部 app，一個入口</span>
+      </div>
+      <div class="head-actions">
+        <button class="install-btn" id="install-btn">⬇️ 安裝 App</button>
+        <button class="icon-btn" id="theme-btn" title="切換深色 / 淺色" aria-label="切換主題">🌙</button>
+      </div>
+    </div>
+    <input class="search" id="search" type="search" placeholder="🔍 搜尋 app…" aria-label="搜尋 app" />
+  </header>
+
+  <nav class="chips" id="chips"></nav>
+  <div id="sections"></div>
+  <p class="empty" id="empty">搵唔到符合嘅 app</p>
+
+  <footer>
+    <div class="tip">💡 <b>提示：</b>喺瀏覽器選單選「加入主畫面 / 安裝 App」（Android 直接撳上面個「安裝 App」掣），呢個展示櫃就會變成你電話桌面嘅一個 App。之後所有應用由呢度入，唔使逐个加落桌面。</div>
+    <span id="foot-count"></span>
+    <div style="margin-top:14px">© 2026 Scout System · 由 <a href="https://vercel.com" target="_blank" rel="noopener">Vercel</a> 提供部署</div>
+  </footer>
+</div>
+
+<div id="admin-panel" hidden>
+  <div id="admin-content"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="store.js"></script>
+<script src="admin.js"></script>
+<script>
+/* ════════════════════════════════════════════════════════════════
+   ⚙️  配置已經搬去同層嘅 apps.json — 加新 app 只需改嗰個檔案
+   ────────────────────────────────────────────────────────────────
+   每個 app：
+     name    顯示名稱
+     url     打開嘅地址（你嘅 xxx.vercel.app）
+     icon    可選，emoji 或圖片 URL；唔填會自動用該網站嘅 favicon
+     github  可選，填咗 tile 角落會有一粒 GH 徽章
+   分類自由增減，由上落顯示。改完 push 上去 Vercel 自動部署。
+   ════════════════════════════════════════════════════════════════ */
+
+/* ════════════════════════════════════════════════════════════════
+   以下係網站邏輯，一般唔需要改
+   ════════════════════════════════════════════════════════════════ */
+
+// 主題
+const themeBtn = document.getElementById("theme-btn");
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  themeBtn.textContent = t === "dark" ? "☀️" : "🌙";
+  localStorage.setItem("theme", t);
+  document.querySelector('meta[name="theme-color"]').content = t === "dark" ? "#0f1115" : "#2563eb";
+}
+applyTheme(localStorage.getItem("theme") ||
+  (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+themeBtn.onclick = () =>
+  applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+
+
+// PWA 一鍵安裝（Android / Chrome 有效；iPhone 會用 footer 嘅提示）
+const installBtn = document.getElementById("install-btn");
+let deferredPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBtn.style.display = "flex";
+});
+installBtn.onclick = async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  installBtn.style.display = "none";
+};
+
+// 圖標背景配色（按名稱 hash 穩定取色）
+const PALETTE = [
+  ["#dbeafe", "#bfdbfe"], ["#fee2e2", "#fecaca"], ["#dcfce7", "#bbf7d0"],
+  ["#fef9c3", "#fde68a"], ["#fae8ff", "#f0abfc"], ["#e0f2fe", "#bae6fd"],
+  ["#ffedd5", "#fed7aa"], ["#f3e8ff", "#d8b4fe"]
+];
+function tileBg(name) {
+  let h = 0;
+  for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return PALETTE[h % PALETTE.length];
+}
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+function faviconUrl(url) {
+  try { return "https://www.google.com/s2/favicons?domain=" + new URL(url).hostname + "&sz=64"; }
+  catch { return null; }
+}
+
+// 最近使用（記住你撳過邊個 app）
+const RECENT_KEY = "showcase-recent";
+function getRecent() { try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; } }
+function addRecent(app) {
+  let r = getRecent().filter((x) => x.url !== app.url);
+  r.unshift({ name: app.name, url: app.url, icon: app.icon || null, cat: "最近" });
+  r = r.slice(0, 8);
+  localStorage.setItem(RECENT_KEY, JSON.stringify(r));
+}
+function openApp(app) {
+  addRecent(app);
+  trackClick(app._id);
+  window.location.href = app.url;
+}
+
+function iconHTML(app) {
+  const [c1, c2] = tileBg(app.name);
+  let inner = "";
+  if (app.icon) {
+    if (/^https?:\/\//i.test(app.icon)) {
+      inner = `<img src="${esc(app.icon)}" alt="" loading="lazy" onerror="this.remove()" />`;
+    } else {
+      inner = esc(app.icon); // emoji / 文字
+    }
+  } else {
+    const fav = faviconUrl(app.url);
+    if (fav) inner = `<img src="${esc(fav)}" alt="" loading="lazy" onerror="this.remove()" />`;
+  }
+  return `<div class="tile-icon" style="background:linear-gradient(135deg,${c1},${c2})">${inner || "📦"}</div>`;
+}
+
+// 渲染
+const REG = []; // 本次渲染所有 tile 對應嘅 app 物件
+const chipsEl = document.getElementById("chips");
+const sectionsEl = document.getElementById("sections");
+const emptyEl = document.getElementById("empty");
+const searchEl = document.getElementById("search");
+const footCount = document.getElementById("foot-count");
+
+let flat = []; // 由 main() 填入
+
+function tileHTML(idx) {
+  const app = REG[idx];
+  return `
+  <a class="tile" href="${esc(app.url)}" title="${esc(app.description || app.name)}" onclick="event.preventDefault(); openApp(REG[${idx}])">
+    ${app.github ? `<span class="gh-badge" title="GitHub repo" onclick="event.stopPropagation(); window.open('${esc(app.github)}','_blank')">GH</span>` : ""}
+    ${iconHTML(app)}
+    <div class="tile-name">${esc(app.name)}</div>
+    ${app.description ? `<div class="tile-desc">${esc(app.description)}</div>` : ""}
+  </a>`;
+}
+
+function sectionHTML(title, icon, apps, id) {
+  if (!apps.length) return "";
+  const start = REG.length;
+  apps.forEach((a) => REG.push(a));
+  const tiles = apps.map((_, i) => tileHTML(start + i)).join("");
+  return `
+  <section id="${id}">
+    <div class="sec-head"><span>${icon || ""}</span><h2>${esc(title)}</h2><span class="num">${apps.length}</span></div>
+    <div class="grid">${tiles}</div>
+  </section>`;
+}
+
+function render() {
+  REG.length = 0;
+  const q = searchEl.value.trim().toLowerCase();
+  const match = (a) => !q || (a.name + " " + (a.cat || "")).toLowerCase().includes(q);
+  let html = "";
+
+  if (!q) {
+    const recent = getRecent();
+    if (recent.length) html += sectionHTML("最近使用", "🕘", recent, "recent");
+  }
+
+  const visible = (a) => a.visible !== false;
+  const cats = SITES.categories
+    .map((c, i) => ({ c, i, shown: c.apps.filter(visible).filter(match) }))
+    .filter((x) => x.shown.length);
+
+  html += cats.map((x) => sectionHTML(x.c.name, x.c.icon, x.shown, "cat-" + x.i)).join("");
+  sectionsEl.innerHTML = html;
+  emptyEl.style.display = html ? "none" : "block";
+
+  chipsEl.innerHTML =
+    `<span class="chip" onclick="scrollTo({top:0,behavior:'smooth'})">⌂ 全部</span>` +
+    cats.map((x) =>
+      `<span class="chip" onclick="document.getElementById('cat-${x.i}').scrollIntoView({behavior:'smooth'})">${esc((x.c.icon ? x.c.icon + " " : "") + x.c.name)}</span>`
+    ).join("");
+}
+let SITES = null;
+async function main() {
+  const { sites } = await loadSites();
+  SITES = sites;
+  document.getElementById("site-name").textContent = SITES.name;
+  document.getElementById("site-sub").textContent = SITES.sub;
+  SITES.categories.forEach((cat) => cat.apps.forEach((a) => flat.push({ ...a, cat: cat.name })));
+  footCount.textContent = `共 ${flat.length} 個 app · ${SITES.categories.length} 個分類`;
+  searchEl.addEventListener("input", render);
+  render();
+}
+main();
+
+// 金手指：登入後連點 Logo 20 次 → 開啟改密碼（靜默，冇任何提示）
+const GOLDENFINGER_TAPS = 20;
+let _gfCount = 0;
+let _gfLast = 0;
+function goldfingerClick() {
+  const now = Date.now();
+  _gfCount = now - _gfLast < 900 ? _gfCount + 1 : 1;
+  _gfLast = now;
+  if (_gfCount < GOLDENFINGER_TAPS) return;
+  _gfCount = 0;
+  (async () => {
+    const sb = getSB();
+    if (!sb) return;
+    const { data } = await sb.auth.getSession();
+    if (data?.session) ADMIN.changePassword();
+  })();
+}
+
+// Service worker（離線都開到展示櫃）
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
+}
+
+// 管理面板（隱藏入口：網址 + #admin）
+window.addEventListener("hashchange", () => {
+  if (isAdminRoute()) ADMIN.init();
+  else main();
+});
+if (isAdminRoute()) ADMIN.init();
+</script>
+</body>
+</html>
