@@ -127,10 +127,19 @@ const ADMIN = {
       return el && el.checked;
     });
     const visEl = document.getElementById("f-visible");
+    // 圖示來源：radio 值優先；冇 radio 嘅就睇舊 icon 內容猜
+    const srcRadio = document.querySelector('input[name="f-iconSource"]:checked');
+    const iconSource = srcRadio ? srcRadio.value : iconSourceOf(this.form);
+    // emoji 從 #f-icon 拎，upload 從 #f-icon-url 拎（兩個 input 唔同 id）
+    const rawIcon = iconSource === "emoji" ? val("f-icon")
+                   : iconSource === "upload" ? val("f-icon-url")
+                   : "";
+    // 「favicon」/「none」會忽略 icon 欄位（避免舊 emoji/URL 殘留）
+    const icon = (iconSource === "emoji" || iconSource === "upload") ? rawIcon : "";
     try {
       adminSaveApp({
         name, url, page, category, tags,
-        description: val("f-desc"), icon: val("f-icon"),
+        description: val("f-desc"), icon, iconSource,
         github: val("f-gh"), note: val("f-note"),
         visible: visEl ? visEl.checked : true
       }, this.editId).then(() => {
@@ -385,10 +394,17 @@ function formHTML() {
     ${tagCheckHTML(f.tags)}
     <div class="admin-lbl">介紹（公開版面顯示，可選）</div>
     <input id="f-desc" placeholder="介紹…" value="${esc(f.description || "")}" />
-    <div class="admin-lbl">圖示</div>
-    <div class="admin-row">
-      <input id="f-icon" placeholder="emoji 或圖片網址" value="${esc(f.icon || "")}" style="flex:2" />
-      <button class="mini-btn" onclick="pickIntoInput('f-icon')">🎨 揀 emoji</button>
+    <div class="admin-lbl">圖示來源</div>
+    ${iconSourceHTML(f)}
+    <div id="f-icon-wrap">
+      <div class="admin-row" id="f-emoji-row" style="${iconSourceOf(f) === "emoji" ? "" : "display:none"}">
+        <input id="f-icon" placeholder="emoji" value="${esc(f.icon || "")}" style="flex:2" />
+        <button class="mini-btn" onclick="pickIntoInput('f-icon')">🎨 揀 emoji</button>
+      </div>
+      <div class="admin-row" id="f-upload-row" style="${iconSourceOf(f) === "upload" ? "" : "display:none"}">
+        <input id="f-icon-url" placeholder="圖片網址 https://…" value="${esc(f.icon || "")}" style="flex:2" inputmode="url" />
+        <span class="muted" style="font-size:12px">用 https 開頭嘅圖片連結</span>
+      </div>
     </div>
     <div class="admin-row">
       <input id="f-gh" placeholder="GitHub repo（可選）" value="${esc(f.github || "")}" inputmode="url" />
@@ -408,13 +424,43 @@ function formHTML() {
 }
 
 /* ── 分頁 + 分類 + 項目 管理列 ──────────────────────────── */
+
+// 表單：揀「圖示來源」後即時切換顯示嘅輸入框
+function iconSourceOf(f) {
+  if (f.iconSource === "favicon" || f.iconSource === "emoji" ||
+      f.iconSource === "upload" || f.iconSource === "none") return f.iconSource;
+  if (f.icon && /^https?:\/\//i.test(f.icon)) return "upload";
+  if (f.icon && f.icon.length) return "emoji";
+  return "favicon";
+}
+function iconSourceHTML(f) {
+  const cur = iconSourceOf(f);
+  const opt = (v, label, hint) => `
+    <label class="icon-src-opt ${cur === v ? "on" : ""}">
+      <input type="radio" name="f-iconSource" value="${v}" ${cur === v ? "checked" : ""} onchange="onIconSourceChange(this.value)" />
+      <span class="iso-dot" aria-hidden="true"></span>
+      <span class="iso-lbl">${label}</span>
+      <span class="iso-hint">${hint}</span>
+    </label>`;
+  return `<div class="icon-src-row">
+    ${opt("favicon", "🌐 App 自帶 Logo", "用該網站嘅 favicon")}
+    ${opt("emoji", "😀 Emoji", "由你揀一個字符")}
+    ${opt("upload", "🖼 圖片網址", "貼一張 https 圖片 URL")}
+    ${opt("none", "🚫 不用", "直接用我哋全站 Logo")}
+  </div>`;
+}
+function onIconSourceChange(v) {
+  document.querySelectorAll(".icon-src-opt").forEach((el) => {
+    el.classList.toggle("on", el.querySelector("input").value === v);
+  });
+  const er = document.getElementById("f-emoji-row");
+  const ur = document.getElementById("f-upload-row");
+  if (er) er.style.display = v === "emoji" ? "" : "none";
+  if (ur) ur.style.display = v === "upload" ? "" : "none";
+}
 function itemRowHTML(a) {
   const tags = a.tags && a.tags.length ? a.tags.map((t) => `<span class="mini-tag">${esc(t)}</span>`).join("") : "";
-  const icon = a.icon
-    ? (/^https?:/i.test(a.icon)
-      ? `<img class="row-ico" src="${esc(a.icon)}" alt="" onerror="this.onerror=null;this.src='${SITE_LOGO}'" />`
-      : esc(a.icon))
-    : `<img class="row-ico" src="${SITE_LOGO}" alt="" />`;
+  const icon = appIconHTML(a, "row");
   return `
   <div class="admin-app-row">
     <span style="font-size:18px;line-height:1">${icon}</span>
@@ -487,13 +533,7 @@ function manageHTML() {
 function tilesForCat(cat) {
   return cat.apps.map((a) => {
     const [g1, g2] = tileBg(a.name);
-    let inner = "";
-    if (a.icon) {
-      if (/^https?:/i.test(a.icon)) inner = `<img src="${esc(a.icon)}" alt="" onerror="this.onerror=null;this.src='${SITE_LOGO}'" />`;
-      else inner = esc(a.icon);
-    } else {
-      inner = `<img src="${SITE_LOGO}" alt="" />`;
-    }
+    const inner = appIconHTML(a, "tile");
     return `
     <a class="tile" href="${esc(a.url)}" title="${esc((a.description || "") + (a.visible === false ? "（隱藏中）" : ""))}" target="_blank" rel="noopener">
       ${a.visible === false ? '<span class="lock-tag" style="position:absolute;top:2px;right:2px;z-index:2">🔒</span>' : ""}

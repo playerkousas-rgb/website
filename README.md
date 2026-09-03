@@ -57,6 +57,20 @@
 
 其他按鈕：📤 備份｜♻️ 還原（完整覆蓋）｜🔳 QR｜**⚠️ 一鍵重設**｜登出
 
+### 圖示來源（每個項目有 4 選 1）
+
+新增 / 編輯項目時，揀「圖示來源」：
+
+| 選項 | 行為 | 適用場景 |
+|---|---|---|
+| 🌐 **App 自帶 Logo**（預設） | 自動攞該網站嘅 favicon（Google s2，64px）；攞唔到就退我哋全站 Logo | 對外連結到自己嘅 Vercel/網站，最方便 |
+| 😀 **Emoji** | 由你揀一個字符 | 自家內部工具、快速標記 |
+| 🖼 **圖片網址** | 貼一張 https 圖片連結 | 想用特定 PNG / 設計過嘅 logo |
+| 🚫 **不用** | 直接用我哋全站 Logo | 想統一一個 brand |
+
+> 舊資料冇 `icon_source` 欄位會自動推測：icon 係 https URL 視為「圖片網址」；
+> 其他非空字串視為「Emoji」；空字串視為「App 自帶 Logo」—— 行為兼容唔使人手改。
+
 ### ⚠️ 一鍵重設（清空 + 建立預設模板）
 
 登入後撳「一鍵重設」會**完整清空** DB／本機嘅所有分類同項目，並建立預設模板：
@@ -107,6 +121,7 @@ create table if not exists apps (
   url text not null,
   description text,
   icon text,
+  icon_source text, -- 'favicon' (預設) / 'emoji' / 'upload' / 'none'
   github text,
   note text,
   category text not null default '其他',
@@ -118,10 +133,11 @@ create table if not exists apps (
   created_at timestamptz not null default now()
 );
 
--- 1) 舊表補新欄位（分頁 + 童軍級別標籤）
+-- 1) 舊表補新欄位（分頁 + 童軍級別標籤 + 圖示來源）
 alter table categories add column if not exists page text not null default 'apps';
 alter table apps add column if not exists page text not null default 'apps';
 alter table apps add column if not exists tags text[];
+alter table apps add column if not exists icon_source text;
 
 -- 2) 分類改用「(page, name)」組合主鍵，先可以每個分頁獨立用同名分類
 alter table categories drop constraint if exists categories_pkey;

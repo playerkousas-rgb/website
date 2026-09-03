@@ -727,6 +727,31 @@
     background: rgba(0, 0, 0, .22); border-color: #0b0d12; color: #0b0d12;
   }
 
+  /* 圖示來源 4 選 1 */
+  .icon-src-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; }
+  .icon-src-opt {
+    display: flex; align-items: center; gap: 6px; cursor: pointer;
+    padding: 8px 10px; border-radius: 12px; min-height: 38px;
+    background: var(--bg-elevated); color: var(--text);
+    border: 1.5px solid var(--border);
+    font-size: 13px; font-weight: 600;
+    transition: border-color .15s, background .15s, color .15s;
+  }
+  .icon-src-opt:hover { border-color: var(--accent); }
+  .icon-src-opt input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .icon-src-opt .iso-dot {
+    width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
+    background: #fff; border: 1.5px solid var(--border);
+    box-shadow: inset 0 1px 2px rgba(15,23,42,.15);
+  }
+  .icon-src-opt.on {
+    border-color: var(--accent); background: var(--accent-soft); color: var(--accent-text);
+  }
+  .icon-src-opt.on .iso-dot { background: var(--accent); border-color: var(--accent); box-shadow: inset 0 0 0 3px #fff; }
+  .icon-src-opt .iso-hint { font-weight: 500; color: var(--muted); font-size: 12px; }
+  [data-theme="dark"] .icon-src-opt.on { color: #0b0d12; }
+  [data-theme="dark"] .icon-src-opt.on .iso-dot { box-shadow: inset 0 0 0 3px var(--bg-elevated); }
+
   /* 開關掣（分頁開放／項目公開顯示共用） */
   .switch {
     position: relative; flex-shrink: 0;

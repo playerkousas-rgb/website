@@ -25,6 +25,46 @@ let _sb = null;
 // 全站 Logo（項目／分類冇揀 icon 時嘅預設圖示）
 const SITE_LOGO = "/icons/icon-192.png";
 
+// HTML escape（共用，公開 / 後台 / store 都用）
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+
+// 攞外部 App 嘅 favicon（用 Google s2，64px）。
+// 失敗嗰陣 caller 會退返 SITE_LOGO。
+function faviconUrl(url) {
+  try { return "https://www.google.com/s2/favicons?domain=" + new URL(url).hostname + "&sz=64"; }
+  catch { return null; }
+}
+
+// 渲染 item 嘅圖示 HTML（公開 tile / 後台列表 / 總覽預覽 共用）
+// app.iconSource: "favicon" (預設) | "emoji" | "upload" | "none"
+//   舊資料冇 iconSource 時：icon 為 https URL 視為 "upload"；其他非空字串視為 "emoji"；空字串視為 "favicon"
+function resolveIconSource(app) {
+  if (app.iconSource === "favicon" || app.iconSource === "emoji" ||
+      app.iconSource === "upload" || app.iconSource === "none") return app.iconSource;
+  if (app.icon && /^https?:\/\//i.test(app.icon)) return "upload";
+  if (app.icon && app.icon.length) return "emoji";
+  return "favicon";
+}
+function appIconHTML(app, size) {
+  const src = resolveIconSource(app);
+  const cls = size === "row" ? ' class="row-ico"' : "";
+  const lazy = size === "row" ? "" : ' loading="lazy" decoding="async"';
+  const fallback = `this.onerror=null;this.src='${SITE_LOGO}'`;
+  if (src === "emoji") return esc(app.icon);
+  if (src === "upload") return `<img${cls} src="${esc(app.icon)}" alt=""${lazy} onerror="${fallback}" />`;
+  if (src === "favicon") {
+    const fav = faviconUrl(app.url);
+    if (fav) return `<img${cls} src="${esc(fav)}" alt=""${lazy} onerror="${fallback}" />`;
+    return `<img${cls} src="${SITE_LOGO}" alt=""${lazy} />`;
+  }
+  // "none" → 直接用全站 Logo
+  return `<img${cls} src="${SITE_LOGO}" alt=""${lazy} />`;
+}
+
 // 童軍級別標籤（固定，唔可以喺後台加減）
 const SCOUT_TAGS = ["小童軍", "幼童軍", "童軍", "深資童軍", "樂行童軍"];
 
@@ -72,6 +112,7 @@ function rowsToApp(r) {
     url: r.url,
     description: r.description || null,
     icon: r.icon || null,
+    iconSource: r.iconSource || null,
     github: r.github || null,
     note: r.note || null,
     visible: r.visible !== false,
@@ -213,6 +254,7 @@ function normalizeApp(a, i, catName, page) {
     url: a.url,
     description: a.description || null,
     icon: a.icon || null,
+    iconSource: a.iconSource || null,
     github: a.github || null,
     note: a.note || null,
     visible: a.visible !== false,
@@ -240,6 +282,7 @@ function appPayload(app) {
     url: app.url,
     description: app.description || null,
     icon: app.icon || null,
+    iconSource: app.iconSource || null,
     github: app.github || null,
     note: app.note || null,
     category: app.category,
@@ -255,23 +298,33 @@ async function adminSaveApp(app, id) {
   const sb = getSB();
   if (sb) {
     await ensureCategory(app.page, app.category, "");
-    const { error } = id
-      ? await sb.from("apps").update(payload).eq("id", id)
-      : await sb.from("apps").insert(payload);
-    if (error) throw error;
+    // 先嘗試帶 iconSource 寫入；若 Supabase 嘅 apps table 仲未加呢欄
+    // （用戶未跑 README 嘅 migration），就 fallback 唔寫 iconSource
+    let p = payload;
+    let res = id
+      ? await sb.from("apps").update(p).eq("id", id)
+      : await sb.from("apps").insert(p);
+    if (res.error && /icon_source/i.test(res.error.message || "")) {
+      p = { ...payload };
+      delete p.iconSource;
+      res = id
+        ? await sb.from("apps").update(p).eq("id", id)
+        : await sb.from("apps").insert(p);
+    }
+    if (res.error) throw res.error;
     return;
   }
   const { sites } = await loadSites();
   if (id) {
-    for (const p of sites.pages) for (const c of p.categories) {
+    for (const pg of sites.pages) for (const c of pg.categories) {
       const i = c.apps.findIndex((a) => a._id === id);
       if (i >= 0) c.apps[i] = { ...c.apps[i], ...payload };
     }
   } else {
-    let page = sites.pages.find((p) => p.id === app.page);
-    if (!page) { page = { id: app.page, label: app.page, icon: "", enabled: true, categories: [] }; sites.pages.push(page); }
-    let cat = page.categories.find((c) => c.name === app.category);
-    if (!cat) { cat = { name: app.category, icon: "", apps: [] }; page.categories.push(cat); }
+    let pg = sites.pages.find((p) => p.id === app.page);
+    if (!pg) { pg = { id: app.page, label: app.page, icon: "", enabled: true, categories: [] }; sites.pages.push(pg); }
+    let cat = pg.categories.find((c) => c.name === app.category);
+    if (!cat) { cat = { name: app.category, icon: "", apps: [] }; pg.categories.push(cat); }
     cat.apps.push({ ...payload, clicks: 0, _id: "demo-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) });
   }
   localStorage.setItem(LS_KEY, JSON.stringify(sites));
@@ -582,13 +635,20 @@ async function restoreFromBackup(backup) {
       if (ce && !/duplicate/i.test(ce.message)) throw ce;
       for (const a of c.apps) {
         if (!a.name || !a.url) continue;
-        const { error: ae } = await sb.from("apps").insert({
+        let rowPayload = {
           name: a.name, url: a.url, description: a.description || null,
-          icon: a.icon || null, github: a.github || null, note: a.note || null,
+          icon: a.icon || null, iconSource: a.iconSource || null,
+          github: a.github || null, note: a.note || null,
           category: c.name, page: p.id, tags: a.tags || [],
           visible: a.visible !== false, clicks: typeof a.clicks === "number" ? a.clicks : 0,
           sort_order: a.sort_order ?? itemCount
-        });
+        };
+        let { error: ae } = await sb.from("apps").insert(rowPayload);
+        if (ae && /icon_source/i.test(ae.message || "")) {
+          const { iconSource, ...rest } = rowPayload;
+          rowPayload = rest;
+          ({ error: ae } = await sb.from("apps").insert(rowPayload));
+        }
         if (ae) throw ae;
         itemCount++;
       }
