@@ -30,6 +30,8 @@
 | `store.js` | ⭐ 數據層 — **Supabase 配置填呢度**（`SUPABASE_CONFIG`）；兼預設模板 `makeDefaultSite()` |
 | `admin.js` | 管理面板邏輯 |
 | `app.js` | 公開版面渲染（分頁＋分類＋級別篩選） |
+| `api/favicon.js` | ⭐ 伺服器端 favicon（Vercel serverless）—— 用 Chrome 分頁標籤嗰個原理，自己攞別站 HTML 讀 `<link rel="icon">` |
+| `dev-server.mjs` | 本地 dev server（靜態＋`/api/favicon`，同 Vercel 行為一致） |
 | `manifest.webmanifest` | PWA 配置 |
 | `sw.js` | Service worker（離線可開） |
 | `icons/` | 桌面圖標 |
@@ -39,6 +41,10 @@
 1. 成個資料夾 push 上 GitHub repo
 2. vercel.com → Add New → Project → Import repo → Deploy
 3. 完成。之後每次 push 自動重新部署
+4. `api/` 內嘅 function 會自動部署做 serverless（`/api/favicon`），唔使特別設定。
+
+> **本地預覽**：`node dev-server.mjs`（預設 http://localhost:8080）。
+> 用咗 `/api/favicon`，所以本地同 Vercel 行為一樣。單測：`node test/favicon.test.js`。
 
 ## 管理員點用（網址尾加 `#admin`）
 
@@ -63,13 +69,29 @@
 
 | 選項 | 行為 | 適用場景 |
 |---|---|---|
-| 🌐 **App 自帶 Logo**（預設） | GitHub repo 欄（或 URL 本身係 github.com）有填 → 用 repo 主人嘅 GitHub 頭像（64px）；否則自動攞該網站 favicon（Google s2）；攞唔到就退我哋全站 Logo | 對外連結到自己嘅 Vercel/網站，最方便 |
+| 🌐 **App 自帶 Logo**（預設） | GitHub repo 欄（或 URL 本身係 github.com）有填 → 用 repo 主人嘅 GitHub 頭像（64px）；否則自動攞該網站 favicon，順序：① 我哋 `/api/favicon`（同 Chrome 分頁標籤一樣自己讀該站 HTML）→ ② Google s2 備援 → ③ 全站 Logo | 對外連結到自己嘅 Vercel/網站，最方便 |
 | 😀 **Emoji** | 由你揀一個字符 | 自家內部工具、快速標記 |
 | 🖼 **圖片網址** | 貼一張 https 圖片連結 | 想用特定 PNG / 設計過嘅 logo |
 | 🚫 **不用** | 直接用我哋全站 Logo | 想統一一個 brand |
 
 > 舊資料冇 `icon_source` 欄位會自動推測：icon 係 https URL 視為「圖片網址」；
 > 其他非空字串視為「Emoji」；空字串視為「App 自帶 Logo」—— 行為兼容唔使人手改。
+
+### 🌐 自動 favicon 係點做嘅（Chrome 嗰個原理）
+
+Chrome 分頁標籤識顯示 ICON，係因為佢**自己攞咗成頁 HTML**，然後：
+讀 `<link rel="icon">` → 揀最啱尺寸 → 冇就試 `/favicon.ico`。
+
+我哋個站係「另一個網站」，瀏覽器受 **CORS** 限制讀唔到別站 HTML，
+所以放咗一個 Vercel serverless function（`api/favicon.js`）做同一件事：
+
+1. 伺服器攞該站 HTML（https 唔通轉 http，跟重定向）
+2. 搵所有 `<link rel="icon">`（包括 `shortcut icon` / `apple-touch-icon`），
+   按「PNG 優先、32–128px 最啱 64px tile」打分揀最佳
+3. 冇 link 或圖 404 → 試該站 `/favicon.ico`
+4. 都冇 → 回 404，前端 `<img>` 自動行備援：Google s2 → 全站 Logo
+
+附帶好處：唔使經 Google、edge cache 7 日、SSRF 防護（只收域名，唔收 IP/內網）。
 
 ### ⚠️ 一鍵重設（清空 + 建立預設模板）
 
