@@ -25,18 +25,14 @@ function tileBg(name) {
   const pal = dark ? PALETTE_DARK : PALETTE;
   return pal[h % pal.length];
 }
-function esc(s) {
-  return String(s ?? "").replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  }[c]));
-}
+// esc() 喺 store.js 內定義（global），呢度直接用
 
 // ── 最近使用（只記「小工具 Apps」分頁）────────────────────────
 const RECENT_KEY = "showcase-recent";
 function getRecent() { try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; } }
 function addRecent(app) {
   let r = getRecent().filter((x) => x.url !== app.url);
-  r.unshift({ name: app.name, url: app.url, icon: app.icon || null, cat: "最近", description: app.description || null, _id: app._id });
+  r.unshift({ name: app.name, url: app.url, icon: app.icon || null, iconSource: app.iconSource || null, cat: "最近", description: app.description || null, _id: app._id });
   r = r.slice(0, 8);
   localStorage.setItem(RECENT_KEY, JSON.stringify(r));
 }
@@ -48,19 +44,8 @@ function openApp(app) {
 
 function iconHTML(app) {
   const [c1, c2] = tileBg(app.name);
-  let inner = "";
-  if (app.icon) {
-    if (/^https?:\/\//i.test(app.icon)) {
-      // 自訂圖片網址；載入失敗就退返 Logo
-      inner = `<img src="${esc(app.icon)}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${SITE_LOGO}'" />`;
-    } else {
-      inner = esc(app.icon);
-    }
-  } else {
-    // 冇揀 icon → 預設用我哋嘅 Logo
-    inner = `<img src="${SITE_LOGO}" alt="" loading="lazy" decoding="async" />`;
-  }
-  return `<div class="tile-icon" style="background:linear-gradient(145deg,${c1},${c2})">${inner}</div>`;
+  // 圖示 HTML 由 store.js 統一提供（iconSource：favicon / emoji / upload / none）
+  return `<div class="tile-icon" style="background:linear-gradient(145deg,${c1},${c2})">${appIconHTML(app, "tile")}</div>`;
 }
 
 // ── 公開版面狀態 ─────────────────────────────────────────────
