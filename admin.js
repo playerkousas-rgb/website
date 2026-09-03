@@ -38,7 +38,25 @@ const ADMIN = {
     }
     if (!this._listener) {
       this._listener = true;
-      document.getElementById("admin-content").addEventListener("click", (e) => ADMIN.onAction(e));
+      const root = document.getElementById("admin-content");
+      root.addEventListener("click", (e) => ADMIN.onAction(e));
+      // 勾選狀態即時反映喺 UI（級別標籤／分頁開關／公開顯示）
+      root.addEventListener("change", (e) => {
+        const tc = e.target.closest(".tag-check");
+        if (tc) tc.classList.toggle("on", e.target.checked);
+        const po = e.target.closest(".page-on");
+        if (po) {
+          po.classList.toggle("on", e.target.checked);
+          const txt = po.querySelector(".page-on-txt");
+          if (txt) txt.textContent = e.target.checked ? "開放中" : "已關閉";
+        }
+        const vl = e.target.closest(".vis-lbl");
+        if (vl) {
+          vl.classList.toggle("on", e.target.checked);
+          const txt = vl.querySelector(".vis-txt");
+          if (txt) txt.textContent = e.target.checked ? "公開顯示中" : "已隱藏";
+        }
+      });
     }
     await this.refresh();
   },
@@ -284,7 +302,7 @@ function openEmojiPicker(cb) {
       <div class="emoji-panel-inner">
         <div class="emoji-panel-head">揀個 emoji <span class="spacer"></span><button type="button" class="mini-btn iconish" data-emoji-close="1">×</button></div>
         <div class="emoji-grid">${CATEGORY_EMOJI.map((x) => `<button type="button" class="emoji-cell" data-emoji="${x}">${x}</button>`).join("")}</div>
-        <div style="margin-top:8px"><button type="button" class="mini-btn" data-emoji-none="1">不用 emoji（用預設）</button></div>
+        <div style="margin-top:8px"><button type="button" class="mini-btn" data-emoji-none="1">不用 emoji（預設用我哋 Logo）</button></div>
       </div>`;
     panel.addEventListener("click", (e) => {
       const cell = e.target.closest("[data-emoji]");
@@ -333,7 +351,8 @@ function tagCheckHTML(checkedTags) {
     SCOUT_TAGS.map((t) => {
       const on = Array.isArray(checkedTags) && checkedTags.includes(t);
       return `<label class="tag-check ${on ? "on" : ""}">
-        <input type="checkbox" id="tag-${esc(t)}" ${on ? "checked" : ""} />${esc(t)}</label>`;
+        <input type="checkbox" id="tag-${esc(t)}" ${on ? "checked" : ""} />
+        <span class="tc-box" aria-hidden="true"></span>${esc(t)}</label>`;
     }).join("") + `</div>`;
 }
 
@@ -375,7 +394,12 @@ function formHTML() {
       <input id="f-gh" placeholder="GitHub repo（可選）" value="${esc(f.github || "")}" inputmode="url" />
       <input id="f-note" placeholder="內部備註（只有管理見到）" value="${esc(f.note || "")}" />
     </div>
-    <label class="vis-lbl"><input id="f-visible" type="checkbox" ${f.visible !== false ? "checked" : ""} /> 公開顯示（取消 = 收埋呢個項目）</label>
+    <label class="vis-lbl ${f.visible !== false ? "on" : ""}">
+      <input id="f-visible" type="checkbox" ${f.visible !== false ? "checked" : ""} />
+      <span class="switch" aria-hidden="true"></span>
+      <span class="vis-txt">${f.visible !== false ? "公開顯示中" : "已隱藏"}</span>
+      <span style="font-size:12px;color:var(--muted);font-weight:600">（關 = 收埋呢個項目）</span>
+    </label>
     <div class="admin-actions" style="margin-top:12px">
       <button class="mini-btn primary" onclick="ADMIN.submit()">💾 ${edit ? "儲存" : "加入"}</button>
       ${edit ? '<button class="mini-btn" onclick="ADMIN.cancelEdit()">取消</button>' : ""}
@@ -386,9 +410,14 @@ function formHTML() {
 /* ── 分頁 + 分類 + 項目 管理列 ──────────────────────────── */
 function itemRowHTML(a) {
   const tags = a.tags && a.tags.length ? a.tags.map((t) => `<span class="mini-tag">${esc(t)}</span>`).join("") : "";
+  const icon = a.icon
+    ? (/^https?:/i.test(a.icon)
+      ? `<img class="row-ico" src="${esc(a.icon)}" alt="" onerror="this.onerror=null;this.src='${SITE_LOGO}'" />`
+      : esc(a.icon))
+    : `<img class="row-ico" src="${SITE_LOGO}" alt="" />`;
   return `
   <div class="admin-app-row">
-    <span style="font-size:18px;line-height:1">${a.icon || "📦"}</span>
+    <span style="font-size:18px;line-height:1">${icon}</span>
     <b>${esc(a.name)}</b>
     ${a.visible === false ? '<span class="lock-tag">🔒 隱藏</span>' : ""}
     ${tags ? `<span class="mini-tag-row">${tags}</span>` : ""}
@@ -409,7 +438,7 @@ function pageGroupHTML(p) {
   const hidden = cats.reduce((n, c) => n + c.apps.filter((a) => a.visible === false).length, 0);
   const catHTML = cats.map((c) => `
     <div class="admin-cat-head">
-      <span>${c.icon ? c.icon + " " : "🗂️ "}${esc(c.name)}</span>
+      <span>${c.icon ? c.icon + " " : `<img class="row-ico" src="${SITE_LOGO}" alt="" style="vertical-align:-4px;margin-right:2px" /> `}${esc(c.name)}</span>
       <span class="num-badge">${c.apps.length}</span>
       <span style="flex:1"></span>
       <button class="mini-btn iconish" data-act="cat-move" data-page="${esc(p.id)}" data-name="${esc(c.name)}" data-dir="-1" title="分類上移">▲</button>
@@ -424,15 +453,16 @@ function pageGroupHTML(p) {
   return `
   <div class="page-block">
     <div class="page-block-head">
-      <span class="page-ico">${p.icon || "📄"}</span>
+      <span class="page-ico">${p.icon || `<img class="row-ico" src="${SITE_LOGO}" alt="" />`}</span>
       <div class="page-meta">
         <div class="page-title">${esc(p.label)} <span class="num-badge">${cats.length} 分類 · ${itemCount} 項${hidden ? " · 🔒" + hidden : ""}</span></div>
         <div style="font-size:11.5px;color:var(--muted)">id: ${esc(p.id)}</div>
       </div>
       <span style="flex:1"></span>
-      <label class="page-on">
+      <label class="page-on ${p.enabled ? "on" : ""}">
         <input type="checkbox" ${p.enabled ? "checked" : ""} onchange="ADMIN.togglePage('${esc(p.id)}')" />
-        <span>${p.enabled ? "開放中" : "已關閉"}</span>
+        <span class="switch" aria-hidden="true"></span>
+        <span class="page-on-txt">${p.enabled ? "開放中" : "已關閉"}</span>
       </label>
     </div>
     ${catHTML}
@@ -458,11 +488,16 @@ function tilesForCat(cat) {
   return cat.apps.map((a) => {
     const [g1, g2] = tileBg(a.name);
     let inner = "";
-    if (a.icon) { if (/^https?:/i.test(a.icon)) inner = `<img src="${esc(a.icon)}" alt="" />`; else inner = esc(a.icon); }
+    if (a.icon) {
+      if (/^https?:/i.test(a.icon)) inner = `<img src="${esc(a.icon)}" alt="" onerror="this.onerror=null;this.src='${SITE_LOGO}'" />`;
+      else inner = esc(a.icon);
+    } else {
+      inner = `<img src="${SITE_LOGO}" alt="" />`;
+    }
     return `
     <a class="tile" href="${esc(a.url)}" title="${esc((a.description || "") + (a.visible === false ? "（隱藏中）" : ""))}" target="_blank" rel="noopener">
       ${a.visible === false ? '<span class="lock-tag" style="position:absolute;top:2px;right:2px;z-index:2">🔒</span>' : ""}
-      <div class="tile-icon" style="background:linear-gradient(145deg,${g1},${g2})">${inner || "📦"}</div>
+      <div class="tile-icon" style="background:linear-gradient(145deg,${g1},${g2})">${inner}</div>
       <div class="tile-name">${esc(a.name)}</div>
       ${(a.tags && a.tags.length) ? `<div class="tile-tags">${a.tags.map((t) => `<span>${esc(t)}</span>`).join("")}</div>` : ""}
       ${a.description ? `<div class="tile-desc">${esc(a.description)}</div>` : ""}

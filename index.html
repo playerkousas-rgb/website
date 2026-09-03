@@ -152,11 +152,6 @@
     line-height: 1.2;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .head-titles span {
-    display: block; font-size: 12.5px; color: var(--muted);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    margin-top: 1px;
-  }
   .head-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 
   .icon-btn {
@@ -560,11 +555,21 @@
     border-radius: 999px; padding: 2px 8px; white-space: nowrap;
   }
   .vis-lbl {
+    position: relative;
     font-size: 14px; color: var(--text);
     display: flex; align-items: center; gap: 10px; cursor: pointer;
     min-height: 44px; user-select: none;
+    padding: 6px 12px 6px 8px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--bg);
+    transition: all .16s var(--ease);
   }
-  .vis-lbl input { width: 18px; height: 18px; accent-color: var(--accent); }
+  .vis-lbl input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .vis-lbl .vis-txt { font-weight: 800; color: var(--muted); }
+  .vis-lbl.on {
+    border-color: color-mix(in srgb, var(--ok) 40%, transparent);
+    background: var(--ok-soft);
+  }
+  .vis-lbl.on .vis-txt { color: var(--ok); }
 
   .login-wrap {
     min-height: calc(100dvh - 80px);
@@ -656,24 +661,89 @@
   .page-ico { font-size: 22px; }
   .page-meta { flex: 1; min-width: 120px; }
   .page-title { font-weight: 750; font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .page-on { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; user-select: none; }
-  .page-on input { width: 40px; height: 22px; accent-color: var(--accent); }
+  .page-on {
+    position: relative;
+    display: inline-flex; align-items: center; gap: 9px;
+    font-size: 12.5px; font-weight: 800; cursor: pointer; user-select: none;
+    padding: 7px 12px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--bg);
+    transition: all .16s var(--ease);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .page-on input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .page-on .page-on-txt { color: var(--muted); white-space: nowrap; }
+  .page-on.on {
+    border-color: color-mix(in srgb, var(--ok) 40%, transparent);
+    background: var(--ok-soft);
+  }
+  .page-on.on .page-on-txt { color: var(--ok); }
   .page-sublabel {
     font-size: 12.5px; font-weight: 800; letter-spacing: .02em;
     color: var(--accent-text); margin: 4px 2px 0; text-transform: none;
   }
+  /* 後台列表／標題用嘅細 icon（預設 = 我哋 Logo） */
+  .row-ico {
+    width: 20px; height: 20px; border-radius: 6px; object-fit: contain;
+    vertical-align: -5px;
+  }
+  /* 公開版分類標題：冇 emoji 就用 Logo */
+  .sec-ico-logo {
+    width: 18px; height: 18px; border-radius: 5px; object-fit: contain;
+  }
 
-  /* 管理：級別 checkbox */
+  /* 管理：級別標籤（藥丸＋勾選框，選中一眼分明） */
   .tag-check-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
   .tag-check {
-    display: inline-flex; align-items: center; gap: 6px;
+    position: relative; display: inline-flex; align-items: center; gap: 8px;
     font-size: 13px; font-weight: 700; cursor: pointer; user-select: none;
-    padding: 7px 11px; border-radius: 10px;
-    border: 1px solid var(--border); background: var(--bg);
-    transition: all .15s;
+    padding: 9px 14px; border-radius: 999px;
+    border: 1.5px solid var(--border-strong); background: var(--bg-card);
+    color: var(--muted);
+    transition: all .16s var(--ease);
+    -webkit-tap-highlight-color: transparent;
   }
-  .tag-check input { width: 16px; height: 16px; accent-color: var(--accent); }
-  .tag-check.on { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); color: var(--accent-text); }
+  .tag-check:hover { border-color: var(--accent); color: var(--accent-text); }
+  .tag-check:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tag-check input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .tc-box {
+    width: 18px; height: 18px; border-radius: 6px; flex-shrink: 0;
+    border: 2px solid var(--border-strong); background: var(--bg);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 900; line-height: 1; color: transparent;
+    transition: all .16s var(--ease);
+  }
+  .tag-check.on {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-color: transparent; color: #fff;
+    box-shadow: 0 5px 14px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .tag-check.on .tc-box {
+    background: rgba(255, 255, 255, .3);
+    border-color: rgba(255, 255, 255, .95); color: #fff;
+  }
+  .tag-check.on .tc-box::after { content: "✓"; }
+  [data-theme="dark"] .tag-check.on { color: #0b0d12; }
+  [data-theme="dark"] .tag-check.on .tc-box {
+    background: rgba(0, 0, 0, .22); border-color: #0b0d12; color: #0b0d12;
+  }
+
+  /* 開關掣（分頁開放／項目公開顯示共用） */
+  .switch {
+    position: relative; flex-shrink: 0;
+    width: 46px; height: 28px; border-radius: 999px;
+    background: #c6cedb; box-shadow: inset 0 1px 3px rgba(15, 23, 42, .18);
+    transition: background .18s var(--ease);
+  }
+  .switch::after {
+    content: ""; position: absolute; top: 3px; left: 3px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #fff; box-shadow: 0 2px 5px rgba(15, 23, 42, .3);
+    transition: transform .18s var(--ease);
+  }
+  [data-theme="dark"] .switch { background: #3a4150; }
+  input:checked + .switch { background: var(--ok); }
+  input:checked + .switch::after { transform: translateX(18px); }
+  input:focus-visible + .switch { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   /* emoji picker */
   .emoji-panel {
@@ -709,7 +779,6 @@
         </div>
         <div class="head-titles">
           <h1 id="site-name">童軍小工具</h1>
-          <span id="site-sub">一個入口 · 分類排列</span>
         </div>
         <div class="head-actions">
           <button class="install-btn" id="install-btn" type="button" aria-label="安裝 App">
@@ -750,7 +819,7 @@
   <footer>
     <div class="tip">💡 <b>提示：</b>喺瀏覽器選單選「加入主畫面 / 安裝 App」（Android 可撳右上角「安裝」），呢個「童軍小工具」就會變成電話桌面嘅一個 App。所有童軍工具、圖卡、簡報同連結都由呢度入。</div>
     <span class="foot-meta" id="foot-count">載入中…</span>
-    <div style="margin-top:16px">© 2026 童軍小工具 · 由 <a href="https://vercel.com" target="_blank" rel="noopener">Vercel</a> 提供部署</div>
+    <div style="margin-top:16px">© 2026 Scout System</div>
   </footer>
 </div>
 
