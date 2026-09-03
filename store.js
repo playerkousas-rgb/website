@@ -112,7 +112,7 @@ function rowsToApp(r) {
     url: r.url,
     description: r.description || null,
     icon: r.icon || null,
-    iconSource: r.iconSource || null,
+    iconSource: r.icon_source || r.iconSource || null,
     github: r.github || null,
     note: r.note || null,
     visible: r.visible !== false,
@@ -282,7 +282,7 @@ function appPayload(app) {
     url: app.url,
     description: app.description || null,
     icon: app.icon || null,
-    iconSource: app.iconSource || null,
+    icon_source: app.iconSource || null,
     github: app.github || null,
     note: app.note || null,
     category: app.category,
@@ -304,9 +304,9 @@ async function adminSaveApp(app, id) {
     let res = id
       ? await sb.from("apps").update(p).eq("id", id)
       : await sb.from("apps").insert(p);
-    if (res.error && /icon_source/i.test(res.error.message || "")) {
+    if (res.error && /icon_?source/i.test(res.error.message || "")) {
       p = { ...payload };
-      delete p.iconSource;
+      delete p.icon_source;
       res = id
         ? await sb.from("apps").update(p).eq("id", id)
         : await sb.from("apps").insert(p);
@@ -315,17 +315,20 @@ async function adminSaveApp(app, id) {
     return;
   }
   const { sites } = await loadSites();
+  // localStorage 模式用 camelCase
+  const { icon_source, ...localPayload } = payload;
+  localPayload.iconSource = icon_source;
   if (id) {
     for (const pg of sites.pages) for (const c of pg.categories) {
       const i = c.apps.findIndex((a) => a._id === id);
-      if (i >= 0) c.apps[i] = { ...c.apps[i], ...payload };
+      if (i >= 0) c.apps[i] = { ...c.apps[i], ...localPayload };
     }
   } else {
     let pg = sites.pages.find((p) => p.id === app.page);
     if (!pg) { pg = { id: app.page, label: app.page, icon: "", enabled: true, categories: [] }; sites.pages.push(pg); }
     let cat = pg.categories.find((c) => c.name === app.category);
     if (!cat) { cat = { name: app.category, icon: "", apps: [] }; pg.categories.push(cat); }
-    cat.apps.push({ ...payload, clicks: 0, _id: "demo-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) });
+    cat.apps.push({ ...localPayload, clicks: 0, _id: "demo-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) });
   }
   localStorage.setItem(LS_KEY, JSON.stringify(sites));
 }
@@ -637,15 +640,15 @@ async function restoreFromBackup(backup) {
         if (!a.name || !a.url) continue;
         let rowPayload = {
           name: a.name, url: a.url, description: a.description || null,
-          icon: a.icon || null, iconSource: a.iconSource || null,
+          icon: a.icon || null, icon_source: a.iconSource || null,
           github: a.github || null, note: a.note || null,
           category: c.name, page: p.id, tags: a.tags || [],
           visible: a.visible !== false, clicks: typeof a.clicks === "number" ? a.clicks : 0,
           sort_order: a.sort_order ?? itemCount
         };
         let { error: ae } = await sb.from("apps").insert(rowPayload);
-        if (ae && /icon_source/i.test(ae.message || "")) {
-          const { iconSource, ...rest } = rowPayload;
+        if (ae && /icon_?source/i.test(ae.message || "")) {
+          const { icon_source, ...rest } = rowPayload;
           rowPayload = rest;
           ({ error: ae } = await sb.from("apps").insert(rowPayload));
         }
