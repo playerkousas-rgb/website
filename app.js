@@ -27,25 +27,24 @@ function tileBg(name) {
 }
 // esc() 喺 store.js 內定義（global），呢度直接用
 
-// ── 最近使用（只記「小工具 Apps」分頁）────────────────────────
-const RECENT_KEY = "showcase-recent";
-function getRecent() { try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; } }
-function addRecent(app) {
-  let r = getRecent().filter((x) => x.url !== app.url);
-  r.unshift({ name: app.name, url: app.url, icon: app.icon || null, iconSource: app.iconSource || null, cat: "最近", description: app.description || null, _id: app._id });
-  r = r.slice(0, 8);
-  localStorage.setItem(RECENT_KEY, JSON.stringify(r));
+// ── 我的最愛 ─────────────────────────────────────────────
+const FAV_KEY = "showcase-favorites";
+function getFavorites() { try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; } catch { return []; } }
+function isFavorite(id) { return getFavorites().includes(id); }
+function toggleFavorite(id) {
+  let favs = getFavorites();
+  if (favs.includes(id)) favs = favs.filter((x) => x !== id);
+  else favs.unshift(id);
+  localStorage.setItem(FAV_KEY, JSON.stringify(favs));
 }
 function openApp(app) {
-  addRecent(app);
   trackClick(app._id);
   window.location.href = app.url;
 }
 
 function iconHTML(app) {
-  const [c1, c2] = tileBg(app.name);
-  // 圖示 HTML 由 store.js 統一提供（iconSource：favicon / emoji / upload / none）
-  return `<div class="tile-icon" style="background:linear-gradient(145deg,${c1},${c2})">${appIconHTML(app, "tile")}</div>`;
+  // 圖示直接放大，唔加底色
+  return `<div class="tile-icon">${appIconHTML(app, "tile")}</div>`;
 }
 
 // ── 公開版面狀態 ─────────────────────────────────────────────
@@ -118,15 +117,24 @@ function tileHTML(idx, delay) {
   const app = REG[idx];
   const d = Math.min(delay || 0, 12) * 30;
   const tags = (app.tags || []).filter(Boolean);
+  const starred = isFavorite(app._id);
   return `
-  <a class="tile" href="${esc(app.url)}" title="${esc((app.description || app.name) + (tags.length ? "　標籤：" + tags.join("、") : ""))}"
-     data-idx="${idx}" style="animation-delay:${d}ms">
+  <a class="tile" href="${esc(app.url)}" title="${esc((app.description || app.name) + (tags.length ? " 標籤：" + tags.join("、") : ""))}"
+     data-idx="${idx}" data-id="${esc(app._id || "")}" style="animation-delay:${d}ms">
+    <span class="fav-star ${starred ? "on" : ""}" title="加入我的最愛" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); toggleFav(this)"></span>
     ${app.github ? `<span class="gh-badge" title="GitHub repo" onclick="event.preventDefault(); event.stopPropagation(); window.open('${esc(app.github)}','_blank')">GH</span>` : ""}
     ${iconHTML(app)}
     <div class="tile-name">${esc(app.name)}</div>
     ${tags.length ? `<div class="tile-tags">${tags.map((t) => `<span>${esc(t)}</span>`).join("")}</div>` : ""}
     ${app.description ? `<div class="tile-desc">${esc(app.description)}</div>` : ""}
   </a>`;
+}
+
+function toggleFav(el) {
+  const id = el.dataset.id;
+  if (!id) return;
+  toggleFavorite(id);
+  el.classList.toggle("on", isFavorite(id));
 }
 
 function sectionHTML(title, icon, apps, id) {
@@ -151,10 +159,22 @@ function setActiveChip(id) {
 }
 
 function jumpTo(id) {
-  setActiveChip(id);
-  if (id === "all") { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
-  const el = document.getElementById(id);
-  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (id === "all") {
+    activeChip = "all";
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+  if (id === "fav") {
+    activeChip = "fav";
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+  // 選咗某個分類 → 只顯示該分類
+  activeChip = id;
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function setTag(tag) {
@@ -210,20 +230,50 @@ function render() {
     .map((c, i) => ({ c, i, shown: c.apps.filter(visible).filter(match) }))
     .filter((x) => x.shown.length);
 
-  // 「最近使用」只喺小工具/Apps 分頁、冇搜尋冇篩選時顯示
-  if (!q && !tagFilter && ACTIVE_PAGE === "apps") {
-    const recent = getRecent().filter((r) => r.visible !== false);
-    if (recent.length) html += sectionHTML("最近使用", "🕘", recent, "recent");
+  // 「我的最愛」：當 activeChip === "fav" 時只顯示最愛項目
+  const favIds = new Set(getFavorites());
+  if (activeChip === "fav") {
+    const favApps = [];
+    for (const x of cats) {
+      for (const a of x.shown) {
+        if (favIds.has(a._id)) favApps.push(a);
+      }
+    }
+    html += sectionHTML("我的最愛", "⭐", favApps, "favorites");
+  } else if (activeChip !== "all" && !q && !tagFilter) {
+    // 選咗某個分類 chip → 只顯示該分類
+    const matchCat = cats.find((x) => "cat-" + x.i === activeChip);
+    if (matchCat) {
+      html += sectionHTML(matchCat.c.name, matchCat.c.icon, matchCat.shown, "cat-" + matchCat.i);
+    }
+  } else {
+    // 「全部」模式（或有搜尋/篩選）→ 顯示所有分類
+    html += cats.map((x) => sectionHTML(x.c.name, x.c.icon, x.shown, "cat-" + x.i)).join("");
   }
 
-  html += cats.map((x) => sectionHTML(x.c.name, x.c.icon, x.shown, "cat-" + x.i)).join("");
   sectionsEl.innerHTML = html;
-  emptyEl.style.display = html ? "none" : "block";
+  if (html) {
+    emptyEl.style.display = "none";
+  } else {
+    emptyEl.style.display = "block";
+    if (activeChip === "fav") {
+      emptyEl.querySelector("b").textContent = "暫時未有我的最愛";
+      emptyEl.querySelector("p").textContent = "喺項目右上角撳 ☆ 就可以加入收藏！";
+    } else if (activeChip !== "all" && !q && !tagFilter) {
+      emptyEl.querySelector("b").textContent = "呢個分類暫時冇項目";
+      emptyEl.querySelector("p").textContent = "試下撳「全部」睇下其他分類";
+    } else {
+      emptyEl.querySelector("b").textContent = "未有內容";
+      emptyEl.querySelector("p").textContent = "試下改關鍵字，或者撳「全部」／轉第二個分頁睇下";
+    }
+  }
 
+  // Build chip bar with 「我的最愛」 chip
   chipsEl.innerHTML =
-    `<button type="button" class="chip ${!q && activeChip === "all" ? "on" : ""}" data-chip="all" onclick="jumpTo('all')">⌂ 全部</button>` +
+    `<button type="button" class="chip ${!q && !tagFilter && activeChip === "all" ? "on" : ""}" data-chip="all" onclick="jumpTo('all')">⌂ 全部</button>` +
+    `<button type="button" class="chip ${activeChip === "fav" ? "on" : ""}" data-chip="fav" onclick="jumpTo('fav')">⭐ 我的最愛</button>` +
     cats.map((x) =>
-      `<button type="button" class="chip ${!q && activeChip === ("cat-" + x.i) ? "on" : ""}" data-chip="cat-${x.i}" onclick="jumpTo('cat-${x.i}')">${esc((x.c.icon ? x.c.icon + " " : "") + x.c.name)}</button>`
+      `<button type="button" class="chip ${!q && !tagFilter && activeChip === ("cat-" + x.i) ? "on" : ""}" data-chip="cat-${x.i}" onclick="jumpTo('cat-${x.i}')">${esc((x.c.icon ? x.c.icon + " " : "") + x.c.name)}</button>`
     ).join("");
 
   renderTagRow();
@@ -236,11 +286,13 @@ let _io = null;
 function watchSections() {
   if (_io) _io.disconnect();
   if (!("IntersectionObserver" in window)) return;
+  // 單一分類模式或我的最愛模式時，唔需要用 observer
+  if (activeChip !== "all" || searchEl.value.trim() || tagFilter) return;
   const secs = sectionsEl.querySelectorAll("section[id]");
   if (!secs.length) return;
   _io = new IntersectionObserver(
     (entries) => {
-      if (searchEl.value.trim() || tagFilter) return;
+      if (searchEl.value.trim() || tagFilter || activeChip !== "all") return;
       const v = entries.filter((e) => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio);
       if (!v.length) return;
       const id = v[0].target.id;
