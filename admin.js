@@ -298,35 +298,108 @@ const ADMIN = {
   }
 };
 
-/* ── Emoji 揀選 ─────────────────────────────────────────── */
+/* ── Emoji 揀選 ───────────────────────────────────────────
+   WhatsApp 式：分「種類」tag ＋ 搜尋 ＋ 最近用過 ＋ 常用。 */
 let EMOJI_CB = null;
+let _emojiCtx = null;   // { recent, tab, query } 開picker 嗰下嘅狀態
+function buildEmojiGrid(emojiArr) {
+  return emojiArr.map((x) => `<button type="button" class="emoji-cell" data-emoji="${esc(x)}">${x}</button>`).join("");
+}
+function refreshEmojiPanel() {
+  const grid = document.querySelector("#emoji-panel .emoji-grid");
+  if (!grid) return;
+  const ctx = _emojiCtx || { tab: "recent", query: "" };
+  const q = (ctx.query || "").trim().toLowerCase();
+  let html = "";
+  if (q) {
+    const res = emojiSearch(q);
+    const hits = res.hits.slice(0, 40);
+    if (hits.length) {
+      html = buildEmojiGrid(hits.map((h) => h.e)) +
+        `<div class="emoji-none-hint">結果唔啱？可以喺下面每個分類入面直接揀，或者自己打喺輸入框</div>`;
+    } else {
+      html = `<div class="emoji-none-hint">搵唔到「${esc(q)}」相關嘅 emoji，可以喺分類度直接揀</div>`;
+    }
+  } else if (ctx.tab === "recent") {
+    const rec = (ctx.recent || []).slice(0, 40);
+    html = rec.length ? buildEmojiGrid(rec) : `<div class="emoji-none-hint">未用過 emoji — 揀咗一個之後會喺度記住，方便下次快揀</div>`;
+  } else if (ctx.tab === "all") {
+    html = buildEmojiGrid(EMOJI_ALL);
+  } else {
+    const g = EMOJI_GROUPS.find((x) => x.key === ctx.tab);
+    html = g ? buildEmojiGrid(g.emojis) : "";
+  }
+  grid.innerHTML = html;
+}
 function openEmojiPicker(cb) {
   EMOJI_CB = cb;
+  // 上一格揀咗／而家開嗰刻：記住最近用過同個 tab
+  _emojiCtx = { recent: emojiRecentGet(), tab: _emojiCtx && _emojiCtx.tab !== "recent" ? _emojiCtx.tab : "recent", query: "" };
   let panel = document.getElementById("emoji-panel");
   if (!panel) {
     panel = document.createElement("div");
     panel.id = "emoji-panel";
     panel.className = "emoji-panel";
+    const tabs = EMOJI_GROUPS.map((g) =>
+      `<button type="button" class="emoji-tab" data-emoji-tab="${g.key}" title="${esc(g.label.replace(/^.{1,2}\s/, ""))}">${esc(g.label)}</button>`).join("");
     panel.innerHTML = `
       <div class="emoji-panel-inner">
         <div class="emoji-panel-head">揀個 emoji <span class="spacer"></span><button type="button" class="mini-btn iconish" data-emoji-close="1">×</button></div>
-        <div class="emoji-grid">${CATEGORY_EMOJI.map((x) => `<button type="button" class="emoji-cell" data-emoji="${x}">${x}</button>`).join("")}</div>
-        <div style="margin-top:8px"><button type="button" class="mini-btn" data-emoji-none="1">不用 emoji（預設用我哋 Logo）</button></div>
+        <input id="emoji-search" class="emoji-search" type="search" placeholder="🔍 搜尋 emoji（例如：露營、地圖、獎…）" autocomplete="off" enterkeyhint="done" />
+        <div class="emoji-tabs">
+          <button type="button" class="emoji-tab on" data-emoji-tab="recent">🕘 最近</button>
+          <button type="button" class="emoji-tab" data-emoji-tab="all">☰ 全部</button>
+          ${tabs}
+        </div>
+        <div class="emoji-grid"></div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="mini-btn" data-emoji-none="1">🚫 不用 emoji（預設用我哋 Logo）</button>
+          <span class="emoji-total">共 ${EMOJI_ALL.length} 個</span>
+        </div>
       </div>`;
+    const syncTabs = () => {
+      panel.querySelectorAll(".emoji-tab").forEach((b) => {
+        const on = _emojiCtx && (_emojiCtx.query ? false : b.dataset.emojiTab === _emojiCtx.tab);
+        b.classList.toggle("on", !!on);
+      });
+    };
+    const setTab = (k) => { if (_emojiCtx) { _emojiCtx.tab = k; _emojiCtx.query = ""; const s = document.getElementById("emoji-search"); if (s) s.value = ""; } refreshEmojiPanel(); syncTabs(); };
     panel.addEventListener("click", (e) => {
       const cell = e.target.closest("[data-emoji]");
+      const tab = e.target.closest("[data-emoji-tab]");
       const none = e.target.closest("[data-emoji-none]");
       const close = e.target.closest("[data-emoji-close]");
-      if (cell && EMOJI_CB) { const cb = EMOJI_CB; EMOJI_CB = null; panel.hidden = true; cb(cell.dataset.emoji); }
+      if (cell && EMOJI_CB) { const cb = EMOJI_CB; EMOJI_CB = null; emojiRecentPush(cell.dataset.emoji); panel.hidden = true; cb(cell.dataset.emoji); }
+      else if (tab) setTab(tab.dataset.emojiTab);
       else if (none && EMOJI_CB) { const cb = EMOJI_CB; EMOJI_CB = null; panel.hidden = true; cb(""); }
       else if (close) { EMOJI_CB = null; panel.hidden = true; }
     });
+    const search = panel.querySelector("#emoji-search");
+    if (search) {
+      search.addEventListener("input", () => { if (_emojiCtx) _emojiCtx.query = search.value; refreshEmojiPanel(); syncTabs(); });
+      search.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") e.preventDefault(); // 唔好捲頁
+      });
+    }
     document.body.appendChild(panel);
   }
   panel.hidden = false;
+  refreshEmojiPanel();
+  const tabsBar = panel.querySelectorAll(".emoji-tab");
+  tabsBar.forEach((b) => {
+    const on = _emojiCtx && (_emojiCtx.query ? false : b.dataset.emojiTab === _emojiCtx.tab);
+    b.classList.toggle("on", !!on);
+  });
+  const qb = document.getElementById("emoji-search");
+  if (qb) { qb.value = ""; requestAnimationFrame(() => qb.focus()); }
 }
 function pickIntoInput(inputId) {
-  openEmojiPicker((emoji) => { const el = document.getElementById(inputId); if (el) el.value = emoji; });
+  openEmojiPicker((emoji) => {
+    const el = document.getElementById(inputId);
+    if (el) el.value = emoji;
+    const src = document.querySelector('input[name="f-iconSource"]');
+    if (src) onIconSourceChange("emoji");
+  });
 }
 
 /* ── 登入頁 ─────────────────────────────────────────────── */
@@ -451,7 +524,10 @@ function iconSourceHTML(f) {
 }
 function onIconSourceChange(v) {
   document.querySelectorAll(".icon-src-opt").forEach((el) => {
-    el.classList.toggle("on", el.querySelector("input").value === v);
+    const inp = el.querySelector("input");
+    const on = inp.value === v;
+    el.classList.toggle("on", on);
+    if (on) inp.checked = true; // 撳咗 picker 揀完都同步返 radio
   });
   const er = document.getElementById("f-emoji-row");
   const ur = document.getElementById("f-upload-row");

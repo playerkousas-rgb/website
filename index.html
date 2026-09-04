@@ -802,6 +802,34 @@
   }
   .emoji-panel-head { display: flex; align-items: center; font-weight: 750; font-size: 14px; margin-bottom: 10px; }
   .emoji-panel-head .spacer { flex: 1; }
+  .emoji-search {
+    width: 100%; min-height: 42px; padding: 9px 12px; margin-bottom: 8px;
+    border-radius: 11px; border: 1px solid var(--border); background: var(--bg);
+    color: var(--text); font-size: 15px; -webkit-appearance: none; appearance: none;
+    outline: none; transition: border-color .15s, box-shadow .15s;
+  }
+  .emoji-search:focus { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .emoji-tabs {
+    position: sticky; top: 0; z-index: 2;
+    display: flex; gap: 6px; overflow-x: auto;
+    padding: 2px 0 8px; margin-bottom: 2px;
+    background: var(--bg-elevated);
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .emoji-tabs::-webkit-scrollbar { display: none; }
+  .emoji-tab {
+    flex-shrink: 0; white-space: nowrap; cursor: pointer;
+    font-size: 13px; font-weight: 700; color: var(--muted);
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 999px; padding: 7px 12px; touch-action: manipulation;
+    transition: all .15s var(--ease);
+  }
+  .emoji-tab:hover { color: var(--text); border-color: var(--border-strong); }
+  .emoji-tab.on {
+    color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-color: transparent;
+  }
+  [data-theme="dark"] .emoji-tab.on { color: #0b0d12; }
   .emoji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 6px; }
   .emoji-cell {
     aspect-ratio: 1; font-size: 24px; border: 1px solid var(--border);
@@ -810,6 +838,13 @@
     transition: transform .12s, background .15s, border-color .15s;
   }
   .emoji-cell:hover { transform: scale(1.1); border-color: var(--accent); background: var(--accent-soft); }
+  .emoji-total { font-size: 12px; color: var(--muted); align-self: center; margin-left: auto; }
+  .emoji-none-hint {
+    grid-column: 1 / -1; text-align: left;
+    font-size: 12.5px; color: var(--muted); line-height: 1.5;
+    background: var(--bg); border: 1px dashed var(--border-strong);
+    border-radius: 10px; padding: 12px;
+  }
 </style>
 </head>
 <body>

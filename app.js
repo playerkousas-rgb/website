@@ -179,7 +179,7 @@ function jumpTo(id) {
 
 function setTag(tag) {
   tagFilter = tagFilter === tag ? null : tag;
-  activeChip = "all";
+  // 唔再強制跳返「全部」——保留目前揀咗嘅分類，等適用級別同分類可以疊加一齊用
   render();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -226,29 +226,26 @@ function render() {
   const visible = (a) => a.visible !== false;
 
   let html = "";
-  const cats = pg.categories
-    .map((c, i) => ({ c, i, shown: c.apps.filter(visible).filter(match) }))
-    .filter((x) => x.shown.length);
+  const shownOf = (c) => c.apps.filter(visible).filter(match);
+  // 呢頁「有內容」嘅分類 —— 唔畀目前搜尋／適用級別篩選收窄，
+  // 咁分類同適用級別先至可以同時撳（唔會「LOCK 死」）。
+  const catIdx = [];
+  pg.categories.forEach((c, i) => { if (c.apps.some(visible)) catIdx.push({ c, i }); });
 
-  // 「我的最愛」：當 activeChip === "fav" 時只顯示最愛項目
+  // 「我的最愛」／單一分類／全部 —— 全部都同搜尋、適用級別篩選疊加（AND）
   const favIds = new Set(getFavorites());
   if (activeChip === "fav") {
     const favApps = [];
-    for (const x of cats) {
-      for (const a of x.shown) {
-        if (favIds.has(a._id)) favApps.push(a);
-      }
-    }
+    for (const { c } of catIdx) for (const a of shownOf(c)) if (favIds.has(a._id)) favApps.push(a);
     html += sectionHTML("我的最愛", "⭐", favApps, "favorites");
-  } else if (activeChip !== "all" && !q && !tagFilter) {
-    // 選咗某個分類 chip → 只顯示該分類
-    const matchCat = cats.find((x) => "cat-" + x.i === activeChip);
-    if (matchCat) {
-      html += sectionHTML(matchCat.c.name, matchCat.c.icon, matchCat.shown, "cat-" + matchCat.i);
-    }
+  } else if (activeChip !== "all") {
+    // 揀咗某個分類 chip → 只顯示嗰個分類（可疊加適用級別／搜尋）
+    const selIdx = Number(String(activeChip).replace("cat-", ""));
+    const sel = pg.categories[selIdx];
+    if (sel) html += sectionHTML(sel.name, sel.icon, shownOf(sel), activeChip);
   } else {
-    // 「全部」模式（或有搜尋/篩選）→ 顯示所有分類
-    html += cats.map((x) => sectionHTML(x.c.name, x.c.icon, x.shown, "cat-" + x.i)).join("");
+    // 「全部」→ 顯示所有分類（可疊加適用級別／搜尋）
+    html += catIdx.map(({ c, i }) => sectionHTML(c.name, c.icon, shownOf(c), "cat-" + i)).join("");
   }
 
   sectionsEl.innerHTML = html;
@@ -256,24 +253,34 @@ function render() {
     emptyEl.style.display = "none";
   } else {
     emptyEl.style.display = "block";
+    const b = emptyEl.querySelector("b");
+    const p = emptyEl.querySelector("p");
     if (activeChip === "fav") {
-      emptyEl.querySelector("b").textContent = "暫時未有我的最愛";
-      emptyEl.querySelector("p").textContent = "喺項目右上角撳 ☆ 就可以加入收藏！";
-    } else if (activeChip !== "all" && !q && !tagFilter) {
-      emptyEl.querySelector("b").textContent = "呢個分類暫時冇項目";
-      emptyEl.querySelector("p").textContent = "試下撳「全部」睇下其他分類";
+      b.textContent = "暫時未有我的最愛";
+      p.textContent = "喺項目右上角撳 ☆ 就可以加入收藏！";
+    } else if (activeChip !== "all") {
+      b.textContent = "呢個分類暫時冇項目";
+      p.textContent = tagFilter
+        ? `試下撳多次「${tagFilter}」取消級別篩選，或者轉「全部」`
+        : "試下撳「全部」睇下其他分類";
+    } else if (tagFilter && q) {
+      b.textContent = "冇符合嘅結果";
+      p.textContent = `換個關鍵字，或撳多次「${tagFilter}」取消級別篩選`;
+    } else if (tagFilter) {
+      b.textContent = `暫時冇「${tagFilter}」級別嘅項目`;
+      p.textContent = "試下揀其他級別，或者撳「全部」睇晒";
     } else {
-      emptyEl.querySelector("b").textContent = "未有內容";
-      emptyEl.querySelector("p").textContent = "試下改關鍵字，或者撳「全部」／轉第二個分頁睇下";
+      b.textContent = "未有內容";
+      p.textContent = "試下改關鍵字，或者撳「全部」／轉第二個分頁睇下";
     }
   }
 
   // Build chip bar with 「我的最愛」 chip
   chipsEl.innerHTML =
-    `<button type="button" class="chip ${!q && !tagFilter && activeChip === "all" ? "on" : ""}" data-chip="all" onclick="jumpTo('all')">⌂ 全部</button>` +
+    `<button type="button" class="chip ${activeChip === "all" ? "on" : ""}" data-chip="all" onclick="jumpTo('all')">⌂ 全部</button>` +
     `<button type="button" class="chip ${activeChip === "fav" ? "on" : ""}" data-chip="fav" onclick="jumpTo('fav')">⭐ 我的最愛</button>` +
-    cats.map((x) =>
-      `<button type="button" class="chip ${!q && !tagFilter && activeChip === ("cat-" + x.i) ? "on" : ""}" data-chip="cat-${x.i}" onclick="jumpTo('cat-${x.i}')">${esc((x.c.icon ? x.c.icon + " " : "") + x.c.name)}</button>`
+    catIdx.map(({ c, i }) =>
+      `<button type="button" class="chip ${activeChip === ("cat-" + i) ? "on" : ""}" data-chip="cat-${i}" onclick="jumpTo('cat-${i}')">${esc((c.icon ? c.icon + " " : "") + c.name)}</button>`
     ).join("");
 
   renderTagRow();
