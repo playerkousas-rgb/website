@@ -141,7 +141,9 @@ const ADMIN = {
         name, url, page, category, tags,
         description: val("f-desc"), icon, iconSource,
         github: val("f-gh"), note: val("f-note"),
-        visible: visEl ? visEl.checked : true
+        visible: visEl ? visEl.checked : true,
+        // 保留現有嘅「今期推廣」狀態 —— 唔帶呢個欄嘅話，編輯一下就會靜靜地清走佢
+        featured: this.editId ? this.form.featured === true : false
       }, this.editId).then(() => {
         this.editId = null; this.form = {};
         return this.refresh();
@@ -170,6 +172,19 @@ const ADMIN = {
   async moveApp(id, dir) {
     try { await adminMoveApp(id, dir); await this.refresh(); }
     catch (e) { alert("排序失敗：" + e.message); }
+  },
+
+  /* 今期推廣：全站得一個。撳第二個會自動搶走。 */
+  async setFeatured(id, on) {
+    try {
+      await adminSetFeatured(id, on);
+      await this.refresh();
+    } catch (e) {
+      alert("設「今期推廣」失敗：" + e.message +
+        "\n\n如果提到 featured 欄，即係 Supabase 仲未加呢個欄位。" +
+        "\n去 Supabase → SQL Editor 貼呢句 → Run：\n" +
+        "alter table apps add column if not exists featured boolean not null default false;");
+    }
   },
 
   // ── 分類動作 ─────────────────────────────
@@ -292,6 +307,7 @@ const ADMIN = {
     else if (act === "cat-move") { this.moveCat(p, n, Number(d)); }
     else if (act === "item-edit") { this.edit(id); }
     else if (act === "item-hide") { this.toggleVisible(id); }
+    else if (act === "item-feature") { this.setFeatured(id, d !== "0"); }
     else if (act === "item-del") { this.removeItem(id); }
     else if (act === "item-move") { this.moveApp(id, Number(d)); }
     else if (act === "reset") { this.resetAll(); }
@@ -538,13 +554,15 @@ function itemRowHTML(a) {
   const tags = a.tags && a.tags.length ? a.tags.map((t) => `<span class="mini-tag">${esc(t)}</span>`).join("") : "";
   const icon = appIconHTML(a, "row");
   return `
-  <div class="admin-app-row">
+  <div class="admin-app-row${a.featured ? " featured" : ""}">
     <span style="font-size:18px;line-height:1">${icon}</span>
     <b>${esc(a.name)}</b>
+    ${a.featured ? '<span class="feat-tag">📣 今期推廣中</span>' : ""}
     ${a.visible === false ? '<span class="lock-tag">🔒 隱藏</span>' : ""}
     ${tags ? `<span class="mini-tag-row">${tags}</span>` : ""}
-    <span class="u" title="${esc(a.note || "")}">${esc(a.url)}${a.note ? " · 📌" : ""}${a.clicks ? ` · ${a.clicks} 次` : ""}</span>
+    <span class="u" title="${esc(a.note || "")}">${esc(a.url)}${a.note ? " · 📌" : ""}${a.clicks ? ` · 🔥 ${a.clicks} 次` : ""}${a.stars ? ` · ⭐ ${a.stars}` : ""}</span>
     <div class="admin-app-actions">
+      <button class="mini-btn${a.featured ? " primary" : ""}" data-act="item-feature" data-id="${a._id}" data-dir="${a.featured ? 0 : 1}" title="${a.featured ? "取消今期推廣" : "設為今期推廣（會喺公開版頂部做大圖推薦）"}">${a.featured ? "✅ 推廣中" : "📣 今期推廣"}</button>
       <button class="mini-btn iconish" data-act="item-move" data-id="${a._id}" data-dir="-1" title="上移">▲</button>
       <button class="mini-btn iconish" data-act="item-move" data-id="${a._id}" data-dir="1" title="下移">▼</button>
       <button class="mini-btn" data-act="item-edit" data-id="${a._id}">編輯</button>
@@ -593,13 +611,27 @@ function pageGroupHTML(p) {
 }
 
 function manageHTML() {
+  // 後台顯示用：連隱藏咗嘅都要報出嚟（公開版就會自動跳過隱藏項目）
+  let feat = null;
+  for (const p of ADMIN.sites.pages) for (const c of p.categories) {
+    const a = c.apps.find((x) => x.featured === true);
+    if (a) { feat = { app: a, page: p, cat: c }; break; }
+    }
   return `
   ${formHTML()}
   <div class="admin-card">
     <div class="admin-lbl">分頁 ＋ 分類 ＋ 項目 管理</div>
+    <div class="banner feat-banner">
+      ${feat
+        ? `📣 <b>今期推廣：</b>${esc(feat.app.name)}（${esc(feat.page.label)} › ${esc(feat.cat.name)}）` +
+          `—— 會喺公開版頂部做大圖推薦位。${feat.app.visible === false ? "<b>⚠️ 但呢個項目而家係「隱藏」，公開版唔會顯示推薦位。</b>" : ""}` +
+          `<br/>想換另一個：撳下面該項目嘅「📣 今期推廣」（全站只有一個，會自動搶走）。`
+        : `📣 <b>今期推廣：</b>未設定 —— 公開版頂部暫時唔會顯示推薦位。撳下面任何項目嘅「📣 今期推廣」即可。`}
+    </div>
     <div class="banner" style="background:var(--accent-soft);color:var(--accent-text);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)">
       每頁可獨立「開放 / 關閉」（✓開放先至會喺公開版出現）。關閉咗嘅分頁內容仍然保留，隨時可以開返。<br/>
-      分類只屬某一個分頁 —— 改/刪分類、加項目都要先揀啱分頁。項目可揀童軍級別標籤，公開版畀用戶篩選。
+      分類只屬某一個分頁 —— 改/刪分類、加項目都要先揀啱分頁。項目可揀童軍級別標籤，公開版畀用戶篩選。<br/>
+      🔥 點擊數 ＝ 公開版打開次數；⭐ 收藏數 ＝ 全站用戶收藏次數（公開版可按呢兩項排序）。
     </div>
     ${ADMIN.sites.pages.map(pageGroupHTML).join("")}
   </div>`;

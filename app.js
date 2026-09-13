@@ -33,9 +33,18 @@ function getFavorites() { try { return JSON.parse(localStorage.getItem(FAV_KEY))
 function isFavorite(id) { return getFavorites().includes(id); }
 function toggleFavorite(id) {
   let favs = getFavorites();
-  if (favs.includes(id)) favs = favs.filter((x) => x !== id);
+  const had = favs.includes(id);
+  if (had) favs = favs.filter((x) => x !== id);
   else favs.unshift(id);
   localStorage.setItem(FAV_KEY, JSON.stringify(favs));
+  // 全站累計收藏數（「最多人收藏」排序用）；本地即刻同步，唔使等 reload
+  if (SITES) {
+    for (const p of SITES.pages) for (const c of p.categories) {
+      const a = c.apps.find((x) => x._id === id);
+      if (a) a.stars = Math.max(0, (a.stars || 0) + (had ? -1 : 1));
+    }
+  }
+  if (typeof trackStar === "function") trackStar(id, had ? -1 : 1);
 }
 function openApp(app) {
   trackClick(app._id);
@@ -51,6 +60,7 @@ function iconHTML(app) {
 const chipsEl = document.getElementById("chips");
 const pageNavEl = document.getElementById("page-nav");
 const tagRowEl = document.getElementById("tag-row");
+const sortRowEl = document.getElementById("sort-row");
 const sectionsEl = document.getElementById("sections");
 const emptyEl = document.getElementById("empty");
 const searchEl = document.getElementById("search");
@@ -63,6 +73,35 @@ let ACTIVE_PAGE = null;
 let activeChip = "all";
 let tagFilter = null;
 const ACTIVE_PAGE_KEY = "scout-active-page";
+
+// ── 排序模式 ─────────────────────────────────────────────────
+const SORT_KEY = "showcase-sort";
+const SORTS = [
+  { id: "default", label: "🗂 預設順序" },
+  { id: "clicks", label: "🔥 最多人點擊" },
+  { id: "stars", label: "⭐ 最多人收藏" }
+];
+let sortMode = SORTS.some((s) => s.id === localStorage.getItem(SORT_KEY))
+  ? localStorage.getItem(SORT_KEY) : "default";
+
+function setSort(m) {
+  if (!SORTS.some((s) => s.id === m)) return;
+  sortMode = m;
+  localStorage.setItem(SORT_KEY, m);
+  render();
+}
+
+// 穩定排序：同分時保留原本嘅 sort_order
+function sortApps(list) {
+  const byOrder = (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0);
+  if (sortMode === "clicks") {
+    return [...list].sort((a, b) => (b.clicks || 0) - (a.clicks || 0) || byOrder(a, b));
+  }
+  if (sortMode === "stars") {
+    return [...list].sort((a, b) => (b.stars || 0) - (a.stars || 0) || (b.clicks || 0) - (a.clicks || 0) || byOrder(a, b));
+  }
+  return list;
+}
 
 function enabledPages() { return (SITES.pages || []).filter((p) => p.enabled); }
 function pageById(id) { return (SITES.pages || []).find((p) => p.id === id); }
@@ -197,6 +236,24 @@ function renderTagRow() {
     ).join("");
 }
 
+// ── 排序列 ───────────────────────────────────────────────────
+function renderSortRow() {
+  if (!sortRowEl) return;
+  const pg = activePage();
+  const count = pg
+    ? (pg.categories || []).reduce((n, c) => n + c.apps.filter((a) => a.visible !== false).length, 0)
+    : 0;
+  // 得 0／1 個項目就唔使排序
+  if (count < 2) { sortRowEl.hidden = true; return; }
+  sortRowEl.hidden = false;
+  sortRowEl.innerHTML =
+    `<span class="tag-row-hint">排序：</span>` +
+    SORTS.map((s) =>
+      `<button type="button" class="tag-chip ${sortMode === s.id ? "on" : ""}" ` +
+      `onclick="setSort('${s.id}')">${s.label}</button>`
+    ).join("");
+}
+
 // ── 主要渲染 ─────────────────────────────────────────────────
 function render() {
   if (!SITES) return;
@@ -213,6 +270,7 @@ function render() {
     emptyEl.querySelector("p").textContent = "管理員喺後台仲未開放任何分頁。";
     chipsEl.innerHTML = "";
     tagRowEl.hidden = true;
+    if (sortRowEl) sortRowEl.hidden = true;
     measurePanes();
     return;
   }
@@ -226,7 +284,7 @@ function render() {
   const visible = (a) => a.visible !== false;
 
   let html = "";
-  const shownOf = (c) => c.apps.filter(visible).filter(match);
+  const shownOf = (c) => sortApps(c.apps.filter(visible).filter(match));
   // 呢頁「有內容」嘅分類 —— 唔畀目前搜尋／適用級別篩選收窄，
   // 咁分類同適用級別先至可以同時撳（唔會「LOCK 死」）。
   const catIdx = [];
@@ -284,8 +342,10 @@ function render() {
     ).join("");
 
   renderTagRow();
+  renderSortRow();
   measurePanes();
   watchSections();
+  if (typeof renderSpotlight === "function") renderSpotlight();
 }
 
 // IntersectionObserver：滾動自動高亮 chip

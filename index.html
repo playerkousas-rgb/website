@@ -281,7 +281,7 @@
     box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 40%, transparent);
     overflow: hidden;
   }
-  .hero-icon img { width: 100%; height: 100%; object-fit: cover; }
+  .hero-icon img { width: 100%; height: 100%; object-fit: contain; }
   .hero-body { min-width: 0; }
   .hero-title { font-size: 24px; font-weight: 900; line-height: 1.2; word-break: break-word; }
   .hero-sub { font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
@@ -689,6 +689,26 @@
     color: var(--warn); background: var(--warn-soft);
     border-radius: 999px; padding: 2px 8px; white-space: nowrap;
   }
+  /* 今期推廣 */
+  .feat-tag {
+    display: inline-block; font-size: 10.5px; font-weight: 800;
+    color: var(--on-accent); background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-radius: 999px; padding: 2px 9px; white-space: nowrap;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .admin-app-row.featured {
+    background: var(--accent-soft);
+    border-radius: var(--radius-sm);
+    padding-left: 8px; padding-right: 8px;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .banner.feat-banner {
+    background: var(--accent-soft); color: var(--accent-text);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  /* 排序列（沿用 tag-row 樣式，只係分隔開） */
+  .sort-row { margin-top: 2px; }
+  .sort-row .tag-row-hint { color: var(--accent-text); }
   .vis-lbl {
     position: relative;
     font-size: 14px; color: var(--text);
@@ -992,6 +1012,7 @@
 
   <nav class="page-nav" id="page-nav" aria-label="分頁" hidden></nav>
   <div class="tag-row" id="tag-row" hidden></div>
+  <div class="tag-row sort-row" id="sort-row" hidden></div>
   <nav class="chips" id="chips" aria-label="分類"></nav>
 
   <!-- ★★★ 今期主打 Spotlight（內容由下方 SPOTLIGHT 設定控制） ★★★ -->
@@ -1127,27 +1148,24 @@ if ("serviceWorker" in navigator) {
 /* ════════════════════════════════════════════════════════════════
    今期主打 Spotlight
    ────────────────────────────────────────────────────────────────
-   日後要推廣另一個 App：只改下面呢個物件，唔使掂 HTML / CSS。
-   · enabled: false  → 成個 hero 收埋，下面嘅工具唔會再朦朧
-   · icon 可以填 emoji（"🔔"）或者圖片網址（"/icons/x.png"、"https://…"）
-   · url 留空 → 「立即開啟」會變成捲去下面嘅工具列表
-   注意：sectionsEl / searchEl 係 app.js 已經宣告咗嘅全域變數，
+   ★ 推廣邊個 App 由後台決定：#admin → 管理 → 項目列嘅「📣 今期推廣」。
+     呢度嘅 SPOTLIGHT 只係控制文案（徽章字、按鈕字），唔使改 code 換 App。
+   · enabled: false → 成個 hero 永久收埋，下面嘅工具唔會再朦朧
+   · 後台未有設任何今期推廣 → hero 自動收埋
+   注意：sectionsEl / searchEl / SITES 都係 app.js 已宣告嘅全域變數，
         呢度直接用，千祈唔好再 const 多次（會 SyntaxError 令成頁壞晒）。
    ════════════════════════════════════════════════════════════════ */
 const SPOTLIGHT = {
   enabled: true,
   badge: "今期主打",
-  icon: "🔔",
-  title: "通告圖書館 v5.8",
-  sub: "查看最新童軍通告、活動公告與文件下載 · 已整合推送訂閱",
-  url: "https://scout-circulars.vercel.app",
   openLabel: "立即開啟",
   allLabel: "查看全部",
-  meta: ["🟢 更新 2026-09-12", "⭐ 4.9 · 2.1k 評分", "⬇️ 使用 8.4k+"]
+  showStats: true          // 顯示「🔥 N 次開啟 · ⭐ N 人收藏」
 };
 
 const heroEl = document.getElementById("hero-spotlight");
 let _sectionsBlurred = false;
+let _userRevealed = false;   // 用戶互動過一次之後，就唔會再自動朦朧
 
 function setSectionsBlur(on) {
   if (!sectionsEl) return;
@@ -1155,64 +1173,74 @@ function setSectionsBlur(on) {
   sectionsEl.classList.toggle("active", !on);
   _sectionsBlurred = !!on;
 }
-function revealSections() { if (_sectionsBlurred) setSectionsBlur(false); }
+function revealSections() {
+  _userRevealed = true;
+  if (_sectionsBlurred) setSectionsBlur(false);
+}
 
 function renderSpotlight() {
   if (!heroEl) return;
-  const off = !SPOTLIGHT.enabled || !SPOTLIGHT.title || isAdminRoute();
-  if (off) { heroEl.hidden = true; setSectionsBlur(false); return; }
+  const f = (SPOTLIGHT.enabled && !isAdminRoute() &&
+             typeof getFeaturedApp === "function" && typeof SITES !== "undefined" && SITES)
+    ? getFeaturedApp(SITES) : null;
 
+  // 冇設今期推廣（或者喺後台）→ 收埋 hero，亦唔好朦朧住啲工具
+  if (!f) { heroEl.hidden = true; setSectionsBlur(false); return; }
+
+  const a = f.app;
   heroEl.hidden = false;
+
   const setText = (id, txt) => {
     const el = document.getElementById(id);
-    if (el && txt != null) el.textContent = txt;
+    if (el) el.textContent = txt == null ? "" : String(txt);
   };
   setText("hero-badge", SPOTLIGHT.badge);
-  setText("hero-title", SPOTLIGHT.title);
-  setText("hero-sub", SPOTLIGHT.sub);
+  setText("hero-title", a.name);
+  setText("hero-sub", a.description || (f.cat && f.cat.name) || "");
   setText("hero-open", SPOTLIGHT.openLabel);
   setText("hero-all", SPOTLIGHT.allLabel);
 
+  // 圖示跟返項目自己嘅圖示來源（emoji / 圖片 / favicon / 全站 logo）
   const iconEl = document.getElementById("hero-icon");
   if (iconEl) {
-    iconEl.textContent = "";
-    const src = String(SPOTLIGHT.icon || "");
-    if (/^(https?:)?\/\//.test(src) || src.startsWith("/")) {
-      const im = document.createElement("img");
-      im.src = src; im.alt = "";
-      iconEl.appendChild(im);
-    } else {
-      iconEl.textContent = src;
-    }
-    iconEl.setAttribute("aria-label", SPOTLIGHT.title);
+    iconEl.innerHTML = appIconHTML(a, "hero");   // appIconHTML 內部已 esc()
+    iconEl.setAttribute("aria-label", a.name || "");
   }
 
+  // meta 用真實數據，唔再係寫死嘅假評分
   const metaEl = document.getElementById("hero-meta");
   if (metaEl) {
     metaEl.textContent = "";
-    (SPOTLIGHT.meta || []).forEach((m) => {
+    const bits = [];
+    if (SPOTLIGHT.showStats) {
+      bits.push("🔥 " + (a.clicks || 0).toLocaleString() + " 次開啟");
+      bits.push("⭐ " + (a.stars || 0).toLocaleString() + " 人收藏");
+    }
+    if (a.tags && a.tags.length) bits.push("🎖 " + a.tags.join(" · "));
+    bits.forEach((t) => {
       const s = document.createElement("span");
-      s.textContent = m;              // textContent：唔會因為內容有 < > 而爆版
+      s.textContent = t;                  // textContent：內容有 < > 都唔會爆版
       metaEl.appendChild(s);
     });
   }
-  setSectionsBlur(true);
+
+  setSectionsBlur(!_userRevealed);
 }
 
 document.getElementById("hero-open").addEventListener("click", () => {
-  if (SPOTLIGHT.url) window.open(SPOTLIGHT.url, "_blank", "noopener");
+  const f = (typeof getFeaturedApp === "function" && typeof SITES !== "undefined" && SITES)
+    ? getFeaturedApp(SITES) : null;
+  if (f && f.app.url) { trackClick(f.app._id); window.open(f.app.url, "_blank", "noopener"); }
   else { revealSections(); sectionsEl.scrollIntoView({ behavior: "smooth", block: "start" }); }
 });
 document.getElementById("hero-all").addEventListener("click", () => {
-  setSectionsBlur(false);
+  revealSections();
   sectionsEl.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
-// 解除朦朧嘅入口：搜尋、撳「查看全部」、撳 hero 以下任何一嘢、捲過 hero
+// 解除朦朧：搜尋、撳「查看全部」、撳工具區、捲過 hero
 searchEl.addEventListener("focus", revealSections);
 searchEl.addEventListener("input", () => { if (searchEl.value.trim()) revealSections(); });
-// 清除搜尋 → 返返去 Spotlight 視角（同原稿一致）
-searchClear.addEventListener("click", () => setSectionsBlur(true));
 // 朦朧期间截住「下面工具區」嘅第一下點擊：只解鎖，唔會誤開 App。
 // 用 DOM 祖先關係判斷（唔靠座標），所以 topbar／hero／chips 一律唔受影響。
 document.addEventListener("click", (e) => {
@@ -1220,7 +1248,7 @@ document.addEventListener("click", (e) => {
   if (!sectionsEl.contains(e.target)) return;
   e.preventDefault();
   e.stopImmediatePropagation();
-  setSectionsBlur(false);
+  revealSections();
 }, true);
 window.addEventListener("scroll", () => {
   if (!_sectionsBlurred || !heroEl || heroEl.hidden) return;
