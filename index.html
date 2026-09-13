@@ -116,7 +116,7 @@
     padding:
       calc(12px + var(--safe-t))
       max(16px, var(--safe-r))
-      calc(100px + var(--safe-b))
+      calc(44px + var(--safe-b))
       max(16px, var(--safe-l));
   }
 
@@ -316,8 +316,11 @@
     color: var(--accent-text);
     border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
   }
-  .hero-share {
+  .hero-card-tools {
     position: absolute; top: 12px; right: 12px; z-index: 3;
+    display: flex; gap: 6px;
+  }
+  .hero-share, .hero-collapse {
     width: 38px; height: 38px; border-radius: 50%;
     border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
     background: color-mix(in srgb, var(--text) 6%, transparent);
@@ -325,8 +328,8 @@
     display: inline-flex; align-items: center; justify-content: center;
     touch-action: manipulation; transition: transform .12s, background .15s;
   }
-  .hero-share:hover { background: var(--accent-soft); transform: scale(1.06); }
-  .hero-share:active { transform: scale(.94); }
+  .hero-share:hover, .hero-collapse:hover { background: var(--accent-soft); transform: scale(1.06); }
+  .hero-share:active, .hero-collapse:active { transform: scale(.94); }
   .btn-primary:hover {
     filter: brightness(1.06);
     transform: translateY(-2px);
@@ -370,6 +373,28 @@
     overflow: hidden;
   }
 
+  /* 收埋狀態：淨係剩一條「今期主打 · App 名」細條，撳一下就還原 */
+  .hero.collapsed { margin: 14px 0 16px; padding: 10px 12px; }
+  .hero.collapsed .hero-glow,
+  .hero.collapsed .hero-beam,
+  .hero.collapsed .spark,
+  .hero.collapsed .hero-meta,
+  .hero.collapsed .hero-preview,
+  .hero.collapsed .hero-actions { display: none !important; }
+  .hero.collapsed .hero-card {
+    cursor: pointer;
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 94px 10px 12px; /* 右邊畀晒位畀 🔗／ 掣 */
+  }
+  .hero.collapsed .hero-badge { margin: 0; transform: none; font-size: 11px; padding: 4px 10px; flex-shrink: 0; }
+  .hero.collapsed .hero-icon-row { min-width: 0; }
+  .hero.collapsed .hero-icon { display: none; }
+  .hero.collapsed .hero-title {
+    font-size: 15px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .hero.collapsed .hero-sub { display: none; }
+
   /* ── 聚光燈光束（由上照落 hero，App Store 式舞台感）── */
   .hero-beam {
     position: absolute; top: -160px; left: 50%; transform: translateX(-50%);
@@ -396,29 +421,6 @@
   .hero .spark:nth-of-type(5){ top:16%; left:48%; animation-delay:2s; }
   @keyframes twinkle { 0%,100%{opacity:.15; transform:scale(.7);} 50%{opacity:.9; transform:scale(1.2);} }
 
-  /* ── 底部懸浮導覽列（App Store 式）── */
-  .bottom-nav {
-    position: fixed; left: 50%; transform: translateX(-50%);
-    bottom: calc(10px + var(--safe-b)); z-index: 60;
-    display: flex; gap: 4px; padding: 6px; border-radius: 999px;
-    background: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
-    border: 1px solid var(--border);
-    backdrop-filter: saturate(1.4) blur(16px);
-    -webkit-backdrop-filter: saturate(1.4) blur(16px);
-    box-shadow: var(--shadow);
-  }
-  .bottom-nav[hidden] { display: none; }
-  .bn-item {
-    display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
-    border: none; background: transparent; cursor: pointer;
-    color: var(--muted); font-size: 10.5px; font-weight: 700;
-    padding: 8px 18px; border-radius: 999px; touch-action: manipulation;
-    transition: color .15s, background .15s, transform .1s;
-  }
-  .bn-item .bn-ico { font-size: 18px; line-height: 1; }
-  .bn-item.on { color: var(--on-accent); background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
-  .bn-item:not(.on):active { transform: scale(.96); }
-
   @media (prefers-reduced-motion: reduce) {
     .hero-beam, .hero .spark { animation: none; }
   }
@@ -426,7 +428,7 @@
   /* ── Toast（分享／複製提示）── */
   .toast {
     position: fixed; left: 50%; transform: translateX(-50%) translateY(8px);
-    bottom: calc(76px + var(--safe-b)); z-index: 80;
+    bottom: calc(24px + var(--safe-b)); z-index: 80;
     padding: 9px 18px; border-radius: 999px;
     background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
     border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
@@ -713,7 +715,7 @@
   .to-top {
     position: fixed;
     right: max(14px, var(--safe-r));
-    bottom: calc(76px + var(--safe-b));
+    bottom: calc(18px + var(--safe-b));
     width: 46px; height: 46px; border-radius: 50%;
     border: 1px solid var(--border);
     background: var(--bg-card); color: var(--text);
@@ -1186,7 +1188,10 @@
     <div class="hero-beam" aria-hidden="true"></div>
     <span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span>
     <div class="hero-card">
-      <button class="hero-share" id="hero-share" type="button" aria-label="分享此項目" title="分享">🔗</button>
+      <div class="hero-card-tools">
+        <button class="hero-share" id="hero-share" type="button" aria-label="分享此項目" title="分享">🔗</button>
+        <button class="hero-collapse" id="hero-collapse" type="button" aria-label="收埋今期主打" title="收埋">▴</button>
+      </div>
       <div class="hero-badge" id="hero-badge">今期主打</div>
       <div class="hero-icon-row">
         <div class="hero-icon" id="hero-icon" role="img" aria-label="">🔔</div>
@@ -1266,12 +1271,6 @@
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-
-<nav class="bottom-nav" id="bottom-nav" aria-label="主導覽">
-  <button class="bn-item on" data-bn="home" type="button"><span class="bn-ico">🏠</span><span>首頁</span></button>
-  <button class="bn-item" data-bn="cats" type="button"><span class="bn-ico">⌗</span><span>分類</span></button>
-  <button class="bn-item" data-bn="fav" type="button"><span class="bn-ico">⭐</span><span>我的</span></button>
-</nav>
 
 <div id="admin-panel" hidden>
   <div id="admin-content"></div>
@@ -1389,6 +1388,24 @@ const heroEl = document.getElementById("hero-spotlight");
 let _sectionsBlurred = false;
 let _userRevealed = false;   // 用戶互動過一次之後，就唔會再自動朦朧
 
+// 收埋／還原今期主打（狀態記 low 度，下次開都仲係收埋緊）
+let _heroCollapsed = false;
+try { _heroCollapsed = localStorage.getItem("hero-collapsed") === "1"; } catch {}
+function syncHeroCollapseBtn() {
+  const btn = document.getElementById("hero-collapse");
+  if (!btn) return;
+  btn.textContent = _heroCollapsed ? "▾" : "▴";
+  btn.title = _heroCollapsed ? "還原" : "收埋";
+  btn.setAttribute("aria-label", _heroCollapsed ? "還原今期主打" : "收埋今期主打");
+}
+function setHeroCollapsed(on) {
+  _heroCollapsed = !!on;
+  if (heroEl) heroEl.classList.toggle("collapsed", _heroCollapsed);
+  syncHeroCollapseBtn();
+  revealSections();   // 互動過今期主打 = 已經「見識過」，唔好再自動 Blur 下面
+  try { _heroCollapsed ? localStorage.setItem("hero-collapsed", "1") : localStorage.removeItem("hero-collapsed"); } catch {}
+}
+
 function setSectionsBlur(on) {
   if (!sectionsEl) return;
   sectionsEl.classList.toggle("sections-blur", !!on);
@@ -1411,6 +1428,8 @@ function renderSpotlight() {
 
   const a = f.app;
   heroEl.hidden = false;
+  heroEl.classList.toggle("collapsed", _heroCollapsed);
+  syncHeroCollapseBtn();
 
   const setText = (id, txt) => {
     const el = document.getElementById(id);
@@ -1463,9 +1482,10 @@ function renderSpotlight() {
     }
   }
 
-  // 下面 Grid 真有內容先 Blur（防止「Blur 咗但完全冇內容」）
+  // 下面 Grid 真有內容先 Blur（防止「Blur 咗但完全冇內容」）；
+  // Hero 收埋緊時亦唔 Blur（用戶想直接睇工具）
   const hasContent = !!(sectionsEl && sectionsEl.querySelector("section"));
-  setSectionsBlur(!_userRevealed && hasContent);
+  setSectionsBlur(!_userRevealed && !_heroCollapsed && hasContent);
 }
 
 document.getElementById("hero-open").addEventListener("click", () => {
@@ -1477,6 +1497,18 @@ document.getElementById("hero-open").addEventListener("click", () => {
 document.getElementById("hero-all").addEventListener("click", () => {
   revealSections();
   sectionsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+// 收埋／還原今期主打
+document.getElementById("hero-collapse").addEventListener("click", (e) => {
+  e.stopPropagation();
+  setHeroCollapsed(!_heroCollapsed);
+});
+// 收埋緊時撳成張細卡 = 還原
+heroEl.addEventListener("click", (e) => {
+  if (!heroEl.classList.contains("collapsed")) return;
+  if (e.target.closest("button")) return; // 🔗／▾ 掣自己處理
+  setHeroCollapsed(false);
 });
 
 // Toast + 分享（推廣用：Web Share API，冇就複製連結）
@@ -1520,18 +1552,6 @@ document.getElementById("ig-qr-btn").addEventListener("click", () => { igModal.h
 document.getElementById("ig-x").addEventListener("click", () => { igModal.hidden = true; });
 document.getElementById("ig-close").addEventListener("click", () => { igModal.hidden = true; });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") igModal.hidden = true; });
-
-// 底部導覽列
-const bottomNav = document.getElementById("bottom-nav");
-bottomNav.addEventListener("click", (e) => {
-  const b = e.target.closest(".bn-item");
-  if (!b) return;
-  bottomNav.querySelectorAll(".bn-item").forEach((x) => x.classList.toggle("on", x === b));
-  const kind = b.dataset.bn;
-  if (kind === "home") { revealSections(); window.scrollTo({ top: 0, behavior: "smooth" }); }
-  else if (kind === "cats") { revealSections(); sectionsEl.scrollIntoView({ behavior: "smooth", block: "start" }); }
-  else if (kind === "fav") { if (typeof jumpTo === "function") jumpTo("fav"); }
-});
 
 // 解除朦朧：搜尋、撳「查看全部」、撳工具區、捲過 hero
 searchEl.addEventListener("focus", revealSections);
