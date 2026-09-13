@@ -8,7 +8,7 @@
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="icon" type="image/png" href="/icons/icon-192.png" />
 <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-<meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#faf6ec" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
@@ -18,26 +18,28 @@
 <meta name="format-detection" content="telephone=no" />
 <style>
   :root {
-    --bg: #f2f4f8;
+    --bg: #faf6ec;
     --bg-elevated: #ffffff;
     --bg-card: #ffffff;
-    --text: #0f172a;
-    --muted: #64748b;
-    --border: rgba(15, 23, 42, .08);
-    --border-strong: rgba(15, 23, 42, .14);
-    --accent: #2563eb;
-    --accent-2: #7c3aed;
-    --accent-soft: rgba(37, 99, 235, .1);
-    --accent-text: #1d4ed8;
-    --danger: #ef4444;
-    --danger-soft: rgba(239, 68, 68, .1);
+    --bg-card-hover: #fdf6e3;
+    --text: #241a05;
+    --muted: #8a7350;
+    --border: rgba(120, 84, 10, .12);
+    --border-strong: rgba(120, 84, 10, .22);
+    --accent: #d99e06;
+    --accent-2: #b45309;
+    --accent-soft: rgba(217, 158, 6, .14);
+    --accent-text: #8a5a05;
+    --on-accent: #1a1200;
+    --danger: #dc2626;
+    --danger-soft: rgba(220, 38, 38, .1);
     --ok: #059669;
     --ok-soft: rgba(5, 150, 105, .1);
-    --warn: #d97706;
-    --warn-soft: rgba(217, 119, 6, .12);
-    --shadow-sm: 0 1px 2px rgba(15, 23, 42, .04);
-    --shadow: 0 2px 8px rgba(15, 23, 42, .06), 0 8px 24px rgba(15, 23, 42, .06);
-    --shadow-hover: 0 8px 28px rgba(15, 23, 42, .14);
+    --warn: #b45309;
+    --warn-soft: rgba(180, 83, 9, .12);
+    --shadow-sm: 0 1px 2px rgba(90, 62, 8, .06);
+    --shadow: 0 2px 8px rgba(90, 62, 8, .07), 0 8px 24px rgba(90, 62, 8, .07);
+    --shadow-hover: 0 8px 28px rgba(90, 62, 8, .16);
     --radius: 18px;
     --radius-sm: 12px;
     --radius-xs: 10px;
@@ -55,16 +57,18 @@
   }
   [data-theme="dark"] {
     --bg: #0b0d12;
-    --bg-elevated: #12151c;
-    --bg-card: #151922;
+    --bg-elevated: #151922;
+    --bg-card: #1a1f2e;
+    --bg-card-hover: #22293e;
     --text: #f1f5f9;
     --muted: #94a3b8;
-    --border: rgba(255, 255, 255, .07);
-    --border-strong: rgba(255, 255, 255, .12);
-    --accent: #60a5fa;
-    --accent-2: #a78bfa;
-    --accent-soft: rgba(96, 165, 250, .14);
-    --accent-text: #93c5fd;
+    --border: rgba(255, 255, 255, .08);
+    --border-strong: rgba(255, 255, 255, .14);
+    --accent: #facc15;
+    --accent-2: #f59e0b;
+    --accent-soft: rgba(250, 204, 21, .15);
+    --accent-text: #fde68a;
+    --on-accent: #0b0d12;
     --danger: #f87171;
     --danger-soft: rgba(248, 113, 113, .14);
     --ok: #34d399;
@@ -171,7 +175,7 @@
     display: none; align-items: center; gap: 6px;
     border: none; border-radius: 999px; padding: 10px 14px; cursor: pointer;
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    color: #fff; font-size: 13px; font-weight: 700;
+    color: var(--on-accent); font-size: 13px; font-weight: 700;
     box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 35%, transparent);
     white-space: nowrap; touch-action: manipulation;
     transition: filter .15s, transform .15s var(--ease);
@@ -217,6 +221,118 @@
   .search-clear.show { display: inline-flex; }
   .search-clear:hover { background: var(--accent-soft); color: var(--accent-text); }
 
+  /* ── ★ 今期主打 Spotlight（App Store 式 hero） ── */
+  .hero {
+    position: relative;
+    margin: 20px 0 24px;
+    padding: 44px 20px 24px;
+    overflow: hidden;
+    border-radius: 28px;
+    background:
+      radial-gradient(600px 400px at 50% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
+      linear-gradient(180deg, color-mix(in srgb, var(--text) 6%, transparent), color-mix(in srgb, var(--text) 1%, transparent));
+    border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+  .hero[hidden] { display: none; }
+  .hero-glow {
+    position: absolute; top: -80px; left: 50%; transform: translateX(-50%);
+    width: 520px; height: 520px; pointer-events: none;
+    background: radial-gradient(circle,
+      color-mix(in srgb, var(--accent) 90%, transparent) 0%,
+      color-mix(in srgb, var(--accent) 40%, transparent) 25%,
+      transparent 70%);
+    filter: blur(20px);
+    animation: glowPulse 3s ease-in-out infinite;
+  }
+  @keyframes glowPulse {
+    0%, 100% { opacity: .7; transform: translateX(-50%) scale(1); }
+    50% { opacity: 1; transform: translateX(-50%) scale(1.08); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-glow { animation: none; opacity: .8; }
+  }
+  .hero-card {
+    position: relative; z-index: 2;
+    max-width: 560px; margin: 0 auto; padding: 20px;
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--bg-card) 92%, transparent),
+      color-mix(in srgb, var(--bg-elevated) 98%, transparent));
+    border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+    border-radius: 20px;
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent) 15%, transparent),
+      0 20px 60px color-mix(in srgb, var(--accent) 28%, transparent),
+      0 0 80px color-mix(in srgb, var(--accent) 15%, transparent);
+  }
+  .hero-badge {
+    display: inline-block;
+    background: var(--accent); color: var(--on-accent);
+    font-weight: 900; font-size: 12px;
+    padding: 6px 14px; border-radius: 999px;
+    margin-bottom: 14px;
+    transform: rotate(-2deg);
+  }
+  .hero-icon-row { display: flex; gap: 16px; align-items: center; }
+  .hero-icon {
+    width: 64px; height: 64px; flex-shrink: 0;
+    border-radius: 18px; font-size: 34px;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 40%, transparent);
+    overflow: hidden;
+  }
+  .hero-icon img { width: 100%; height: 100%; object-fit: cover; }
+  .hero-body { min-width: 0; }
+  .hero-title { font-size: 24px; font-weight: 900; line-height: 1.2; word-break: break-word; }
+  .hero-sub { font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .hero-meta { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .hero-meta span {
+    font-size: 11px; font-weight: 650;
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+    border: 1px solid var(--border);
+    padding: 5px 10px; border-radius: 999px;
+  }
+  .hero-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .btn-primary, .btn-secondary {
+    flex: 1; min-width: 0;
+    border-radius: 12px; padding: 12px 16px;
+    font-size: 15px; font-weight: 800; cursor: pointer;
+    touch-action: manipulation;
+    transition: filter .15s, transform .15s var(--ease);
+  }
+  .btn-primary {
+    background: var(--accent); color: var(--on-accent); border: none;
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .btn-secondary {
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+    color: var(--accent-text);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .btn-primary:hover { filter: brightness(1.06); }
+  .btn-secondary:hover { border-color: var(--accent); }
+  .btn-primary:active, .btn-secondary:active { transform: scale(.97); }
+  @media (max-width: 420px) {
+    .hero { padding: 36px 14px 18px; border-radius: 22px; }
+    .hero-title { font-size: 20px; }
+    .hero-actions { flex-direction: column; }
+  }
+
+  /* Spotlight 未互動前，下面嘅全部工具做朦朧處理
+     注意：唔好用 pointer-events:none —— 咁樣第一下點擊會穿過去落喺 .wrap，
+     結果 topbar／chips 嘅點擊都要靠幾何位置估，好易誤食。
+     而家保留可點擊，由 boot script 用 DOM 祖先關係精準截第一下。 */
+  .sections-blur {
+    filter: blur(6px); opacity: .38; transform: scale(.98);
+    transition: filter .5s ease, opacity .5s ease, transform .5s ease;
+  }
+  .sections-blur.active {
+    filter: blur(0); opacity: 1; transform: scale(1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sections-blur, .sections-blur.active { transition: none; }
+  }
+
   /* ── Category chips ─────────────────── */
   .chips {
     position: sticky;
@@ -247,7 +363,7 @@
   .chip:hover { color: var(--text); border-color: var(--border-strong); }
   .chip:active { transform: scale(.96); }
   .chip.on {
-    color: #fff;
+    color: var(--on-accent);
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
     border-color: transparent;
     box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 32%, transparent);
@@ -295,7 +411,7 @@
     transition: background .15s;
     animation: tileIn .45s var(--ease) both;
   }
-  .tile:hover { background: color-mix(in srgb, var(--bg-card) 70%, transparent); }
+  .tile:hover { background: var(--bg-card-hover); }
   .tile:active .tile-icon { transform: scale(.88); }
   @keyframes tileIn {
     from { opacity: 0; transform: translateY(10px) scale(.96); }
@@ -320,6 +436,7 @@
   }
   .tile:hover .tile-icon {
     transform: translateY(-3px) scale(1.06);
+    filter: drop-shadow(0 6px 14px color-mix(in srgb, var(--accent) 35%, transparent));
   }
   .tile-icon img {
     width: 58px; height: 58px; object-fit: contain; border-radius: 14px;
@@ -536,7 +653,7 @@
   .mini-btn:active { transform: scale(.97); }
   .mini-btn.primary {
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    color: #fff; border-color: transparent;
+    color: var(--on-accent); border-color: transparent;
     box-shadow: 0 6px 14px color-mix(in srgb, var(--accent) 28%, transparent);
   }
   [data-theme="dark"] .mini-btn.primary { color: #0b0d12; }
@@ -618,7 +735,7 @@
   }
   .page-btn:hover { color: var(--text); border-color: var(--border-strong); }
   .page-btn.on {
-    color: #fff;
+    color: var(--on-accent);
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
     border-color: transparent; box-shadow: 0 5px 14px color-mix(in srgb, var(--accent) 30%, transparent);
   }
@@ -648,7 +765,7 @@
     transition: all .18s var(--ease);
   }
   .tag-chip.on {
-    color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent;
+    color: var(--on-accent); background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent;
   }
   [data-theme="dark"] .tag-chip.on { color: #0b0d12; }
 
@@ -732,7 +849,7 @@
   }
   .tag-check.on {
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    border-color: transparent; color: #fff;
+    border-color: transparent; color: var(--on-accent);
     box-shadow: 0 5px 14px color-mix(in srgb, var(--accent) 35%, transparent);
   }
   .tag-check.on .tc-box {
@@ -826,7 +943,7 @@
   }
   .emoji-tab:hover { color: var(--text); border-color: var(--border-strong); }
   .emoji-tab.on {
-    color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: var(--on-accent); background: linear-gradient(135deg, var(--accent), var(--accent-2));
     border-color: transparent;
   }
   [data-theme="dark"] .emoji-tab.on { color: #0b0d12; }
@@ -876,6 +993,31 @@
   <nav class="page-nav" id="page-nav" aria-label="分頁" hidden></nav>
   <div class="tag-row" id="tag-row" hidden></div>
   <nav class="chips" id="chips" aria-label="分類"></nav>
+
+  <!-- ★★★ 今期主打 Spotlight（內容由下方 SPOTLIGHT 設定控制） ★★★ -->
+  <section class="hero" id="hero-spotlight" aria-label="今期主打">
+    <div class="hero-glow" aria-hidden="true"></div>
+    <div class="hero-card">
+      <div class="hero-badge" id="hero-badge">今期主打</div>
+      <div class="hero-icon-row">
+        <div class="hero-icon" id="hero-icon" role="img" aria-label="">🔔</div>
+        <div class="hero-body">
+          <div class="hero-title" id="hero-title">通告圖書館 v5.8</div>
+          <div class="hero-sub" id="hero-sub">查看最新童軍通告、活動公告與文件下載 · 已整合推送訂閱</div>
+        </div>
+      </div>
+      <div class="hero-meta" id="hero-meta">
+        <span>🟢 更新 2026-09-12</span>
+        <span>⭐ 4.9 · 2.1k 評分</span>
+        <span>⬇️ 使用 8.4k+</span>
+      </div>
+      <div class="hero-actions">
+        <button class="btn-primary" id="hero-open" type="button">立即開啟</button>
+        <button class="btn-secondary" id="hero-all" type="button">查看全部</button>
+      </div>
+    </div>
+  </section>
+
   <div id="sections">
     <div class="skeleton" id="skeleton" aria-hidden="true">
       <div class="sk-tile"><div class="sk-icon"></div><div class="sk-line"></div></div>
@@ -897,7 +1039,7 @@
   <footer>
     <div class="tip">💡 <b>提示：</b>喺瀏覽器選單選「加入主畫面 / 安裝 App」（Android 可撳右上角「安裝」），呢個「童軍小工具」就會變成電話桌面嘅一個 App。所有童軍工具、圖卡、簡報同連結都由呢度入。</div>
     <span class="foot-meta" id="foot-count">載入中…</span>
-    <div style="margin-top:16px">© 2026 Scout System</div>
+    <div style="margin-top:16px">© 2026 Scout System · App Store Edition</div>
   </footer>
 </div>
 
@@ -923,10 +1065,9 @@ function applyTheme(t) {
   localStorage.setItem("theme", t);
   const meta = document.querySelector('meta[name="theme-color"]:not([media])')
     || document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = t === "dark" ? "#0b0d12" : "#2563eb";
+  if (meta) meta.content = t === "dark" ? "#0b0d12" : "#faf6ec";
 }
-applyTheme(localStorage.getItem("theme") ||
-  (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+applyTheme(localStorage.getItem("theme") || "dark");
 themeBtn.onclick = () => {
   applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
   if (!isAdminRoute() && typeof rerenderPublic === "function") rerenderPublic();
@@ -983,13 +1124,118 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").catch(() => {});
 }
 
+/* ════════════════════════════════════════════════════════════════
+   今期主打 Spotlight
+   ────────────────────────────────────────────────────────────────
+   日後要推廣另一個 App：只改下面呢個物件，唔使掂 HTML / CSS。
+   · enabled: false  → 成個 hero 收埋，下面嘅工具唔會再朦朧
+   · icon 可以填 emoji（"🔔"）或者圖片網址（"/icons/x.png"、"https://…"）
+   · url 留空 → 「立即開啟」會變成捲去下面嘅工具列表
+   注意：sectionsEl / searchEl 係 app.js 已經宣告咗嘅全域變數，
+        呢度直接用，千祈唔好再 const 多次（會 SyntaxError 令成頁壞晒）。
+   ════════════════════════════════════════════════════════════════ */
+const SPOTLIGHT = {
+  enabled: true,
+  badge: "今期主打",
+  icon: "🔔",
+  title: "通告圖書館 v5.8",
+  sub: "查看最新童軍通告、活動公告與文件下載 · 已整合推送訂閱",
+  url: "https://scout-circulars.vercel.app",
+  openLabel: "立即開啟",
+  allLabel: "查看全部",
+  meta: ["🟢 更新 2026-09-12", "⭐ 4.9 · 2.1k 評分", "⬇️ 使用 8.4k+"]
+};
+
+const heroEl = document.getElementById("hero-spotlight");
+let _sectionsBlurred = false;
+
+function setSectionsBlur(on) {
+  if (!sectionsEl) return;
+  sectionsEl.classList.toggle("sections-blur", !!on);
+  sectionsEl.classList.toggle("active", !on);
+  _sectionsBlurred = !!on;
+}
+function revealSections() { if (_sectionsBlurred) setSectionsBlur(false); }
+
+function renderSpotlight() {
+  if (!heroEl) return;
+  const off = !SPOTLIGHT.enabled || !SPOTLIGHT.title || isAdminRoute();
+  if (off) { heroEl.hidden = true; setSectionsBlur(false); return; }
+
+  heroEl.hidden = false;
+  const setText = (id, txt) => {
+    const el = document.getElementById(id);
+    if (el && txt != null) el.textContent = txt;
+  };
+  setText("hero-badge", SPOTLIGHT.badge);
+  setText("hero-title", SPOTLIGHT.title);
+  setText("hero-sub", SPOTLIGHT.sub);
+  setText("hero-open", SPOTLIGHT.openLabel);
+  setText("hero-all", SPOTLIGHT.allLabel);
+
+  const iconEl = document.getElementById("hero-icon");
+  if (iconEl) {
+    iconEl.textContent = "";
+    const src = String(SPOTLIGHT.icon || "");
+    if (/^(https?:)?\/\//.test(src) || src.startsWith("/")) {
+      const im = document.createElement("img");
+      im.src = src; im.alt = "";
+      iconEl.appendChild(im);
+    } else {
+      iconEl.textContent = src;
+    }
+    iconEl.setAttribute("aria-label", SPOTLIGHT.title);
+  }
+
+  const metaEl = document.getElementById("hero-meta");
+  if (metaEl) {
+    metaEl.textContent = "";
+    (SPOTLIGHT.meta || []).forEach((m) => {
+      const s = document.createElement("span");
+      s.textContent = m;              // textContent：唔會因為內容有 < > 而爆版
+      metaEl.appendChild(s);
+    });
+  }
+  setSectionsBlur(true);
+}
+
+document.getElementById("hero-open").addEventListener("click", () => {
+  if (SPOTLIGHT.url) window.open(SPOTLIGHT.url, "_blank", "noopener");
+  else { revealSections(); sectionsEl.scrollIntoView({ behavior: "smooth", block: "start" }); }
+});
+document.getElementById("hero-all").addEventListener("click", () => {
+  setSectionsBlur(false);
+  sectionsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+// 解除朦朧嘅入口：搜尋、撳「查看全部」、撳 hero 以下任何一嘢、捲過 hero
+searchEl.addEventListener("focus", revealSections);
+searchEl.addEventListener("input", () => { if (searchEl.value.trim()) revealSections(); });
+// 清除搜尋 → 返返去 Spotlight 視角（同原稿一致）
+searchClear.addEventListener("click", () => setSectionsBlur(true));
+// 朦朧期间截住「下面工具區」嘅第一下點擊：只解鎖，唔會誤開 App。
+// 用 DOM 祖先關係判斷（唔靠座標），所以 topbar／hero／chips 一律唔受影響。
+document.addEventListener("click", (e) => {
+  if (!_sectionsBlurred) return;
+  if (!sectionsEl.contains(e.target)) return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  setSectionsBlur(false);
+}, true);
+window.addEventListener("scroll", () => {
+  if (!_sectionsBlurred || !heroEl || heroEl.hidden) return;
+  if ((window.scrollY || 0) > heroEl.offsetTop + heroEl.offsetHeight - 120) revealSections();
+}, { passive: true });
+
 // 路由：管理面板 / 公開版面
 function goRoute() {
   if (isAdminRoute()) {
     document.getElementById("admin-panel").hidden = false;
+    renderSpotlight();
     ADMIN.init();
   } else {
     document.getElementById("admin-panel").hidden = true;
+    renderSpotlight();
     main();
   }
 }
