@@ -1214,7 +1214,6 @@ function renderSpotlight() {
     const bits = [];
     if (SPOTLIGHT.showStats) {
       bits.push("🔥 " + (a.clicks || 0).toLocaleString() + " 次開啟");
-      bits.push("⭐ " + (a.stars || 0).toLocaleString() + " 人收藏");
     }
     if (a.tags && a.tags.length) bits.push("🎖 " + a.tags.join(" · "));
     bits.forEach((t) => {

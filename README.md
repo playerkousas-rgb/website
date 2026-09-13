@@ -71,21 +71,20 @@
 4. 管理頁頂部有 banner 顯示目前推廣緊邊個（連隱藏咗嘅都會報出嚟並警告）
 
 推薦位嘅圖示／標題／介紹／連結全部自動攞該項目嘅資料；
-下面三粒徽章係**真實數據**：`🔥 N 次開啟`、`⭐ N 人收藏`、`🎖 級別標籤`。
+下面嘅徽章係**真實數據**：`🔥 N 次開啟`、`🎖 級別標籤`。
 
 > 未設定任何今期推廣 → 推薦位自動收埋，下面嘅工具列表亦唔會朦朧。
 > 需要 DB 有 `featured` 欄（見下方 SQL）；未加欄位㩒落去會彈出提示同嗰句 SQL。
 > 徽章／按鈕嘅**文案**要改就改 `index.html` boot script 入面嘅 `SPOTLIGHT` 物件。
 
-### 🔥 排序（最多人點擊／最多人收藏）
+### 🔥 排序（最多人點擊）
 
-公開版分類 chips 下面有一列「排序」：**🗂 預設順序｜🔥 最多人點擊｜⭐ 最多人收藏**。
+公開版分類 chips 下面有一列「排序」：**🗂 預設順序｜🔥 最多人點擊**。
 
-- `clicks` —— 每次喺公開版打開項目就 `+1`（`bump_clicks` RPC，已有）
-- `stars` —— 每次 ⭐ 收藏 `+1`、取消 `-1`（`bump_stars` RPC）；全站累計，唔係個人
-  （「⭐ 我的最愛」chip 仍然係每個人自己嘅，存喺瀏覽器）
+- `clicks` —— 每次喺公開版打開項目就 `+1`（`bump_clicks` RPC，**舊站已經有**，唔使加欄位）
 - 同分時保留後台嘅 ▲▼ 手動順序
 - 項目少過 2 個就唔會顯示呢列
+- 「⭐ 我的最愛」chip 係每個人自己嘅收藏（存喺瀏覽器），同排序互不影響
 
 其他按鈕：📤 備份｜♻️ 還原（完整覆蓋）｜🔳 QR｜**⚠️ 一鍵重設**｜登出
 
@@ -177,18 +176,16 @@ create table if not exists apps (
   tags text[],
   visible boolean not null default true,
   clicks int not null default 0,
-  stars int not null default 0,
   featured boolean not null default false,
   sort_order int not null default 0,
   created_at timestamptz not null default now()
 );
 
--- 1) 舊表補新欄位（分頁 + 童軍級別標籤 + 圖示來源 + 收藏數 + 今期推廣）
+-- 1) 舊表補新欄位（分頁 + 童軍級別標籤 + 圖示來源 + 今期推廣）
 alter table categories add column if not exists page text not null default 'apps';
 alter table apps add column if not exists page text not null default 'apps';
 alter table apps add column if not exists tags text[];
 alter table apps add column if not exists icon_source text;
-alter table apps add column if not exists stars int not null default 0;
 alter table apps add column if not exists featured boolean not null default false;
 
 -- 2) 分類改用「(page, name)」組合主鍵，先可以每個分頁獨立用同名分類
@@ -237,16 +234,6 @@ security definer
 set search_path = public
 as $$
   update apps set clicks = clicks + 1 where id = p_id;
-$$;
-
--- 6) 收藏數（公開頁 ⭐ 收藏／取消收藏會調用；p_delta 传 1 或 -1）
-create or replace function bump_stars(p_id uuid, p_delta int default 1)
-returns void
-language sql
-security definer
-set search_path = public
-as $$
-  update apps set stars = greatest(0, stars + p_delta) where id = p_id;
 $$;
 ```
 

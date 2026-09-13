@@ -33,18 +33,9 @@ function getFavorites() { try { return JSON.parse(localStorage.getItem(FAV_KEY))
 function isFavorite(id) { return getFavorites().includes(id); }
 function toggleFavorite(id) {
   let favs = getFavorites();
-  const had = favs.includes(id);
-  if (had) favs = favs.filter((x) => x !== id);
+  if (favs.includes(id)) favs = favs.filter((x) => x !== id);
   else favs.unshift(id);
   localStorage.setItem(FAV_KEY, JSON.stringify(favs));
-  // 全站累計收藏數（「最多人收藏」排序用）；本地即刻同步，唔使等 reload
-  if (SITES) {
-    for (const p of SITES.pages) for (const c of p.categories) {
-      const a = c.apps.find((x) => x._id === id);
-      if (a) a.stars = Math.max(0, (a.stars || 0) + (had ? -1 : 1));
-    }
-  }
-  if (typeof trackStar === "function") trackStar(id, had ? -1 : 1);
 }
 function openApp(app) {
   trackClick(app._id);
@@ -78,8 +69,7 @@ const ACTIVE_PAGE_KEY = "scout-active-page";
 const SORT_KEY = "showcase-sort";
 const SORTS = [
   { id: "default", label: "🗂 預設順序" },
-  { id: "clicks", label: "🔥 最多人點擊" },
-  { id: "stars", label: "⭐ 最多人收藏" }
+  { id: "clicks", label: "🔥 最多人點擊" }
 ];
 let sortMode = SORTS.some((s) => s.id === localStorage.getItem(SORT_KEY))
   ? localStorage.getItem(SORT_KEY) : "default";
@@ -96,9 +86,6 @@ function sortApps(list) {
   const byOrder = (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0);
   if (sortMode === "clicks") {
     return [...list].sort((a, b) => (b.clicks || 0) - (a.clicks || 0) || byOrder(a, b));
-  }
-  if (sortMode === "stars") {
-    return [...list].sort((a, b) => (b.stars || 0) - (a.stars || 0) || (b.clicks || 0) - (a.clicks || 0) || byOrder(a, b));
   }
   return list;
 }
