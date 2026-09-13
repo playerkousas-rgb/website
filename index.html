@@ -233,8 +233,13 @@
       radial-gradient(600px 400px at 50% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
       linear-gradient(180deg, color-mix(in srgb, var(--text) 6%, transparent), color-mix(in srgb, var(--text) 1%, transparent));
     border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+    animation: heroIn .45s var(--ease) both;
   }
   .hero[hidden] { display: none; }
+  @keyframes heroIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+  }
   .hero-glow {
     position: absolute; top: -80px; left: 50%; transform: translateX(-50%);
     width: 520px; height: 520px; pointer-events: none;
@@ -250,6 +255,7 @@
     50% { opacity: 1; transform: translateX(-50%) scale(1.08); }
   }
   @media (prefers-reduced-motion: reduce) {
+    .hero { animation: none; }
     .hero-glow { animation: none; opacity: .8; }
   }
   .hero-card {
@@ -321,13 +327,47 @@
   }
   .hero-share:hover { background: var(--accent-soft); transform: scale(1.06); }
   .hero-share:active { transform: scale(.94); }
-  .btn-primary:hover { filter: brightness(1.06); }
-  .btn-secondary:hover { border-color: var(--accent); }
-  .btn-primary:active, .btn-secondary:active { transform: scale(.97); }
+  .btn-primary:hover {
+    filter: brightness(1.06);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 50%, transparent);
+  }
+  .btn-secondary:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .btn-primary:active { transform: translateY(0) scale(.97); }
+  .btn-secondary:active { transform: translateY(0) scale(.97); }
   @media (max-width: 420px) {
     .hero { padding: 36px 14px 18px; border-radius: 22px; }
     .hero-title { font-size: 20px; }
     .hero-actions { flex-direction: column; }
+  }
+
+  /* Hero 內「App 推送通知」預覽（純 CSS mock：截圖清晰唔會模糊，字隨時改） */
+  .hero-preview { margin-top: 16px; }
+  .hero-preview[hidden] { display: none; }
+  .pv-note {
+    display: flex; align-items: center; gap: 12px; text-align: left;
+    padding: 12px 14px; border-radius: 16px;
+    background: color-mix(in srgb, var(--bg) 45%, var(--bg-elevated));
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-sm);
+  }
+  .pv-ico {
+    width: 42px; height: 42px; flex-shrink: 0; border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; overflow: hidden;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 4px 10px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .pv-ico img { width: 32px; height: 32px; object-fit: contain; }
+  .pv-tx { min-width: 0; flex: 1; }
+  .pv-tx b { font-size: 13px; font-weight: 800; display: block; margin-bottom: 1px; }
+  .pv-tx span {
+    font-size: 12.5px; color: var(--muted); line-height: 1.45;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   /* ── 聚光燈光束（由上照落 hero，App Store 式舞台感）── */
@@ -397,21 +437,43 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-  /* ── Instagram 推廣卡 ── */
-  .ig-card {
-    display: flex; align-items: center; gap: 14px;
-    margin: 28px 0 8px; padding: 16px 18px;
-    border-radius: var(--radius);
-    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, var(--bg-card)), var(--bg-card));
-    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  /* ── 底部統一卡（IG 推廣＋安裝提示＋站內資訊，收埋做同一張卡）── */
+  .foot-card {
+    margin-top: 30px; padding: 16px;
+    border-radius: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
     box-shadow: var(--shadow-sm);
   }
-  .ig-emoji { font-size: 30px; }
+  .foot-card .ig-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 14px; border-radius: 14px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%);
+    border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+  .ig-emoji { font-size: 26px; flex-shrink: 0; }
   .ig-body { flex: 1; min-width: 0; }
-  .ig-title { font-weight: 800; font-size: 15px; }
+  .ig-title { font-weight: 800; font-size: 14.5px; }
   .ig-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .ig-actions { display: flex; gap: 8px; flex-shrink: 0; }
-  .ig-actions .btn-primary, .ig-actions .btn-secondary { flex: 0 0 auto; padding: 10px 14px; font-size: 13px; }
+  .ig-actions .btn-primary, .ig-actions .btn-secondary { flex: 0 0 auto; padding: 9px 13px; font-size: 12.5px; }
+  .foot-card .tip {
+    font-size: 13px; color: var(--muted); line-height: 1.65;
+    margin: 14px 4px 0;
+  }
+  .foot-card .tip b { color: var(--text); }
+  .foot-bottom {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 14px; padding-top: 13px;
+    border-top: 1px solid var(--border);
+    font-size: 12.5px; color: var(--muted);
+  }
+  .foot-copy { white-space: nowrap; }
+  @media (max-width: 430px) {
+    .foot-card .ig-row { flex-wrap: wrap; row-gap: 10px; }
+    .foot-card .ig-actions { width: 100%; justify-content: flex-end; }
+  }
 
   /* ── QR Modal ── */
   .modal { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -636,26 +698,15 @@
     100% { background-position: -200% 0; }
   }
 
-  /* Footer */
-  footer {
-    text-align: center; color: var(--muted);
-    font-size: 14px; padding-top: 36px; line-height: 1.8;
-  }
+  /* Footer（統一底卡，見 .foot-card） */
   footer a { color: var(--accent-text); font-weight: 600; }
-  footer .tip {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px 18px; margin: 0 auto 18px; max-width: 560px;
-    text-align: left; box-shadow: var(--shadow-sm);
-    font-size: 15px; line-height: 1.6;
-  }
-  footer .tip b { color: var(--text); }
   .foot-meta {
-    display: inline-flex; align-items: center; gap: 8px;
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: 999px; padding: 8px 16px; font-size: 14px; font-weight: 600;
-    box-shadow: var(--shadow-sm);
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent-soft);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    color: var(--accent-text);
+    border-radius: 999px; padding: 5px 12px;
+    font-size: 12.5px; font-weight: 700;
   }
 
   /* Back to top */
@@ -1127,8 +1178,10 @@
   <div class="tag-row sort-row" id="sort-row" hidden></div>
   <nav class="chips" id="chips" aria-label="分類"></nav>
 
-  <!-- ★★★ 今期主打 Spotlight（內容由下方 SPOTLIGHT 設定控制） ★★★ -->
-  <section class="hero" id="hero-spotlight" aria-label="今期主打">
+  <!-- ★★★ 今期主打 Spotlight（內容由下方 SPOTLIGHT 設定控制） ★★★
+       預設 hidden：數據載入前唔會先閃出舊內容（「舊版殘留」），
+       renderSpotlight() 攞到今期推廣項目先顯示。 -->
+  <section class="hero" id="hero-spotlight" aria-label="今期主打" hidden>
     <div class="hero-glow" aria-hidden="true"></div>
     <div class="hero-beam" aria-hidden="true"></div>
     <span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span>
@@ -1138,14 +1191,19 @@
       <div class="hero-icon-row">
         <div class="hero-icon" id="hero-icon" role="img" aria-label="">🔔</div>
         <div class="hero-body">
-          <div class="hero-title" id="hero-title">通告圖書館 v5.8</div>
-          <div class="hero-sub" id="hero-sub">查看最新童軍通告、活動公告與文件下載 · 已整合推送訂閱</div>
+          <div class="hero-title" id="hero-title">載入中…</div>
+          <div class="hero-sub" id="hero-sub"></div>
         </div>
       </div>
-      <div class="hero-meta" id="hero-meta">
-        <span>🟢 更新 2026-09-12</span>
-        <span>⭐ 4.9 · 2.1k 評分</span>
-        <span>⬇️ 使用 8.4k+</span>
+      <div class="hero-meta" id="hero-meta" hidden></div>
+      <div class="hero-preview" id="hero-preview" aria-hidden="true">
+        <div class="pv-note">
+          <div class="pv-ico" id="pv-ico">🔔</div>
+          <div class="pv-tx">
+            <b id="pv-title">通告圖書館</b>
+            <span id="pv-msg">📢 有新通告：本週活動安排已更新，記得查看！</span>
+          </div>
+        </div>
       </div>
       <div class="hero-actions">
         <button class="btn-primary" id="hero-open" type="button">立即開啟</button>
@@ -1172,23 +1230,25 @@
     <p>試下改關鍵字，或者撳「全部」／轉第二個分頁睇下</p>
   </div>
 
-  <!-- Instagram 推廣 -->
-  <section class="ig-card" aria-label="Instagram">
-    <div class="ig-emoji">📸</div>
-    <div class="ig-body">
-      <div class="ig-title">追蹤我哋嘅 Instagram</div>
-      <div class="ig-sub" id="ig-handle">童軍工具 · 教學 · 活動花絮</div>
+  <!-- 底部統一卡：Instagram 推廣＋安裝提示＋站內資訊
+       （以前 4 樣分開置底、樣式各異，而家收埋做同一張卡） -->
+  <footer class="foot-card" aria-label="底部資訊">
+    <section class="ig-row" aria-label="Instagram">
+      <div class="ig-emoji">📸</div>
+      <div class="ig-body">
+        <div class="ig-title">追蹤我哋嘅 Instagram</div>
+        <div class="ig-sub" id="ig-handle">童軍工具 · 教學 · 活動花絮</div>
+      </div>
+      <div class="ig-actions">
+        <button class="btn-primary" id="ig-follow" type="button">追蹤</button>
+        <button class="btn-secondary" id="ig-qr-btn" type="button">🔳 QR</button>
+      </div>
+    </section>
+    <p class="tip">💡 <b>提示：</b>喺瀏覽器選單選「加入主畫面 / 安裝 App」（Android 可撳右上角「安裝」），呢個「童軍小工具」就會變成電話桌面嘅一個 App。所有童軍工具、圖卡、簡報同連結都由呢度入。</p>
+    <div class="foot-bottom">
+      <span class="foot-meta" id="foot-count">載入中…</span>
+      <span class="foot-copy">© 2026 Scout System · App Store Edition</span>
     </div>
-    <div class="ig-actions">
-      <button class="btn-primary" id="ig-follow" type="button">追蹤</button>
-      <button class="btn-secondary" id="ig-qr-btn" type="button">🔳 QR</button>
-    </div>
-  </section>
-
-  <footer>
-    <div class="tip">💡 <b>提示：</b>喺瀏覽器選單選「加入主畫面 / 安裝 App」（Android 可撳右上角「安裝」），呢個「童軍小工具」就會變成電話桌面嘅一個 App。所有童軍工具、圖卡、簡報同連結都由呢度入。</div>
-    <span class="foot-meta" id="foot-count">載入中…</span>
-    <div style="margin-top:16px">© 2026 Scout System · App Store Edition</div>
   </footer>
 </div>
 
@@ -1290,6 +1350,17 @@ function goldfingerClick() {
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").catch(() => {});
+  // 有新版本 SW 接手（新部署完成）→ 自動重新載入一次，用返新代碼。
+  // 解決「打開先見舊版殘留、之後先跳新版」嘅問題。
+  // sessionStorage 防止無限循環（只重新載入一次）。
+  let _swDidReload = false;
+  try { _swDidReload = sessionStorage.getItem("sw-reload-done") === "1"; } catch {}
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (_swDidReload) return;
+    _swDidReload = true;
+    try { sessionStorage.setItem("sw-reload-done", "1"); } catch {}
+    location.reload();
+  });
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -1307,7 +1378,11 @@ const SPOTLIGHT = {
   badge: "今期主打",
   openLabel: "立即開啟",
   allLabel: "查看全部",
-  showStats: true          // 顯示「🔥 N 次開啟 · ⭐ N 人收藏」
+  showStats: true,          // 顯示「🔥 N 次開啟 · ⭐ N 人收藏」（數字 = 0 時自動隱藏，IG 貼圖唔會晒 0）
+  preview: {
+    enabled: true,                                  // Hero 入面嘅「推送通知」預覽卡
+    msg: "📢 有新通告：本週活動安排已更新，記得查看！"  // 純裝飾文案，想改就改呢度
+  }
 };
 
 const heroEl = document.getElementById("hero-spotlight");
@@ -1354,14 +1429,14 @@ function renderSpotlight() {
     iconEl.setAttribute("aria-label", a.name || "");
   }
 
-  // meta 用真實數據，唔再係寫死嘅假評分
+  // meta 用真實數據；🔥／⭐ 係 0 時自動隱藏（推廣期晒 0 貼 IG 難睇）
   const metaEl = document.getElementById("hero-meta");
   if (metaEl) {
     metaEl.textContent = "";
     const bits = [];
     if (SPOTLIGHT.showStats) {
-      bits.push("🔥 " + (a.clicks || 0).toLocaleString() + " 次開啟");
-      bits.push("⭐ " + (a.stars || 0).toLocaleString() + " 人收藏");
+      if ((a.clicks || 0) > 0) bits.push("🔥 " + a.clicks.toLocaleString() + " 次開啟");
+      if ((a.stars || 0) > 0) bits.push("⭐ " + a.stars.toLocaleString() + " 人收藏");
     }
     if (a.tags && a.tags.length) bits.push("🎖 " + a.tags.join(" · "));
     bits.forEach((t) => {
@@ -1369,9 +1444,28 @@ function renderSpotlight() {
       s.textContent = t;                  // textContent：內容有 < > 都唔會爆版
       metaEl.appendChild(s);
     });
+    metaEl.hidden = !bits.length;          // 全部冇數據 → 成行隱藏
   }
 
-  setSectionsBlur(!_userRevealed);
+  // 推送通知預覽：標題／圖示跟住今期推廣項目（純裝飾，令 Hero 貼 IG 更靚）
+  const pvEl = document.getElementById("hero-preview");
+  if (pvEl) {
+    if (SPOTLIGHT.preview && SPOTLIGHT.preview.enabled) {
+      pvEl.hidden = false;
+      const pvt = document.getElementById("pv-title");
+      if (pvt) pvt.textContent = a.name;
+      const pvm = document.getElementById("pv-msg");
+      if (pvm) pvm.textContent = SPOTLIGHT.preview.msg;
+      const pvi = document.getElementById("pv-ico");
+      if (pvi) pvi.innerHTML = appIconHTML(a, "tile");
+    } else {
+      pvEl.hidden = true;
+    }
+  }
+
+  // 下面 Grid 真有內容先 Blur（防止「Blur 咗但完全冇內容」）
+  const hasContent = !!(sectionsEl && sectionsEl.querySelector("section"));
+  setSectionsBlur(!_userRevealed && hasContent);
 }
 
 document.getElementById("hero-open").addEventListener("click", () => {
