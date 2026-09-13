@@ -189,6 +189,7 @@ function rowsToApp(r) {
     visible: r.visible !== false,
     tags: tags.map((t) => t.trim()).filter(Boolean),
     clicks: r.clicks || 0,
+    stars: r.stars || 0,
     featured: r.featured === true,
     sort_order: r.sort_order ?? 0,
     _id: r.id,
@@ -332,6 +333,7 @@ function normalizeApp(a, i, catName, page) {
     visible: a.visible !== false,
     tags: Array.isArray(a.tags) ? a.tags.filter(Boolean) : [],
     clicks: a.clicks || 0,
+    stars: a.stars || 0,
     featured: a.featured === true,
     sort_order: a.sort_order ?? i,
     _id: a._id || "demo-" + Date.now() + "-" + i + "-" + Math.random().toString(36).slice(2, 6),
@@ -368,7 +370,7 @@ function appPayload(app) {
 
 /* 選擇性欄位：用戶未跑 README 嘅 migration 時，呢啲欄喺 DB 仲未存在。
    寫入失敗就逐個甩走再試，唔會整冧儲存（沿用原本 icon_source 嘅做法）。 */
-const OPTIONAL_APP_COLS = ["icon_source", "featured"];
+const OPTIONAL_APP_COLS = ["icon_source", "featured", "stars"];
 
 async function writeAppRow(sb, payload, id) {
   const drop = [...OPTIONAL_APP_COLS];
@@ -701,6 +703,30 @@ function trackClick(id) {
   } catch {}
 }
 
+// 收藏數（全站累計）—— 同 trackClick 一樣 fire-and-forget，唔阻用戶
+function trackStar(id, delta) {
+  if (!id) return;
+  const sb = getSB();
+  if (sb) {
+    fetch(SUPABASE_CONFIG.url + "/rest/v1/rpc/bump_stars", {
+      method: "POST", keepalive: true,
+      headers: { apikey: SUPABASE_CONFIG.anonKey, Authorization: "Bearer " + SUPABASE_CONFIG.anonKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_id: id, p_delta: delta })
+    }).catch(() => {});
+    return;
+  }
+  try {
+    const ls = JSON.parse(localStorage.getItem(LS_KEY));
+    if (ls) {
+      for (const p of ls.pages || []) for (const c of p.categories || []) {
+        const a = c.apps.find((x) => x._id === id);
+        if (a) a.stars = Math.max(0, (a.stars || 0) + delta);
+      }
+      localStorage.setItem(LS_KEY, JSON.stringify(ls));
+    }
+  } catch {}
+}
+
 // ── JSON 備份匯出 ────────────────────────────────────────────
 function exportSites(sites) {
   const blob = new Blob([JSON.stringify(sites, null, 2)], { type: "application/json" });
@@ -760,6 +786,7 @@ async function restoreFromBackup(backup) {
           github: a.github || null, note: a.note || null,
           category: c.name, page: p.id, tags: a.tags || [],
           visible: a.visible !== false, clicks: typeof a.clicks === "number" ? a.clicks : 0,
+          stars: typeof a.stars === "number" ? a.stars : 0,
           featured: a.featured === true,
           sort_order: a.sort_order ?? itemCount
         };

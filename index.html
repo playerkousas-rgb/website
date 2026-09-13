@@ -310,6 +310,17 @@
     color: var(--accent-text);
     border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
   }
+  .hero-share {
+    position: absolute; top: 12px; right: 12px; z-index: 3;
+    width: 38px; height: 38px; border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+    color: var(--accent-text); font-size: 15px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    touch-action: manipulation; transition: transform .12s, background .15s;
+  }
+  .hero-share:hover { background: var(--accent-soft); transform: scale(1.06); }
+  .hero-share:active { transform: scale(.94); }
   .btn-primary:hover { filter: brightness(1.06); }
   .btn-secondary:hover { border-color: var(--accent); }
   .btn-primary:active, .btn-secondary:active { transform: scale(.97); }
@@ -371,6 +382,20 @@
   @media (prefers-reduced-motion: reduce) {
     .hero-beam, .hero .spark { animation: none; }
   }
+
+  /* ── Toast（分享／複製提示）── */
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%) translateY(8px);
+    bottom: calc(76px + var(--safe-b)); z-index: 80;
+    padding: 9px 18px; border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    color: var(--accent-text); font-size: 13px; font-weight: 700;
+    box-shadow: var(--shadow);
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s var(--ease), transform .25s var(--ease);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   /* Spotlight 未互動前，下面嘅全部工具做朦朧處理
      注意：唔好用 pointer-events:none —— 咁樣第一下點擊會穿過去落喺 .wrap，
@@ -1076,6 +1101,7 @@
     <div class="hero-beam" aria-hidden="true"></div>
     <span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span>
     <div class="hero-card">
+      <button class="hero-share" id="hero-share" type="button" aria-label="分享此項目" title="分享">🔗</button>
       <div class="hero-badge" id="hero-badge">今期主打</div>
       <div class="hero-icon-row">
         <div class="hero-icon" id="hero-icon" role="img" aria-label="">🔔</div>
@@ -1122,6 +1148,8 @@
 </div>
 
 <button class="to-top" id="to-top" type="button" aria-label="返回頂部">↑</button>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <nav class="bottom-nav" id="bottom-nav" aria-label="主導覽">
   <button class="bn-item on" data-bn="home" type="button"><span class="bn-ico">🏠</span><span>首頁</span></button>
@@ -1277,6 +1305,7 @@ function renderSpotlight() {
     const bits = [];
     if (SPOTLIGHT.showStats) {
       bits.push("🔥 " + (a.clicks || 0).toLocaleString() + " 次開啟");
+      bits.push("⭐ " + (a.stars || 0).toLocaleString() + " 人收藏");
     }
     if (a.tags && a.tags.length) bits.push("🎖 " + a.tags.join(" · "));
     bits.forEach((t) => {
@@ -1298,6 +1327,33 @@ document.getElementById("hero-open").addEventListener("click", () => {
 document.getElementById("hero-all").addEventListener("click", () => {
   revealSections();
   sectionsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+// Toast + 分享（推廣用：Web Share API，冇就複製連結）
+const toastEl = document.getElementById("toast");
+let _toastT = null;
+function showToast(msg) {
+  if (!toastEl) return;
+  toastEl.textContent = msg;
+  toastEl.hidden = false;
+  requestAnimationFrame(() => toastEl.classList.add("show"));
+  clearTimeout(_toastT);
+  _toastT = setTimeout(() => {
+    toastEl.classList.remove("show");
+    setTimeout(() => { toastEl.hidden = true; }, 260);
+  }, 1800);
+}
+async function shareApp(app) {
+  const data = { title: app.name, text: (app.name || "") + " — " + (app.description || ""), url: app.url };
+  if (navigator.share) {
+    try { await navigator.share(data); return; } catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  try { await navigator.clipboard.writeText(app.url); showToast("🔗 連結已複製"); }
+  catch (e) { showToast(app.url); }
+}
+document.getElementById("hero-share").addEventListener("click", () => {
+  const f = (typeof getFeaturedApp === "function" && typeof SITES !== "undefined" && SITES) ? getFeaturedApp(SITES) : null;
+  if (f) shareApp(f.app);
 });
 
 // 底部導覽列
