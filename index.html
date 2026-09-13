@@ -116,7 +116,7 @@
     padding:
       calc(12px + var(--safe-t))
       max(16px, var(--safe-r))
-      calc(48px + var(--safe-b))
+      calc(100px + var(--safe-b))
       max(16px, var(--safe-l));
   }
 
@@ -151,6 +151,7 @@
     box-shadow: var(--shadow); display: block;
   }
   .head-titles { min-width: 0; flex: 1; }
+  .head-sub { font-size: 12px; color: var(--muted); margin-top: 2px; letter-spacing: .04em; }
   .head-titles h1 {
     font-size: clamp(20px, 5vw, 25px);
     font-weight: 750; letter-spacing: -.02em;
@@ -316,6 +317,59 @@
     .hero { padding: 36px 14px 18px; border-radius: 22px; }
     .hero-title { font-size: 20px; }
     .hero-actions { flex-direction: column; }
+  }
+
+  /* ── 聚光燈光束（由上照落 hero，App Store 式舞台感）── */
+  .hero-beam {
+    position: absolute; top: -160px; left: 50%; transform: translateX(-50%);
+    width: 380px; height: 540px; pointer-events: none; z-index: 1;
+    background: linear-gradient(to bottom,
+      color-mix(in srgb, var(--accent) 55%, transparent),
+      color-mix(in srgb, var(--accent) 22%, transparent) 55%,
+      transparent 82%);
+    clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%);
+    filter: blur(16px);
+    animation: beamFlicker 4.5s ease-in-out infinite;
+  }
+  @keyframes beamFlicker { 0%,100% { opacity:.85; } 50% { opacity:.55; } }
+  .hero .spark {
+    position: absolute; width: 4px; height: 4px; border-radius: 50%;
+    background: var(--accent); pointer-events: none; z-index: 1;
+    box-shadow: 0 0 8px 2px color-mix(in srgb, var(--accent) 60%, transparent);
+    animation: twinkle 2.6s ease-in-out infinite;
+  }
+  .hero .spark:nth-of-type(1){ top:30%; left:16%; }
+  .hero .spark:nth-of-type(2){ top:22%; left:78%; animation-delay:.5s; }
+  .hero .spark:nth-of-type(3){ top:44%; left:86%; animation-delay:1s; }
+  .hero .spark:nth-of-type(4){ top:58%; left:12%; animation-delay:1.5s; }
+  .hero .spark:nth-of-type(5){ top:16%; left:48%; animation-delay:2s; }
+  @keyframes twinkle { 0%,100%{opacity:.15; transform:scale(.7);} 50%{opacity:.9; transform:scale(1.2);} }
+
+  /* ── 底部懸浮導覽列（App Store 式）── */
+  .bottom-nav {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(10px + var(--safe-b)); z-index: 60;
+    display: flex; gap: 4px; padding: 6px; border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
+    border: 1px solid var(--border);
+    backdrop-filter: saturate(1.4) blur(16px);
+    -webkit-backdrop-filter: saturate(1.4) blur(16px);
+    box-shadow: var(--shadow);
+  }
+  .bottom-nav[hidden] { display: none; }
+  .bn-item {
+    display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
+    border: none; background: transparent; cursor: pointer;
+    color: var(--muted); font-size: 10.5px; font-weight: 700;
+    padding: 8px 18px; border-radius: 999px; touch-action: manipulation;
+    transition: color .15s, background .15s, transform .1s;
+  }
+  .bn-item .bn-ico { font-size: 18px; line-height: 1; }
+  .bn-item.on { color: var(--on-accent); background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+  .bn-item:not(.on):active { transform: scale(.96); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-beam, .hero .spark { animation: none; }
   }
 
   /* Spotlight 未互動前，下面嘅全部工具做朦朧處理
@@ -551,7 +605,7 @@
   .to-top {
     position: fixed;
     right: max(14px, var(--safe-r));
-    bottom: calc(18px + var(--safe-b));
+    bottom: calc(76px + var(--safe-b));
     width: 46px; height: 46px; border-radius: 50%;
     border: 1px solid var(--border);
     background: var(--bg-card); color: var(--text);
@@ -994,6 +1048,7 @@
         </div>
         <div class="head-titles">
           <h1 id="site-name">童軍小工具</h1>
+          <div class="head-sub">童軍工具 · 應用商店</div>
         </div>
         <div class="head-actions">
           <button class="install-btn" id="install-btn" type="button" aria-label="安裝 App">
@@ -1018,6 +1073,8 @@
   <!-- ★★★ 今期主打 Spotlight（內容由下方 SPOTLIGHT 設定控制） ★★★ -->
   <section class="hero" id="hero-spotlight" aria-label="今期主打">
     <div class="hero-glow" aria-hidden="true"></div>
+    <div class="hero-beam" aria-hidden="true"></div>
+    <span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span>
     <div class="hero-card">
       <div class="hero-badge" id="hero-badge">今期主打</div>
       <div class="hero-icon-row">
@@ -1065,6 +1122,12 @@
 </div>
 
 <button class="to-top" id="to-top" type="button" aria-label="返回頂部">↑</button>
+
+<nav class="bottom-nav" id="bottom-nav" aria-label="主導覽">
+  <button class="bn-item on" data-bn="home" type="button"><span class="bn-ico">🏠</span><span>首頁</span></button>
+  <button class="bn-item" data-bn="cats" type="button"><span class="bn-ico">⌗</span><span>分類</span></button>
+  <button class="bn-item" data-bn="fav" type="button"><span class="bn-ico">⭐</span><span>我的</span></button>
+</nav>
 
 <div id="admin-panel" hidden>
   <div id="admin-content"></div>
@@ -1235,6 +1298,18 @@ document.getElementById("hero-open").addEventListener("click", () => {
 document.getElementById("hero-all").addEventListener("click", () => {
   revealSections();
   sectionsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+// 底部導覽列
+const bottomNav = document.getElementById("bottom-nav");
+bottomNav.addEventListener("click", (e) => {
+  const b = e.target.closest(".bn-item");
+  if (!b) return;
+  bottomNav.querySelectorAll(".bn-item").forEach((x) => x.classList.toggle("on", x === b));
+  const kind = b.dataset.bn;
+  if (kind === "home") { revealSections(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  else if (kind === "cats") { revealSections(); sectionsEl.scrollIntoView({ behavior: "smooth", block: "start" }); }
+  else if (kind === "fav") { if (typeof jumpTo === "function") jumpTo("fav"); }
 });
 
 // 解除朦朧：搜尋、撳「查看全部」、撳工具區、捲過 hero
