@@ -8,7 +8,7 @@
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="icon" type="image/png" href="/icons/icon-192.png" />
 <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-<meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#faf6ec" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
@@ -18,26 +18,28 @@
 <meta name="format-detection" content="telephone=no" />
 <style>
   :root {
-    --bg: #f2f4f8;
+    --bg: #faf6ec;
     --bg-elevated: #ffffff;
     --bg-card: #ffffff;
-    --text: #0f172a;
-    --muted: #64748b;
-    --border: rgba(15, 23, 42, .08);
-    --border-strong: rgba(15, 23, 42, .14);
-    --accent: #2563eb;
-    --accent-2: #7c3aed;
-    --accent-soft: rgba(37, 99, 235, .1);
-    --accent-text: #1d4ed8;
-    --danger: #ef4444;
-    --danger-soft: rgba(239, 68, 68, .1);
+    --bg-card-hover: #fdf6e3;
+    --text: #241a05;
+    --muted: #8a7350;
+    --border: rgba(120, 84, 10, .12);
+    --border-strong: rgba(120, 84, 10, .22);
+    --accent: #d99e06;
+    --accent-2: #b45309;
+    --accent-soft: rgba(217, 158, 6, .14);
+    --accent-text: #8a5a05;
+    --on-accent: #1a1200;
+    --danger: #dc2626;
+    --danger-soft: rgba(220, 38, 38, .1);
     --ok: #059669;
     --ok-soft: rgba(5, 150, 105, .1);
-    --warn: #d97706;
-    --warn-soft: rgba(217, 119, 6, .12);
-    --shadow-sm: 0 1px 2px rgba(15, 23, 42, .04);
-    --shadow: 0 2px 8px rgba(15, 23, 42, .06), 0 8px 24px rgba(15, 23, 42, .06);
-    --shadow-hover: 0 8px 28px rgba(15, 23, 42, .14);
+    --warn: #b45309;
+    --warn-soft: rgba(180, 83, 9, .12);
+    --shadow-sm: 0 1px 2px rgba(90, 62, 8, .06);
+    --shadow: 0 2px 8px rgba(90, 62, 8, .07), 0 8px 24px rgba(90, 62, 8, .07);
+    --shadow-hover: 0 8px 28px rgba(90, 62, 8, .16);
     --radius: 18px;
     --radius-sm: 12px;
     --radius-xs: 10px;
@@ -55,16 +57,18 @@
   }
   [data-theme="dark"] {
     --bg: #0b0d12;
-    --bg-elevated: #12151c;
-    --bg-card: #151922;
+    --bg-elevated: #151922;
+    --bg-card: #1a1f2e;
+    --bg-card-hover: #22293e;
     --text: #f1f5f9;
     --muted: #94a3b8;
-    --border: rgba(255, 255, 255, .07);
-    --border-strong: rgba(255, 255, 255, .12);
-    --accent: #60a5fa;
-    --accent-2: #a78bfa;
-    --accent-soft: rgba(96, 165, 250, .14);
-    --accent-text: #93c5fd;
+    --border: rgba(255, 255, 255, .08);
+    --border-strong: rgba(255, 255, 255, .14);
+    --accent: #facc15;
+    --accent-2: #f59e0b;
+    --accent-soft: rgba(250, 204, 21, .15);
+    --accent-text: #fde68a;
+    --on-accent: #0b0d12;
     --danger: #f87171;
     --danger-soft: rgba(248, 113, 113, .14);
     --ok: #34d399;
@@ -112,7 +116,7 @@
     padding:
       calc(12px + var(--safe-t))
       max(16px, var(--safe-r))
-      calc(48px + var(--safe-b))
+      calc(100px + var(--safe-b))
       max(16px, var(--safe-l));
   }
 
@@ -147,6 +151,7 @@
     box-shadow: var(--shadow); display: block;
   }
   .head-titles { min-width: 0; flex: 1; }
+  .head-sub { font-size: 12px; color: var(--muted); margin-top: 2px; letter-spacing: .04em; }
   .head-titles h1 {
     font-size: clamp(20px, 5vw, 25px);
     font-weight: 750; letter-spacing: -.02em;
@@ -171,7 +176,7 @@
     display: none; align-items: center; gap: 6px;
     border: none; border-radius: 999px; padding: 10px 14px; cursor: pointer;
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    color: #fff; font-size: 13px; font-weight: 700;
+    color: var(--on-accent); font-size: 13px; font-weight: 700;
     box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 35%, transparent);
     white-space: nowrap; touch-action: manipulation;
     transition: filter .15s, transform .15s var(--ease);
@@ -217,6 +222,228 @@
   .search-clear.show { display: inline-flex; }
   .search-clear:hover { background: var(--accent-soft); color: var(--accent-text); }
 
+  /* ── ★ 今期主打 Spotlight（App Store 式 hero） ── */
+  .hero {
+    position: relative;
+    margin: 20px 0 24px;
+    padding: 44px 20px 24px;
+    overflow: hidden;
+    border-radius: 28px;
+    background:
+      radial-gradient(600px 400px at 50% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
+      linear-gradient(180deg, color-mix(in srgb, var(--text) 6%, transparent), color-mix(in srgb, var(--text) 1%, transparent));
+    border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+  .hero[hidden] { display: none; }
+  .hero-glow {
+    position: absolute; top: -80px; left: 50%; transform: translateX(-50%);
+    width: 520px; height: 520px; pointer-events: none;
+    background: radial-gradient(circle,
+      color-mix(in srgb, var(--accent) 90%, transparent) 0%,
+      color-mix(in srgb, var(--accent) 40%, transparent) 25%,
+      transparent 70%);
+    filter: blur(20px);
+    animation: glowPulse 3s ease-in-out infinite;
+  }
+  @keyframes glowPulse {
+    0%, 100% { opacity: .7; transform: translateX(-50%) scale(1); }
+    50% { opacity: 1; transform: translateX(-50%) scale(1.08); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-glow { animation: none; opacity: .8; }
+  }
+  .hero-card {
+    position: relative; z-index: 2;
+    max-width: 560px; margin: 0 auto; padding: 20px;
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--bg-card) 92%, transparent),
+      color-mix(in srgb, var(--bg-elevated) 98%, transparent));
+    border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+    border-radius: 20px;
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent) 15%, transparent),
+      0 20px 60px color-mix(in srgb, var(--accent) 28%, transparent),
+      0 0 80px color-mix(in srgb, var(--accent) 15%, transparent);
+  }
+  .hero-badge {
+    display: inline-block;
+    background: var(--accent); color: var(--on-accent);
+    font-weight: 900; font-size: 12px;
+    padding: 6px 14px; border-radius: 999px;
+    margin-bottom: 14px;
+    transform: rotate(-2deg);
+  }
+  .hero-icon-row { display: flex; gap: 16px; align-items: center; }
+  .hero-icon {
+    width: 64px; height: 64px; flex-shrink: 0;
+    border-radius: 18px; font-size: 34px;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 40%, transparent);
+    overflow: hidden;
+  }
+  .hero-icon img { width: 100%; height: 100%; object-fit: contain; }
+  .hero-body { min-width: 0; }
+  .hero-title { font-size: 24px; font-weight: 900; line-height: 1.2; word-break: break-word; }
+  .hero-sub { font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .hero-meta { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .hero-meta span {
+    font-size: 11px; font-weight: 650;
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+    border: 1px solid var(--border);
+    padding: 5px 10px; border-radius: 999px;
+  }
+  .hero-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .btn-primary, .btn-secondary {
+    flex: 1; min-width: 0;
+    border-radius: 12px; padding: 12px 16px;
+    font-size: 15px; font-weight: 800; cursor: pointer;
+    touch-action: manipulation;
+    transition: filter .15s, transform .15s var(--ease);
+  }
+  .btn-primary {
+    background: var(--accent); color: var(--on-accent); border: none;
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .btn-secondary {
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+    color: var(--accent-text);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .hero-share {
+    position: absolute; top: 12px; right: 12px; z-index: 3;
+    width: 38px; height: 38px; border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+    color: var(--accent-text); font-size: 15px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    touch-action: manipulation; transition: transform .12s, background .15s;
+  }
+  .hero-share:hover { background: var(--accent-soft); transform: scale(1.06); }
+  .hero-share:active { transform: scale(.94); }
+  .btn-primary:hover { filter: brightness(1.06); }
+  .btn-secondary:hover { border-color: var(--accent); }
+  .btn-primary:active, .btn-secondary:active { transform: scale(.97); }
+  @media (max-width: 420px) {
+    .hero { padding: 36px 14px 18px; border-radius: 22px; }
+    .hero-title { font-size: 20px; }
+    .hero-actions { flex-direction: column; }
+  }
+
+  /* ── 聚光燈光束（由上照落 hero，App Store 式舞台感）── */
+  .hero-beam {
+    position: absolute; top: -160px; left: 50%; transform: translateX(-50%);
+    width: 380px; height: 540px; pointer-events: none; z-index: 1;
+    background: linear-gradient(to bottom,
+      color-mix(in srgb, var(--accent) 55%, transparent),
+      color-mix(in srgb, var(--accent) 22%, transparent) 55%,
+      transparent 82%);
+    clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%);
+    filter: blur(16px);
+    animation: beamFlicker 4.5s ease-in-out infinite;
+  }
+  @keyframes beamFlicker { 0%,100% { opacity:.85; } 50% { opacity:.55; } }
+  .hero .spark {
+    position: absolute; width: 4px; height: 4px; border-radius: 50%;
+    background: var(--accent); pointer-events: none; z-index: 1;
+    box-shadow: 0 0 8px 2px color-mix(in srgb, var(--accent) 60%, transparent);
+    animation: twinkle 2.6s ease-in-out infinite;
+  }
+  .hero .spark:nth-of-type(1){ top:30%; left:16%; }
+  .hero .spark:nth-of-type(2){ top:22%; left:78%; animation-delay:.5s; }
+  .hero .spark:nth-of-type(3){ top:44%; left:86%; animation-delay:1s; }
+  .hero .spark:nth-of-type(4){ top:58%; left:12%; animation-delay:1.5s; }
+  .hero .spark:nth-of-type(5){ top:16%; left:48%; animation-delay:2s; }
+  @keyframes twinkle { 0%,100%{opacity:.15; transform:scale(.7);} 50%{opacity:.9; transform:scale(1.2);} }
+
+  /* ── 底部懸浮導覽列（App Store 式）── */
+  .bottom-nav {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(10px + var(--safe-b)); z-index: 60;
+    display: flex; gap: 4px; padding: 6px; border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
+    border: 1px solid var(--border);
+    backdrop-filter: saturate(1.4) blur(16px);
+    -webkit-backdrop-filter: saturate(1.4) blur(16px);
+    box-shadow: var(--shadow);
+  }
+  .bottom-nav[hidden] { display: none; }
+  .bn-item {
+    display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
+    border: none; background: transparent; cursor: pointer;
+    color: var(--muted); font-size: 10.5px; font-weight: 700;
+    padding: 8px 18px; border-radius: 999px; touch-action: manipulation;
+    transition: color .15s, background .15s, transform .1s;
+  }
+  .bn-item .bn-ico { font-size: 18px; line-height: 1; }
+  .bn-item.on { color: var(--on-accent); background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+  .bn-item:not(.on):active { transform: scale(.96); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-beam, .hero .spark { animation: none; }
+  }
+
+  /* ── Toast（分享／複製提示）── */
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%) translateY(8px);
+    bottom: calc(76px + var(--safe-b)); z-index: 80;
+    padding: 9px 18px; border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    color: var(--accent-text); font-size: 13px; font-weight: 700;
+    box-shadow: var(--shadow);
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s var(--ease), transform .25s var(--ease);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── Instagram 推廣卡 ── */
+  .ig-card {
+    display: flex; align-items: center; gap: 14px;
+    margin: 28px 0 8px; padding: 16px 18px;
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, var(--bg-card)), var(--bg-card));
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    box-shadow: var(--shadow-sm);
+  }
+  .ig-emoji { font-size: 30px; }
+  .ig-body { flex: 1; min-width: 0; }
+  .ig-title { font-weight: 800; font-size: 15px; }
+  .ig-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .ig-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .ig-actions .btn-primary, .ig-actions .btn-secondary { flex: 0 0 auto; padding: 10px 14px; font-size: 13px; }
+
+  /* ── QR Modal ── */
+  .modal { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal[hidden] { display: none; }
+  .modal-backdrop { position: absolute; inset: 0; background: color-mix(in srgb, var(--bg) 60%, transparent); backdrop-filter: blur(6px); }
+  .modal-card {
+    position: relative; z-index: 1; max-width: 340px; width: 100%;
+    background: var(--bg-elevated); border: 1px solid var(--border-strong);
+    border-radius: 22px; padding: 22px; text-align: center; box-shadow: var(--shadow);
+  }
+  .modal-x { position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%;
+    border: 1px solid var(--border); background: var(--bg-card); color: var(--muted); font-size: 16px; cursor: pointer; }
+  .ig-qr-img { width: 100%; max-width: 240px; margin: 0 auto; border-radius: 14px; background: #fff; padding: 8px; }
+  .modal-title { font-weight: 800; margin-top: 14px; }
+  .modal-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .modal-card .btn-primary { margin-top: 14px; width: 100%; }
+
+  /* Spotlight 未互動前，下面嘅全部工具做朦朧處理
+     注意：唔好用 pointer-events:none —— 咁樣第一下點擊會穿過去落喺 .wrap，
+     結果 topbar／chips 嘅點擊都要靠幾何位置估，好易誤食。
+     而家保留可點擊，由 boot script 用 DOM 祖先關係精準截第一下。 */
+  .sections-blur {
+    filter: blur(6px); opacity: .38; transform: scale(.98);
+    transition: filter .5s ease, opacity .5s ease, transform .5s ease;
+  }
+  .sections-blur.active {
+    filter: blur(0); opacity: 1; transform: scale(1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sections-blur, .sections-blur.active { transition: none; }
+  }
+
   /* ── Category chips ─────────────────── */
   .chips {
     position: sticky;
@@ -247,7 +474,7 @@
   .chip:hover { color: var(--text); border-color: var(--border-strong); }
   .chip:active { transform: scale(.96); }
   .chip.on {
-    color: #fff;
+    color: var(--on-accent);
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
     border-color: transparent;
     box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 32%, transparent);
@@ -295,7 +522,7 @@
     transition: background .15s;
     animation: tileIn .45s var(--ease) both;
   }
-  .tile:hover { background: color-mix(in srgb, var(--bg-card) 70%, transparent); }
+  .tile:hover { background: var(--bg-card-hover); }
   .tile:active .tile-icon { transform: scale(.88); }
   @keyframes tileIn {
     from { opacity: 0; transform: translateY(10px) scale(.96); }
@@ -320,6 +547,7 @@
   }
   .tile:hover .tile-icon {
     transform: translateY(-3px) scale(1.06);
+    filter: drop-shadow(0 6px 14px color-mix(in srgb, var(--accent) 35%, transparent));
   }
   .tile-icon img {
     width: 58px; height: 58px; object-fit: contain; border-radius: 14px;
@@ -434,7 +662,7 @@
   .to-top {
     position: fixed;
     right: max(14px, var(--safe-r));
-    bottom: calc(18px + var(--safe-b));
+    bottom: calc(76px + var(--safe-b));
     width: 46px; height: 46px; border-radius: 50%;
     border: 1px solid var(--border);
     background: var(--bg-card); color: var(--text);
@@ -536,7 +764,7 @@
   .mini-btn:active { transform: scale(.97); }
   .mini-btn.primary {
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    color: #fff; border-color: transparent;
+    color: var(--on-accent); border-color: transparent;
     box-shadow: 0 6px 14px color-mix(in srgb, var(--accent) 28%, transparent);
   }
   [data-theme="dark"] .mini-btn.primary { color: #0b0d12; }
@@ -572,6 +800,26 @@
     color: var(--warn); background: var(--warn-soft);
     border-radius: 999px; padding: 2px 8px; white-space: nowrap;
   }
+  /* 今期推廣 */
+  .feat-tag {
+    display: inline-block; font-size: 10.5px; font-weight: 800;
+    color: var(--on-accent); background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-radius: 999px; padding: 2px 9px; white-space: nowrap;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .admin-app-row.featured {
+    background: var(--accent-soft);
+    border-radius: var(--radius-sm);
+    padding-left: 8px; padding-right: 8px;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .banner.feat-banner {
+    background: var(--accent-soft); color: var(--accent-text);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  /* 排序列（沿用 tag-row 樣式，只係分隔開） */
+  .sort-row { margin-top: 2px; }
+  .sort-row .tag-row-hint { color: var(--accent-text); }
   .vis-lbl {
     position: relative;
     font-size: 14px; color: var(--text);
@@ -618,7 +866,7 @@
   }
   .page-btn:hover { color: var(--text); border-color: var(--border-strong); }
   .page-btn.on {
-    color: #fff;
+    color: var(--on-accent);
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
     border-color: transparent; box-shadow: 0 5px 14px color-mix(in srgb, var(--accent) 30%, transparent);
   }
@@ -648,7 +896,7 @@
     transition: all .18s var(--ease);
   }
   .tag-chip.on {
-    color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent;
+    color: var(--on-accent); background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent;
   }
   [data-theme="dark"] .tag-chip.on { color: #0b0d12; }
 
@@ -732,7 +980,7 @@
   }
   .tag-check.on {
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    border-color: transparent; color: #fff;
+    border-color: transparent; color: var(--on-accent);
     box-shadow: 0 5px 14px color-mix(in srgb, var(--accent) 35%, transparent);
   }
   .tag-check.on .tc-box {
@@ -826,7 +1074,7 @@
   }
   .emoji-tab:hover { color: var(--text); border-color: var(--border-strong); }
   .emoji-tab.on {
-    color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: var(--on-accent); background: linear-gradient(135deg, var(--accent), var(--accent-2));
     border-color: transparent;
   }
   [data-theme="dark"] .emoji-tab.on { color: #0b0d12; }
@@ -857,6 +1105,7 @@
         </div>
         <div class="head-titles">
           <h1 id="site-name">童軍小工具</h1>
+          <div class="head-sub">童軍工具 · 應用商店</div>
         </div>
         <div class="head-actions">
           <button class="install-btn" id="install-btn" type="button" aria-label="安裝 App">
@@ -875,7 +1124,36 @@
 
   <nav class="page-nav" id="page-nav" aria-label="分頁" hidden></nav>
   <div class="tag-row" id="tag-row" hidden></div>
+  <div class="tag-row sort-row" id="sort-row" hidden></div>
   <nav class="chips" id="chips" aria-label="分類"></nav>
+
+  <!-- ★★★ 今期主打 Spotlight（內容由下方 SPOTLIGHT 設定控制） ★★★ -->
+  <section class="hero" id="hero-spotlight" aria-label="今期主打">
+    <div class="hero-glow" aria-hidden="true"></div>
+    <div class="hero-beam" aria-hidden="true"></div>
+    <span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span><span class="spark" aria-hidden="true"></span>
+    <div class="hero-card">
+      <button class="hero-share" id="hero-share" type="button" aria-label="分享此項目" title="分享">🔗</button>
+      <div class="hero-badge" id="hero-badge">今期主打</div>
+      <div class="hero-icon-row">
+        <div class="hero-icon" id="hero-icon" role="img" aria-label="">🔔</div>
+        <div class="hero-body">
+          <div class="hero-title" id="hero-title">通告圖書館 v5.8</div>
+          <div class="hero-sub" id="hero-sub">查看最新童軍通告、活動公告與文件下載 · 已整合推送訂閱</div>
+        </div>
+      </div>
+      <div class="hero-meta" id="hero-meta">
+        <span>🟢 更新 2026-09-12</span>
+        <span>⭐ 4.9 · 2.1k 評分</span>
+        <span>⬇️ 使用 8.4k+</span>
+      </div>
+      <div class="hero-actions">
+        <button class="btn-primary" id="hero-open" type="button">立即開啟</button>
+        <button class="btn-secondary" id="hero-all" type="button">查看全部</button>
+      </div>
+    </div>
+  </section>
+
   <div id="sections">
     <div class="skeleton" id="skeleton" aria-hidden="true">
       <div class="sk-tile"><div class="sk-icon"></div><div class="sk-line"></div></div>
@@ -894,14 +1172,46 @@
     <p>試下改關鍵字，或者撳「全部」／轉第二個分頁睇下</p>
   </div>
 
+  <!-- Instagram 推廣 -->
+  <section class="ig-card" aria-label="Instagram">
+    <div class="ig-emoji">📸</div>
+    <div class="ig-body">
+      <div class="ig-title">追蹤我哋嘅 Instagram</div>
+      <div class="ig-sub" id="ig-handle">童軍工具 · 教學 · 活動花絮</div>
+    </div>
+    <div class="ig-actions">
+      <button class="btn-primary" id="ig-follow" type="button">追蹤</button>
+      <button class="btn-secondary" id="ig-qr-btn" type="button">🔳 QR</button>
+    </div>
+  </section>
+
   <footer>
     <div class="tip">💡 <b>提示：</b>喺瀏覽器選單選「加入主畫面 / 安裝 App」（Android 可撳右上角「安裝」），呢個「童軍小工具」就會變成電話桌面嘅一個 App。所有童軍工具、圖卡、簡報同連結都由呢度入。</div>
     <span class="foot-meta" id="foot-count">載入中…</span>
-    <div style="margin-top:16px">© 2026 Scout System</div>
+    <div style="margin-top:16px">© 2026 Scout System · App Store Edition</div>
   </footer>
 </div>
 
 <button class="to-top" id="to-top" type="button" aria-label="返回頂部">↑</button>
+
+<div class="modal" id="ig-modal" hidden>
+  <div class="modal-backdrop" id="ig-close"></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-label="Instagram QR">
+    <button class="modal-x" id="ig-x" type="button" aria-label="關閉">×</button>
+    <img class="ig-qr-img" src="/icons/ig-qr.png" alt="Instagram QR code" />
+    <div class="modal-title">掃描追蹤 <span id="ig-handle-modal"></span></div>
+    <div class="modal-sub">長按儲存 QR 碼，或撳「開啟 Instagram」</div>
+    <button class="btn-primary" id="ig-open" type="button">開啟 Instagram</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<nav class="bottom-nav" id="bottom-nav" aria-label="主導覽">
+  <button class="bn-item on" data-bn="home" type="button"><span class="bn-ico">🏠</span><span>首頁</span></button>
+  <button class="bn-item" data-bn="cats" type="button"><span class="bn-ico">⌗</span><span>分類</span></button>
+  <button class="bn-item" data-bn="fav" type="button"><span class="bn-ico">⭐</span><span>我的</span></button>
+</nav>
 
 <div id="admin-panel" hidden>
   <div id="admin-content"></div>
@@ -923,10 +1233,9 @@ function applyTheme(t) {
   localStorage.setItem("theme", t);
   const meta = document.querySelector('meta[name="theme-color"]:not([media])')
     || document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = t === "dark" ? "#0b0d12" : "#2563eb";
+  if (meta) meta.content = t === "dark" ? "#0b0d12" : "#faf6ec";
 }
-applyTheme(localStorage.getItem("theme") ||
-  (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+applyTheme(localStorage.getItem("theme") || "dark");
 themeBtn.onclick = () => {
   applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
   if (!isAdminRoute() && typeof rerenderPublic === "function") rerenderPublic();
@@ -983,13 +1292,179 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").catch(() => {});
 }
 
+/* ════════════════════════════════════════════════════════════════
+   今期主打 Spotlight
+   ────────────────────────────────────────────────────────────────
+   ★ 推廣邊個 App 由後台決定：#admin → 管理 → 項目列嘅「📣 今期推廣」。
+     呢度嘅 SPOTLIGHT 只係控制文案（徽章字、按鈕字），唔使改 code 換 App。
+   · enabled: false → 成個 hero 永久收埋，下面嘅工具唔會再朦朧
+   · 後台未有設任何今期推廣 → hero 自動收埋
+   注意：sectionsEl / searchEl / SITES 都係 app.js 已宣告嘅全域變數，
+        呢度直接用，千祈唔好再 const 多次（會 SyntaxError 令成頁壞晒）。
+   ════════════════════════════════════════════════════════════════ */
+const SPOTLIGHT = {
+  enabled: true,
+  badge: "今期主打",
+  openLabel: "立即開啟",
+  allLabel: "查看全部",
+  showStats: true          // 顯示「🔥 N 次開啟 · ⭐ N 人收藏」
+};
+
+const heroEl = document.getElementById("hero-spotlight");
+let _sectionsBlurred = false;
+let _userRevealed = false;   // 用戶互動過一次之後，就唔會再自動朦朧
+
+function setSectionsBlur(on) {
+  if (!sectionsEl) return;
+  sectionsEl.classList.toggle("sections-blur", !!on);
+  sectionsEl.classList.toggle("active", !on);
+  _sectionsBlurred = !!on;
+}
+function revealSections() {
+  _userRevealed = true;
+  if (_sectionsBlurred) setSectionsBlur(false);
+}
+
+function renderSpotlight() {
+  if (!heroEl) return;
+  const f = (SPOTLIGHT.enabled && !isAdminRoute() &&
+             typeof getFeaturedApp === "function" && typeof SITES !== "undefined" && SITES)
+    ? getFeaturedApp(SITES) : null;
+
+  // 冇設今期推廣（或者喺後台）→ 收埋 hero，亦唔好朦朧住啲工具
+  if (!f) { heroEl.hidden = true; setSectionsBlur(false); return; }
+
+  const a = f.app;
+  heroEl.hidden = false;
+
+  const setText = (id, txt) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = txt == null ? "" : String(txt);
+  };
+  setText("hero-badge", SPOTLIGHT.badge);
+  setText("hero-title", a.name);
+  setText("hero-sub", a.description || (f.cat && f.cat.name) || "");
+  setText("hero-open", SPOTLIGHT.openLabel);
+  setText("hero-all", SPOTLIGHT.allLabel);
+
+  // 圖示跟返項目自己嘅圖示來源（emoji / 圖片 / favicon / 全站 logo）
+  const iconEl = document.getElementById("hero-icon");
+  if (iconEl) {
+    iconEl.innerHTML = appIconHTML(a, "hero");   // appIconHTML 內部已 esc()
+    iconEl.setAttribute("aria-label", a.name || "");
+  }
+
+  // meta 用真實數據，唔再係寫死嘅假評分
+  const metaEl = document.getElementById("hero-meta");
+  if (metaEl) {
+    metaEl.textContent = "";
+    const bits = [];
+    if (SPOTLIGHT.showStats) {
+      bits.push("🔥 " + (a.clicks || 0).toLocaleString() + " 次開啟");
+      bits.push("⭐ " + (a.stars || 0).toLocaleString() + " 人收藏");
+    }
+    if (a.tags && a.tags.length) bits.push("🎖 " + a.tags.join(" · "));
+    bits.forEach((t) => {
+      const s = document.createElement("span");
+      s.textContent = t;                  // textContent：內容有 < > 都唔會爆版
+      metaEl.appendChild(s);
+    });
+  }
+
+  setSectionsBlur(!_userRevealed);
+}
+
+document.getElementById("hero-open").addEventListener("click", () => {
+  const f = (typeof getFeaturedApp === "function" && typeof SITES !== "undefined" && SITES)
+    ? getFeaturedApp(SITES) : null;
+  if (f && f.app.url) { trackClick(f.app._id); window.open(f.app.url, "_blank", "noopener"); }
+  else { revealSections(); sectionsEl.scrollIntoView({ behavior: "smooth", block: "start" }); }
+});
+document.getElementById("hero-all").addEventListener("click", () => {
+  revealSections();
+  sectionsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+// Toast + 分享（推廣用：Web Share API，冇就複製連結）
+const toastEl = document.getElementById("toast");
+let _toastT = null;
+function showToast(msg) {
+  if (!toastEl) return;
+  toastEl.textContent = msg;
+  toastEl.hidden = false;
+  requestAnimationFrame(() => toastEl.classList.add("show"));
+  clearTimeout(_toastT);
+  _toastT = setTimeout(() => {
+    toastEl.classList.remove("show");
+    setTimeout(() => { toastEl.hidden = true; }, 260);
+  }, 1800);
+}
+async function shareApp(app) {
+  const data = { title: app.name, text: (app.name || "") + " — " + (app.description || ""), url: app.url };
+  if (navigator.share) {
+    try { await navigator.share(data); return; } catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  try { await navigator.clipboard.writeText(app.url); showToast("🔗 連結已複製"); }
+  catch (e) { showToast(app.url); }
+}
+document.getElementById("hero-share").addEventListener("click", () => {
+  const f = (typeof getFeaturedApp === "function" && typeof SITES !== "undefined" && SITES) ? getFeaturedApp(SITES) : null;
+  if (f) shareApp(f.app);
+});
+
+// Instagram 推廣（改帳號／網址只改呢度）
+const IG = { url: "https://www.instagram.com/aiscout_system/", handle: "@aiscout_system" };
+const igModal = document.getElementById("ig-modal");
+(function initIG() {
+  const h = document.getElementById("ig-handle-modal"); if (h) h.textContent = IG.handle;
+  const f = document.getElementById("ig-follow"); if (f) f.textContent = "追蹤 " + IG.handle;
+})();
+const openIG = () => window.open(IG.url, "_blank", "noopener");
+document.getElementById("ig-follow").addEventListener("click", openIG);
+document.getElementById("ig-open").addEventListener("click", openIG);
+document.getElementById("ig-qr-btn").addEventListener("click", () => { igModal.hidden = false; });
+document.getElementById("ig-x").addEventListener("click", () => { igModal.hidden = true; });
+document.getElementById("ig-close").addEventListener("click", () => { igModal.hidden = true; });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") igModal.hidden = true; });
+
+// 底部導覽列
+const bottomNav = document.getElementById("bottom-nav");
+bottomNav.addEventListener("click", (e) => {
+  const b = e.target.closest(".bn-item");
+  if (!b) return;
+  bottomNav.querySelectorAll(".bn-item").forEach((x) => x.classList.toggle("on", x === b));
+  const kind = b.dataset.bn;
+  if (kind === "home") { revealSections(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  else if (kind === "cats") { revealSections(); sectionsEl.scrollIntoView({ behavior: "smooth", block: "start" }); }
+  else if (kind === "fav") { if (typeof jumpTo === "function") jumpTo("fav"); }
+});
+
+// 解除朦朧：搜尋、撳「查看全部」、撳工具區、捲過 hero
+searchEl.addEventListener("focus", revealSections);
+searchEl.addEventListener("input", () => { if (searchEl.value.trim()) revealSections(); });
+// 朦朧期间截住「下面工具區」嘅第一下點擊：只解鎖，唔會誤開 App。
+// 用 DOM 祖先關係判斷（唔靠座標），所以 topbar／hero／chips 一律唔受影響。
+document.addEventListener("click", (e) => {
+  if (!_sectionsBlurred) return;
+  if (!sectionsEl.contains(e.target)) return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  revealSections();
+}, true);
+window.addEventListener("scroll", () => {
+  if (!_sectionsBlurred || !heroEl || heroEl.hidden) return;
+  if ((window.scrollY || 0) > heroEl.offsetTop + heroEl.offsetHeight - 120) revealSections();
+}, { passive: true });
+
 // 路由：管理面板 / 公開版面
 function goRoute() {
   if (isAdminRoute()) {
     document.getElementById("admin-panel").hidden = false;
+    renderSpotlight();
     ADMIN.init();
   } else {
     document.getElementById("admin-panel").hidden = true;
+    renderSpotlight();
     main();
   }
 }

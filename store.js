@@ -189,6 +189,8 @@ function rowsToApp(r) {
     visible: r.visible !== false,
     tags: tags.map((t) => t.trim()).filter(Boolean),
     clicks: r.clicks || 0,
+    stars: r.stars || 0,
+    featured: r.featured === true,
     sort_order: r.sort_order ?? 0,
     _id: r.id,
     page: r.page || "apps"
@@ -331,6 +333,8 @@ function normalizeApp(a, i, catName, page) {
     visible: a.visible !== false,
     tags: Array.isArray(a.tags) ? a.tags.filter(Boolean) : [],
     clicks: a.clicks || 0,
+    stars: a.stars || 0,
+    featured: a.featured === true,
     sort_order: a.sort_order ?? i,
     _id: a._id || "demo-" + Date.now() + "-" + i + "-" + Math.random().toString(36).slice(2, 6),
     page
@@ -359,8 +363,27 @@ function appPayload(app) {
     category: app.category,
     page: app.page || "apps",
     tags: Array.isArray(app.tags) ? app.tags : [],
-    visible: app.visible !== false
+    visible: app.visible !== false,
+    featured: app.featured === true
   };
+}
+
+/* 選擇性欄位：用戶未跑 README 嘅 migration 時，呢啲欄喺 DB 仲未存在。
+   寫入失敗就逐個甩走再試，唔會整冧儲存（沿用原本 icon_source 嘅做法）。 */
+const OPTIONAL_APP_COLS = ["icon_source", "featured", "stars"];
+
+async function writeAppRow(sb, payload, id) {
+  const drop = [...OPTIONAL_APP_COLS];
+  let p = { ...payload };
+  let res = id ? await sb.from("apps").update(p).eq("id", id) : await sb.from("apps").insert(p);
+  while (res.error && drop.length) {
+    const bad = drop.find((k) => new RegExp(k.replace("_", "_?"), "i").test(res.error.message || ""));
+    if (!bad) break;
+    drop.splice(drop.indexOf(bad), 1);
+    delete p[bad];
+    res = id ? await sb.from("apps").update(p).eq("id", id) : await sb.from("apps").insert(p);
+  }
+  return res;
 }
 
 // ── Admin 寫入（新增/編輯 item）──────────────────────────────
@@ -369,19 +392,7 @@ async function adminSaveApp(app, id) {
   const sb = getSB();
   if (sb) {
     await ensureCategory(app.page, app.category, "");
-    // 先嘗試帶 iconSource 寫入；若 Supabase 嘅 apps table 仲未加呢欄
-    // （用戶未跑 README 嘅 migration），就 fallback 唔寫 iconSource
-    let p = payload;
-    let res = id
-      ? await sb.from("apps").update(p).eq("id", id)
-      : await sb.from("apps").insert(p);
-    if (res.error && /icon_?source/i.test(res.error.message || "")) {
-      p = { ...payload };
-      delete p.icon_source;
-      res = id
-        ? await sb.from("apps").update(p).eq("id", id)
-        : await sb.from("apps").insert(p);
-    }
+    const res = await writeAppRow(sb, payload, id);
     if (res.error) throw res.error;
     return;
   }
@@ -402,6 +413,42 @@ async function adminSaveApp(app, id) {
     cat.apps.push({ ...localPayload, clicks: 0, _id: "demo-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) });
   }
   localStorage.setItem(LS_KEY, JSON.stringify(sites));
+}
+
+/* ── 今期推廣：全站只可以有一個 featured 項目 ──────────────────
+   on = true  → 呢個項目做 hero，其他全部清走
+   on = false → 取消推廣（hero 自動收埋） */
+async function adminSetFeatured(id, on) {
+  const sb = getSB();
+  if (sb) {
+    if (on) {
+      const { error: ce } = await sb.from("apps").update({ featured: false }).eq("featured", true);
+      // 未跑 migration（冇 featured 欄）→ 唔好擲錯，交返下面嗰句一齊報
+      const { error: se } = await sb.from("apps").update({ featured: true }).eq("id", id);
+      if (se) throw se;
+      if (ce) throw ce;
+    } else {
+      const { error } = await sb.from("apps").update({ featured: false }).eq("id", id);
+      if (error) throw error;
+    }
+    return;
+  }
+  const { sites } = await loadSites();
+  for (const p of sites.pages) for (const c of p.categories) {
+    for (const a of c.apps) a.featured = on ? a._id === id : (a._id === id ? false : a.featured);
+  }
+  localStorage.setItem(LS_KEY, JSON.stringify(sites));
+}
+
+// 由 sites 結構搵出目前嘅今期推廣項目（跨分頁／跨分類）
+function getFeaturedApp(sites) {
+  for (const p of (sites && sites.pages) || []) {
+    for (const c of p.categories || []) {
+      const a = (c.apps || []).find((x) => x.featured === true && x.visible !== false);
+      if (a) return { app: a, page: p, cat: c };
+    }
+  }
+  return null;
 }
 
 async function adminDeleteApp(id) {
@@ -656,6 +703,30 @@ function trackClick(id) {
   } catch {}
 }
 
+// 收藏數（全站累計）—— 同 trackClick 一樣 fire-and-forget，唔阻用戶
+function trackStar(id, delta) {
+  if (!id) return;
+  const sb = getSB();
+  if (sb) {
+    fetch(SUPABASE_CONFIG.url + "/rest/v1/rpc/bump_stars", {
+      method: "POST", keepalive: true,
+      headers: { apikey: SUPABASE_CONFIG.anonKey, Authorization: "Bearer " + SUPABASE_CONFIG.anonKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_id: id, p_delta: delta })
+    }).catch(() => {});
+    return;
+  }
+  try {
+    const ls = JSON.parse(localStorage.getItem(LS_KEY));
+    if (ls) {
+      for (const p of ls.pages || []) for (const c of p.categories || []) {
+        const a = c.apps.find((x) => x._id === id);
+        if (a) a.stars = Math.max(0, (a.stars || 0) + delta);
+      }
+      localStorage.setItem(LS_KEY, JSON.stringify(ls));
+    }
+  } catch {}
+}
+
 // ── JSON 備份匯出 ────────────────────────────────────────────
 function exportSites(sites) {
   const blob = new Blob([JSON.stringify(sites, null, 2)], { type: "application/json" });
@@ -715,14 +786,11 @@ async function restoreFromBackup(backup) {
           github: a.github || null, note: a.note || null,
           category: c.name, page: p.id, tags: a.tags || [],
           visible: a.visible !== false, clicks: typeof a.clicks === "number" ? a.clicks : 0,
+          stars: typeof a.stars === "number" ? a.stars : 0,
+          featured: a.featured === true,
           sort_order: a.sort_order ?? itemCount
         };
-        let { error: ae } = await sb.from("apps").insert(rowPayload);
-        if (ae && /icon_?source/i.test(ae.message || "")) {
-          const { icon_source, ...rest } = rowPayload;
-          rowPayload = rest;
-          ({ error: ae } = await sb.from("apps").insert(rowPayload));
-        }
+        const { error: ae } = await writeAppRow(sb, rowPayload, null);
         if (ae) throw ae;
         itemCount++;
       }
