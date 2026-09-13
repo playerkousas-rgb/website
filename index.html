@@ -397,6 +397,38 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+  /* ── Instagram 推廣卡 ── */
+  .ig-card {
+    display: flex; align-items: center; gap: 14px;
+    margin: 28px 0 8px; padding: 16px 18px;
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, var(--bg-card)), var(--bg-card));
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    box-shadow: var(--shadow-sm);
+  }
+  .ig-emoji { font-size: 30px; }
+  .ig-body { flex: 1; min-width: 0; }
+  .ig-title { font-weight: 800; font-size: 15px; }
+  .ig-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .ig-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .ig-actions .btn-primary, .ig-actions .btn-secondary { flex: 0 0 auto; padding: 10px 14px; font-size: 13px; }
+
+  /* ── QR Modal ── */
+  .modal { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal[hidden] { display: none; }
+  .modal-backdrop { position: absolute; inset: 0; background: color-mix(in srgb, var(--bg) 60%, transparent); backdrop-filter: blur(6px); }
+  .modal-card {
+    position: relative; z-index: 1; max-width: 340px; width: 100%;
+    background: var(--bg-elevated); border: 1px solid var(--border-strong);
+    border-radius: 22px; padding: 22px; text-align: center; box-shadow: var(--shadow);
+  }
+  .modal-x { position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%;
+    border: 1px solid var(--border); background: var(--bg-card); color: var(--muted); font-size: 16px; cursor: pointer; }
+  .ig-qr-img { width: 100%; max-width: 240px; margin: 0 auto; border-radius: 14px; background: #fff; padding: 8px; }
+  .modal-title { font-weight: 800; margin-top: 14px; }
+  .modal-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .modal-card .btn-primary { margin-top: 14px; width: 100%; }
+
   /* Spotlight 未互動前，下面嘅全部工具做朦朧處理
      注意：唔好用 pointer-events:none —— 咁樣第一下點擊會穿過去落喺 .wrap，
      結果 topbar／chips 嘅點擊都要靠幾何位置估，好易誤食。
@@ -1140,6 +1172,19 @@
     <p>試下改關鍵字，或者撳「全部」／轉第二個分頁睇下</p>
   </div>
 
+  <!-- Instagram 推廣 -->
+  <section class="ig-card" aria-label="Instagram">
+    <div class="ig-emoji">📸</div>
+    <div class="ig-body">
+      <div class="ig-title">追蹤我哋嘅 Instagram</div>
+      <div class="ig-sub" id="ig-handle">童軍工具 · 教學 · 活動花絮</div>
+    </div>
+    <div class="ig-actions">
+      <button class="btn-primary" id="ig-follow" type="button">追蹤</button>
+      <button class="btn-secondary" id="ig-qr-btn" type="button">🔳 QR</button>
+    </div>
+  </section>
+
   <footer>
     <div class="tip">💡 <b>提示：</b>喺瀏覽器選單選「加入主畫面 / 安裝 App」（Android 可撳右上角「安裝」），呢個「童軍小工具」就會變成電話桌面嘅一個 App。所有童軍工具、圖卡、簡報同連結都由呢度入。</div>
     <span class="foot-meta" id="foot-count">載入中…</span>
@@ -1148,6 +1193,17 @@
 </div>
 
 <button class="to-top" id="to-top" type="button" aria-label="返回頂部">↑</button>
+
+<div class="modal" id="ig-modal" hidden>
+  <div class="modal-backdrop" id="ig-close"></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-label="Instagram QR">
+    <button class="modal-x" id="ig-x" type="button" aria-label="關閉">×</button>
+    <img class="ig-qr-img" src="/icons/ig-qr.png" alt="Instagram QR code" />
+    <div class="modal-title">掃描追蹤 <span id="ig-handle-modal"></span></div>
+    <div class="modal-sub">長按儲存 QR 碼，或撳「開啟 Instagram」</div>
+    <button class="btn-primary" id="ig-open" type="button">開啟 Instagram</button>
+  </div>
+</div>
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
@@ -1355,6 +1411,21 @@ document.getElementById("hero-share").addEventListener("click", () => {
   const f = (typeof getFeaturedApp === "function" && typeof SITES !== "undefined" && SITES) ? getFeaturedApp(SITES) : null;
   if (f) shareApp(f.app);
 });
+
+// Instagram 推廣（改帳號／網址只改呢度）
+const IG = { url: "https://www.instagram.com/aiscout_system/", handle: "@aiscout_system" };
+const igModal = document.getElementById("ig-modal");
+(function initIG() {
+  const h = document.getElementById("ig-handle-modal"); if (h) h.textContent = IG.handle;
+  const f = document.getElementById("ig-follow"); if (f) f.textContent = "追蹤 " + IG.handle;
+})();
+const openIG = () => window.open(IG.url, "_blank", "noopener");
+document.getElementById("ig-follow").addEventListener("click", openIG);
+document.getElementById("ig-open").addEventListener("click", openIG);
+document.getElementById("ig-qr-btn").addEventListener("click", () => { igModal.hidden = false; });
+document.getElementById("ig-x").addEventListener("click", () => { igModal.hidden = true; });
+document.getElementById("ig-close").addEventListener("click", () => { igModal.hidden = true; });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") igModal.hidden = true; });
 
 // 底部導覽列
 const bottomNav = document.getElementById("bottom-nav");
