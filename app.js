@@ -2,7 +2,7 @@
    公開版面 app.js  (童軍小工具 · 多分頁渲染)
    store.js 載入後、admin.js 之後載入。
    全站 = 4 個分頁（每個可獨立開放/關閉）；每頁有自己的分類；
-   每頁項目全部係「連結」，逐個可開/關，並可帶童軍級別標籤篩選。
+   每頁項目全部係「連結」，逐個可開/關，並可帶童軍支部標籤篩選（可多選）。
    ════════════════════════════════════════════════════════════════ */
 
 // ── 圖標背景配色（按名稱 hash 穩定取色）──────────────────────
@@ -71,15 +71,33 @@ let REG = [];
 let SITES = null;
 let ACTIVE_PAGE = null;
 let activeChip = "all";
-let tagFilter = null;
+// 適用支部篩選：可以**同時揀幾個**（OR —— 揀「小＋幼」= 兩個支部嘅嘢都俾我睇）
+// 儲存仍係全名（小童軍／幼童軍…），公開版顯示做一個字
+let tagFilter = [];
 const ACTIVE_PAGE_KEY = "scout-active-page";
+const TAGFILTER_KEY = "scout-tag-filter";
+let _tagFilterRestored = false;
+function restoreTagFilter() {
+  if (_tagFilterRestored) return;
+  _tagFilterRestored = true;
+  try {
+    const raw = JSON.parse(localStorage.getItem(TAGFILTER_KEY) || "null");
+    if (raw && raw.page === ACTIVE_PAGE && Array.isArray(raw.tags)) {
+      tagFilter = raw.tags.filter((t) => SCOUT_TAGS.includes(t));
+    }
+  } catch {}
+}
+function persistTagFilter() {
+  try { localStorage.setItem(TAGFILTER_KEY, JSON.stringify({ page: ACTIVE_PAGE, tags: tagFilter })); } catch {}
+}
 
 // ── 排序模式 ─────────────────────────────────────────────────
+// 手機版淨係顯示 emoji（文字包咗喺 .wide-only，細屏被 CSS 收埋）
 const SORT_KEY = "showcase-sort";
 const SORTS = [
-  { id: "default", label: "🗂 預設順序" },
-  { id: "clicks", label: "🔥 最多人點擊" },
-  { id: "stars", label: "⭐ 最多人收藏" }
+  { id: "default", ico: "🗂", label: "預設順序", hint: "用後台排好嘅順序" },
+  { id: "clicks",  ico: "🔥", label: "最多人點擊", hint: "按開啟次數排序" },
+  { id: "stars",   ico: "⭐", label: "最多人收藏", hint: "按全站收藏人數排序" }
 ];
 let sortMode = SORTS.some((s) => s.id === localStorage.getItem(SORT_KEY))
   ? localStorage.getItem(SORT_KEY) : "default";
@@ -108,9 +126,21 @@ function pageById(id) { return (SITES.pages || []).find((p) => p.id === id); }
 function activePage() { return pageById(ACTIVE_PAGE); }
 
 function measurePanes() {
+  const root = document.documentElement;
   const pnav = pageNavEl;
   const h = (pnav && !pnav.hidden && pnav.offsetHeight) ? pnav.offsetHeight : 0;
-  document.documentElement.style.setProperty("--pnav-h", h + "px");
+  root.style.setProperty("--pnav-h", h + "px");
+  // chips 列高度（手機版收細咗，section 嘅 scroll-margin 要跟實際值先唔會郁空）
+  const ch = (chipsEl && !chipsEl.hidden && chipsEl.offsetHeight) ? chipsEl.offsetHeight : 0;
+  if (ch) root.style.setProperty("--chip-h", ch + "px");
+}
+
+// ── 顯示層小工具：手機得 emoji／短名，桌面先顯示全名 ────────────
+// 全部靠 CSS 嘅 .wide-only / .narrow-only 切換（見 index.html），
+// 所以同一個掣喺手機細啲、喺桌面有完整文字，唔使 JS 偵測螢幕。
+function chipTxt(full, short) {
+  return `<span class="wide-only">${esc(full)}</span>` +
+         `<span class="narrow-only">${esc(short || full)}</span>`;
 }
 
 // ── 分頁導覽 ─────────────────────────────────────────────────
@@ -125,7 +155,8 @@ function renderPages() {
   pageNavEl.innerHTML =
     `<button type="button" class="page-btn" data-page="__prev" onclick="switchPage()" title="上一頁" aria-label="上一頁">‹</button>` +
     pages.map((p) =>
-      `<button type="button" class="page-btn ${p.id === ACTIVE_PAGE ? "on" : ""}" data-page="${esc(p.id)}" onclick="switchPage('${esc(p.id)}')">${esc(p.icon ? p.icon + " " : "")}${esc(p.label)}</button>`
+      `<button type="button" class="page-btn ${p.id === ACTIVE_PAGE ? "on" : ""}" data-page="${esc(p.id)}" onclick="switchPage('${esc(p.id)}')" title="${esc(p.label)}">` +
+      `${p.icon ? `<span class="chip-ico">${esc(p.icon)}</span>` : ""}${chipTxt(p.label, catShort(p.label))}</button>`
     ).join("") +
     `<button type="button" class="page-btn" data-page="__next" onclick="switchPage()" title="下一頁" aria-label="下一頁">›</button>`;
   // 上一頁/下一頁
@@ -145,7 +176,8 @@ function switchPage(id) {
   if (!p || !p.enabled) return;
   ACTIVE_PAGE = id;
   localStorage.setItem(ACTIVE_PAGE_KEY, id);
-  tagFilter = null;
+  tagFilter = [];
+  persistTagFilter();
   activeChip = "all";
   render();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -164,7 +196,7 @@ function tileHTML(idx, delay) {
     ${app.github ? `<span class="gh-badge" title="GitHub repo" onclick="event.preventDefault(); event.stopPropagation(); window.open('${esc(app.github)}','_blank')">GH</span>` : ""}
     ${iconHTML(app)}
     <div class="tile-name">${esc(app.name)}</div>
-    ${tags.length ? `<div class="tile-tags">${tags.map((t) => `<span>${esc(t)}</span>`).join("")}</div>` : ""}
+    ${tags.length ? `<div class="tile-tags">${tags.map((t) => `<span title="${esc(t)}">${esc(scoutTagShort(t))}</span>`).join("")}</div>` : ""}
     ${app.description ? `<div class="tile-desc">${esc(app.description)}</div>` : ""}
   </a>`;
 }
@@ -197,7 +229,7 @@ function setActiveChip(id) {
   chipsEl.querySelectorAll(".chip").forEach((el) => el.classList.toggle("on", el.dataset.chip === id));
 }
 
-function jumpTo(id) {
+function publicJumpTo(id) {
   if (id === "all") {
     activeChip = "all";
     render();
@@ -216,27 +248,54 @@ function jumpTo(id) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+// ── 支部篩選（可多選）────────────────────────────────────────
 function setTag(tag) {
-  tagFilter = tagFilter === tag ? null : tag;
-  // 唔再強制跳返「全部」——保留目前揀咗嘅分類，等適用級別同分類可以疊加一齊用
+  // 用家特意去揀支部 = 已經知道個篩選存在 → 唔使再朦朧住下面嘅工具
+  if (typeof revealSections === "function") revealSections(); // 定義喺 index.html boot；後台/單測環境無
+  const i = tagFilter.indexOf(tag);
+  if (i >= 0) tagFilter.splice(i, 1);
+  else tagFilter.push(tag);
+  // 順序跟 SCOUT_TAGS，令 chip 顯示穩定（同埋分享／重開都一致）
+  tagFilter = SCOUT_TAGS.filter((t) => tagFilter.includes(t));
+  persistTagFilter();
+  // 唔再強制跳返「全部」——保留目前揀咗嘅分類，等適用支部同分類可以疊加一齊用
   render();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
+function clearTags() {
+  if (!tagFilter.length) return;
+  tagFilter = [];
+  persistTagFilter();
+  render();
+}
+const tagActive = (t) => tagFilter.includes(t);
+function tagLabel(t) { return scoutTagShort(t) || t; }   // 一個字（小／幼／童／深／樂）
 
-// ── 童軍標籤列 ───────────────────────────────────────────────
+// ── 童軍支部篩選列 ───────────────────────────────────────────
+// 全名（小童軍／深資童軍…）留喺 title／aria-label，肉眼見到就係一個字。
+// 未揀嘅時候一律用「中性」外殼（唔好一睇以為已經撳咗），撳咗先變 accent。
 function renderTagRow() {
   const pg = activePage();
   const hasTag = !!(pg && (pg.categories || []).some((c) => c.apps.some((a) => a.visible !== false && (a.tags || []).length)));
   if (!hasTag || !pg) { tagRowEl.hidden = true; return; }
   tagRowEl.hidden = false;
+  const n = tagFilter.length;
   tagRowEl.innerHTML =
-    `<span class="tag-row-hint">適用級別：</span>` +
-    SCOUT_TAGS.map((t) =>
-      `<button type="button" class="tag-chip ${tagFilter === t ? "on" : ""}" onclick="setTag('${esc(t)}')">${esc(t)}</button>`
-    ).join("");
+    `<span class="tag-row-hint">🔍<span class="wide-only"> 適用支部</span>：</span>` +
+    SCOUT_TAGS.map((t) => {
+      const on = tagActive(t);
+      return `<button type="button" class="tag-chip lv-chip ${on ? "on" : ""}" ` +
+        `onclick="setTag('${esc(t)}')" title="${esc(t)}（撳一下篩選／再撳取消）" ` +
+        `aria-label="${esc(t)}" aria-pressed="${on ? "true" : "false"}">${esc(scoutTagShort(t))}</button>`;
+    }).join("") +
+    (n
+      ? `<span class="tag-row-note"><span class="wide-only">已揀 ${n} 個支部</span><span class="narrow-only">${n} 個</span></span>` +
+        `<button type="button" class="tag-chip tag-clear" onclick="clearTags()" title="清晒支部篩選" aria-label="清晒支部篩選">✕ 清除</button>`
+      : `<span class="tag-row-hint wide-only muted-hint">（可多選）</span>`);
 }
 
 // ── 排序列 ───────────────────────────────────────────────────
+// 手機：🔥／⭐／🗂 三個 emoji；桌面：emoji + 全名
 function renderSortRow() {
   if (!sortRowEl) return;
   const pg = activePage();
@@ -247,17 +306,21 @@ function renderSortRow() {
   if (count < 2) { sortRowEl.hidden = true; return; }
   sortRowEl.hidden = false;
   sortRowEl.innerHTML =
-    `<span class="tag-row-hint">排序：</span>` +
-    SORTS.map((s) =>
-      `<button type="button" class="tag-chip ${sortMode === s.id ? "on" : ""}" ` +
-      `onclick="setSort('${s.id}')">${s.label}</button>`
-    ).join("");
+    `<span class="tag-row-hint">↕<span class="wide-only"> 排序</span>：</span>` +
+    SORTS.map((s) => {
+      const on = sortMode === s.id;
+      return `<button type="button" class="tag-chip sort-chip ${on ? "on" : ""}" ` +
+        `onclick="setSort('${s.id}')" title="${esc(s.label)} — ${esc(s.hint)}" ` +
+        `aria-label="${esc(s.label)}" aria-pressed="${on ? "true" : "false"}">` +
+        `<span class="chip-ico">${s.ico}</span><span class="wide-only">${esc(s.label)}</span></button>`;
+    }).join("");
 }
 
 // ── 主要渲染 ─────────────────────────────────────────────────
 function render() {
   if (!SITES) return;
   renderPages();
+  restoreTagFilter();
   const pg = activePage();
   sectionsEl.innerHTML = "";
   REG.length = 0;
@@ -276,33 +339,36 @@ function render() {
   }
 
   const match = (a) => {
-    if (tagFilter && !((a.tags || []).includes(tagFilter))) return false;
+    // 多選之間係 OR：揀咗「小＋幼」= 兩個支部嘅項目都畀我睇
+    if (tagFilter.length && !tagFilter.some((t) => (a.tags || []).includes(t))) return false;
     if (!q) return true;
-    const hay = [a.name, a.cat, a.description, a.note, (a.tags || []).join(" ")].filter(Boolean).join(" ").toLowerCase();
+    // 支部全名＋短名都入 haystack：用家搜「小童軍」定搜一個字「小」都揾到
+    const tagStr = (a.tags || []).concat((a.tags || []).map(scoutTagShort)).join(" ");
+    const hay = [a.name, a.cat, a.description, a.note, tagStr].filter(Boolean).join(" ").toLowerCase();
     return hay.includes(q);
   };
   const visible = (a) => a.visible !== false;
 
   let html = "";
   const shownOf = (c) => sortApps(c.apps.filter(visible).filter(match));
-  // 呢頁「有內容」嘅分類 —— 唔畀目前搜尋／適用級別篩選收窄，
-  // 咁分類同適用級別先至可以同時撳（唔會「LOCK 死」）。
+  // 呢頁「有內容」嘅分類 —— 唔畀目前搜尋／支部篩選收窄，
+  // 咁分類同適用支部先至可以同時撳（唔會「LOCK 死」）。
   const catIdx = [];
   pg.categories.forEach((c, i) => { if (c.apps.some(visible)) catIdx.push({ c, i }); });
 
-  // 「我的最愛」／單一分類／全部 —— 全部都同搜尋、適用級別篩選疊加（AND）
+  // 「我的最愛」／單一分類／全部 —— 全部都同搜尋、支部篩選疊加（AND；支部之間係 OR）
   const favIds = new Set(getFavorites());
   if (activeChip === "fav") {
     const favApps = [];
     for (const { c } of catIdx) for (const a of shownOf(c)) if (favIds.has(a._id)) favApps.push(a);
     html += sectionHTML("我的最愛", "⭐", favApps, "favorites");
   } else if (activeChip !== "all") {
-    // 揀咗某個分類 chip → 只顯示嗰個分類（可疊加適用級別／搜尋）
+    // 揀咗某個分類 chip → 只顯示嗰個分類（可疊加支部／搜尋）
     const selIdx = Number(String(activeChip).replace("cat-", ""));
     const sel = pg.categories[selIdx];
     if (sel) html += sectionHTML(sel.name, sel.icon, shownOf(sel), activeChip);
   } else {
-    // 「全部」→ 顯示所有分類（可疊加適用級別／搜尋）
+    // 「全部」→ 顯示所有分類（可疊加支部／搜尋）
     html += catIdx.map(({ c, i }) => sectionHTML(c.name, c.icon, shownOf(c), "cat-" + i)).join("");
   }
 
@@ -318,28 +384,31 @@ function render() {
       p.textContent = "喺項目右上角撳 ☆ 就可以加入收藏！";
     } else if (activeChip !== "all") {
       b.textContent = "呢個分類暫時冇項目";
-      p.textContent = tagFilter
-        ? `試下撳多次「${tagFilter}」取消級別篩選，或者轉「全部」`
+      p.textContent = tagFilter.length
+        ? `撳多次「${tagFilter.map(tagLabel).join("／")}」取消支部篩選，或者撳「✕ 清除」`
         : "試下撳「全部」睇下其他分類";
-    } else if (tagFilter && q) {
+    } else if (tagFilter.length && q) {
       b.textContent = "冇符合嘅結果";
-      p.textContent = `換個關鍵字，或撳多次「${tagFilter}」取消級別篩選`;
-    } else if (tagFilter) {
-      b.textContent = `暫時冇「${tagFilter}」級別嘅項目`;
-      p.textContent = "試下揀其他級別，或者撳「全部」睇晒";
+      p.textContent = `換個關鍵字，或者撳「✕ 清除」取消支部篩選`;
+    } else if (tagFilter.length) {
+      b.textContent = `暫時冇「${tagFilter.map(tagLabel).join("／")}」支部嘅項目`;
+      p.textContent = "試下揀其他支部（可以同時揀幾個），或者撳「全部」睇晒";
     } else {
       b.textContent = "未有內容";
       p.textContent = "試下改關鍵字，或者撳「全部」／轉第二個分頁睇下";
     }
   }
 
-  // Build chip bar with 「我的最愛」 chip
+  // Build chip bar with 「我的最愛」chip
+  // 手機版用短名（全部／最愛／進度紀錄…），桌面版用全名；emoji 兩邊都顯示
+  const chipBtn = (id, ico, full, short) =>
+    `<button type="button" class="chip ${activeChip === id ? "on" : ""}" data-chip="${esc(id)}" ` +
+    `onclick="jumpTo('${esc(id)}')" title="${esc(full)}">` +
+    `${ico ? `<span class="chip-ico">${esc(ico)}</span>` : ""}${chipTxt(full, short)}</button>`;
   chipsEl.innerHTML =
-    `<button type="button" class="chip ${activeChip === "all" ? "on" : ""}" data-chip="all" onclick="jumpTo('all')">⌂ 全部</button>` +
-    `<button type="button" class="chip ${activeChip === "fav" ? "on" : ""}" data-chip="fav" onclick="jumpTo('fav')">⭐ 我的最愛</button>` +
-    catIdx.map(({ c, i }) =>
-      `<button type="button" class="chip ${activeChip === ("cat-" + i) ? "on" : ""}" data-chip="cat-${i}" onclick="jumpTo('cat-${i}')">${esc((c.icon ? c.icon + " " : "") + c.name)}</button>`
-    ).join("");
+    chipBtn("all", "⌂", "全部", "全部") +
+    chipBtn("fav", "⭐", "我的最愛", "最愛") +
+    catIdx.map(({ c, i }) => chipBtn("cat-" + i, c.icon, c.name, catShort(c.name))).join("");
 
   renderTagRow();
   renderSortRow();
@@ -354,12 +423,12 @@ function watchSections() {
   if (_io) _io.disconnect();
   if (!("IntersectionObserver" in window)) return;
   // 單一分類模式或我的最愛模式時，唔需要用 observer
-  if (activeChip !== "all" || searchEl.value.trim() || tagFilter) return;
+  if (activeChip !== "all" || searchEl.value.trim() || tagFilter.length) return;
   const secs = sectionsEl.querySelectorAll("section[id]");
   if (!secs.length) return;
   _io = new IntersectionObserver(
     (entries) => {
-      if (searchEl.value.trim() || tagFilter || activeChip !== "all") return;
+      if (searchEl.value.trim() || tagFilter.length || activeChip !== "all") return;
       const v = entries.filter((e) => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio);
       if (!v.length) return;
       const id = v[0].target.id;

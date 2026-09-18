@@ -1,8 +1,10 @@
 // 簡單 offline cache：展示櫃本體可以離線打開（app 本身當然要上網）
-// v18：升級 cache 版本 → activate 時自動清走舊 cache（scout-tools-v17 等），
+// v20：升級 cache 版本 → activate 時自動清走舊 cache（scout-tools-v19 等），
 //      解決「打開先見舊版殘留、之後先跳新版」嘅問題。
 //      以後改咗 core 檔案想令用戶即刻用上新版，就 +1 個數。
-const CACHE = 'scout-tools-v18';
+//      v19 = 手機版標籤收細（支部一個字／排序得 emoji／分類短名）＋ 今期主打默認收起
+//      v20 = 「適用級別」改叫「適用支部」＋支部篩選改做可多選（OR）＋分類 chips 識轉行
+const CACHE = 'scout-tools-v20';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
