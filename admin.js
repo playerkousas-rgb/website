@@ -479,8 +479,11 @@ function formHTML() {
       </select>
     </div>
     <input id="f-cat-new" placeholder="新分類名稱（喺揀定嘅分頁開新分類）" style="display:${f.category === "__new__" ? "" : "none"};margin-top:8px;min-height:44px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--bg);color:var(--text);width:100%" value="${esc(edit && !catInList ? f.category : "")}" />
-    <div class="admin-lbl">適用童軍級別（可多選，公開版可篩選）</div>
+    <div class="admin-lbl">適用童軍級別（剔「呢個內容係邊個支部用」）</div>
     ${tagCheckHTML(f.tags)}
+    <div class="admin-hint">💡 公開版一個字就夠：<b>小／幼／童／深／樂</b>（領隊一眼就識）。
+      冇「領袖」呢個級別係刻意嘅 —— 呢度所有工具本身就係畀領隊用，所以「小童軍集會助手」剔<b>小童軍</b>就得；
+      領隊想搵自己支部嘅嘢，用上面嘅級別篩選，或者直接把分類改名做「領袖用」。</div>
     <div class="admin-lbl">介紹（公開版面顯示，可選）</div>
     <input id="f-desc" placeholder="介紹…" value="${esc(f.description || "")}" />
     <div class="admin-lbl">圖示來源</div>
@@ -551,7 +554,8 @@ function onIconSourceChange(v) {
   if (ur) ur.style.display = v === "upload" ? "" : "none";
 }
 function itemRowHTML(a) {
-  const tags = a.tags && a.tags.length ? a.tags.map((t) => `<span class="mini-tag">${esc(t)}</span>`).join("") : "";
+  // 同公開版一樣：一個字代表一個級別（tooltip 留全名）
+  const tags = a.tags && a.tags.length ? a.tags.map((t) => `<span class="mini-tag" title="${esc(t)}">${esc(scoutTagShort(t))}</span>`).join("") : "";
   const icon = appIconHTML(a, "row");
   return `
   <div class="admin-app-row${a.featured ? " featured" : ""}">
@@ -647,7 +651,7 @@ function tilesForCat(cat) {
       ${a.visible === false ? '<span class="lock-tag" style="position:absolute;top:2px;right:2px;z-index:2">🔒</span>' : ""}
       <div class="tile-icon" style="background:linear-gradient(145deg,${g1},${g2})">${inner}</div>
       <div class="tile-name">${esc(a.name)}</div>
-      ${(a.tags && a.tags.length) ? `<div class="tile-tags">${a.tags.map((t) => `<span>${esc(t)}</span>`).join("")}</div>` : ""}
+      ${(a.tags && a.tags.length) ? `<div class="tile-tags">${a.tags.map((t) => `<span title="${esc(t)}">${esc(scoutTagShort(t))}</span>`).join("")}</div>` : ""}
       ${a.description ? `<div class="tile-desc">${esc(a.description)}</div>` : ""}
     </a>`;
   }).join("");

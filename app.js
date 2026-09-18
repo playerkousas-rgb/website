@@ -75,11 +75,12 @@ let tagFilter = null;
 const ACTIVE_PAGE_KEY = "scout-active-page";
 
 // ── 排序模式 ─────────────────────────────────────────────────
+// 手機版淨係顯示 emoji（文字包咗喺 .wide-only，細屏被 CSS 收埋）
 const SORT_KEY = "showcase-sort";
 const SORTS = [
-  { id: "default", label: "🗂 預設順序" },
-  { id: "clicks", label: "🔥 最多人點擊" },
-  { id: "stars", label: "⭐ 最多人收藏" }
+  { id: "default", ico: "🗂", label: "預設順序", hint: "用後台排好嘅順序" },
+  { id: "clicks",  ico: "🔥", label: "最多人點擊", hint: "按開啟次數排序" },
+  { id: "stars",   ico: "⭐", label: "最多人收藏", hint: "按全站收藏人數排序" }
 ];
 let sortMode = SORTS.some((s) => s.id === localStorage.getItem(SORT_KEY))
   ? localStorage.getItem(SORT_KEY) : "default";
@@ -108,9 +109,21 @@ function pageById(id) { return (SITES.pages || []).find((p) => p.id === id); }
 function activePage() { return pageById(ACTIVE_PAGE); }
 
 function measurePanes() {
+  const root = document.documentElement;
   const pnav = pageNavEl;
   const h = (pnav && !pnav.hidden && pnav.offsetHeight) ? pnav.offsetHeight : 0;
-  document.documentElement.style.setProperty("--pnav-h", h + "px");
+  root.style.setProperty("--pnav-h", h + "px");
+  // chips 列高度（手機版收細咗，section 嘅 scroll-margin 要跟實際值先唔會郁空）
+  const ch = (chipsEl && !chipsEl.hidden && chipsEl.offsetHeight) ? chipsEl.offsetHeight : 0;
+  if (ch) root.style.setProperty("--chip-h", ch + "px");
+}
+
+// ── 顯示層小工具：手機得 emoji／短名，桌面先顯示全名 ────────────
+// 全部靠 CSS 嘅 .wide-only / .narrow-only 切換（見 index.html），
+// 所以同一個掣喺手機細啲、喺桌面有完整文字，唔使 JS 偵測螢幕。
+function chipTxt(full, short) {
+  return `<span class="wide-only">${esc(full)}</span>` +
+         `<span class="narrow-only">${esc(short || full)}</span>`;
 }
 
 // ── 分頁導覽 ─────────────────────────────────────────────────
@@ -125,7 +138,8 @@ function renderPages() {
   pageNavEl.innerHTML =
     `<button type="button" class="page-btn" data-page="__prev" onclick="switchPage()" title="上一頁" aria-label="上一頁">‹</button>` +
     pages.map((p) =>
-      `<button type="button" class="page-btn ${p.id === ACTIVE_PAGE ? "on" : ""}" data-page="${esc(p.id)}" onclick="switchPage('${esc(p.id)}')">${esc(p.icon ? p.icon + " " : "")}${esc(p.label)}</button>`
+      `<button type="button" class="page-btn ${p.id === ACTIVE_PAGE ? "on" : ""}" data-page="${esc(p.id)}" onclick="switchPage('${esc(p.id)}')" title="${esc(p.label)}">` +
+      `${p.icon ? `<span class="chip-ico">${esc(p.icon)}</span>` : ""}${chipTxt(p.label, catShort(p.label))}</button>`
     ).join("") +
     `<button type="button" class="page-btn" data-page="__next" onclick="switchPage()" title="下一頁" aria-label="下一頁">›</button>`;
   // 上一頁/下一頁
@@ -164,7 +178,7 @@ function tileHTML(idx, delay) {
     ${app.github ? `<span class="gh-badge" title="GitHub repo" onclick="event.preventDefault(); event.stopPropagation(); window.open('${esc(app.github)}','_blank')">GH</span>` : ""}
     ${iconHTML(app)}
     <div class="tile-name">${esc(app.name)}</div>
-    ${tags.length ? `<div class="tile-tags">${tags.map((t) => `<span>${esc(t)}</span>`).join("")}</div>` : ""}
+    ${tags.length ? `<div class="tile-tags">${tags.map((t) => `<span title="${esc(t)}">${esc(scoutTagShort(t))}</span>`).join("")}</div>` : ""}
     ${app.description ? `<div class="tile-desc">${esc(app.description)}</div>` : ""}
   </a>`;
 }
@@ -224,19 +238,24 @@ function setTag(tag) {
 }
 
 // ── 童軍標籤列 ───────────────────────────────────────────────
+// 全名（小童軍／深資童軍…）留喺 title／aria-label，肉眼見到就係一個字
 function renderTagRow() {
   const pg = activePage();
   const hasTag = !!(pg && (pg.categories || []).some((c) => c.apps.some((a) => a.visible !== false && (a.tags || []).length)));
   if (!hasTag || !pg) { tagRowEl.hidden = true; return; }
   tagRowEl.hidden = false;
   tagRowEl.innerHTML =
-    `<span class="tag-row-hint">適用級別：</span>` +
-    SCOUT_TAGS.map((t) =>
-      `<button type="button" class="tag-chip ${tagFilter === t ? "on" : ""}" onclick="setTag('${esc(t)}')">${esc(t)}</button>`
-    ).join("");
+    `<span class="tag-row-hint"><span class="wide-only">適用</span>級別：</span>` +
+    SCOUT_TAGS.map((t) => {
+      const on = tagFilter === t;
+      return `<button type="button" class="tag-chip lv-chip ${on ? "on" : ""}" ` +
+        `onclick="setTag('${esc(t)}')" title="${esc(t)}${on ? "（再撳一次取消）" : ""}" ` +
+        `aria-label="${esc(t)}" aria-pressed="${on ? "true" : "false"}">${esc(scoutTagShort(t))}</button>`;
+    }).join("");
 }
 
 // ── 排序列 ───────────────────────────────────────────────────
+// 手機：🔥／⭐／🗂 三個 emoji；桌面：emoji + 全名
 function renderSortRow() {
   if (!sortRowEl) return;
   const pg = activePage();
@@ -248,10 +267,13 @@ function renderSortRow() {
   sortRowEl.hidden = false;
   sortRowEl.innerHTML =
     `<span class="tag-row-hint">排序：</span>` +
-    SORTS.map((s) =>
-      `<button type="button" class="tag-chip ${sortMode === s.id ? "on" : ""}" ` +
-      `onclick="setSort('${s.id}')">${s.label}</button>`
-    ).join("");
+    SORTS.map((s) => {
+      const on = sortMode === s.id;
+      return `<button type="button" class="tag-chip sort-chip ${on ? "on" : ""}" ` +
+        `onclick="setSort('${s.id}')" title="${esc(s.label)} — ${esc(s.hint)}" ` +
+        `aria-label="${esc(s.label)}" aria-pressed="${on ? "true" : "false"}">` +
+        `<span class="chip-ico">${s.ico}</span><span class="wide-only">${esc(s.label)}</span></button>`;
+    }).join("");
 }
 
 // ── 主要渲染 ─────────────────────────────────────────────────
@@ -278,7 +300,9 @@ function render() {
   const match = (a) => {
     if (tagFilter && !((a.tags || []).includes(tagFilter))) return false;
     if (!q) return true;
-    const hay = [a.name, a.cat, a.description, a.note, (a.tags || []).join(" ")].filter(Boolean).join(" ").toLowerCase();
+    // 級別全名＋短名都入 haystack：用家搜「小童軍」定搜一個字「小」都揾到
+    const tagStr = (a.tags || []).concat((a.tags || []).map(scoutTagShort)).join(" ");
+    const hay = [a.name, a.cat, a.description, a.note, tagStr].filter(Boolean).join(" ").toLowerCase();
     return hay.includes(q);
   };
   const visible = (a) => a.visible !== false;
@@ -333,13 +357,16 @@ function render() {
     }
   }
 
-  // Build chip bar with 「我的最愛」 chip
+  // Build chip bar with 「我的最愛」chip
+  // 手機版用短名（全部／最愛／進度紀錄…），桌面版用全名；emoji 兩邊都顯示
+  const chipBtn = (id, ico, full, short) =>
+    `<button type="button" class="chip ${activeChip === id ? "on" : ""}" data-chip="${esc(id)}" ` +
+    `onclick="jumpTo('${esc(id)}')" title="${esc(full)}">` +
+    `${ico ? `<span class="chip-ico">${esc(ico)}</span>` : ""}${chipTxt(full, short)}</button>`;
   chipsEl.innerHTML =
-    `<button type="button" class="chip ${activeChip === "all" ? "on" : ""}" data-chip="all" onclick="jumpTo('all')">⌂ 全部</button>` +
-    `<button type="button" class="chip ${activeChip === "fav" ? "on" : ""}" data-chip="fav" onclick="jumpTo('fav')">⭐ 我的最愛</button>` +
-    catIdx.map(({ c, i }) =>
-      `<button type="button" class="chip ${activeChip === ("cat-" + i) ? "on" : ""}" data-chip="cat-${i}" onclick="jumpTo('cat-${i}')">${esc((c.icon ? c.icon + " " : "") + c.name)}</button>`
-    ).join("");
+    chipBtn("all", "⌂", "全部", "全部") +
+    chipBtn("fav", "⭐", "我的最愛", "最愛") +
+    catIdx.map(({ c, i }) => chipBtn("cat-" + i, c.icon, c.name, catShort(c.name))).join("");
 
   renderTagRow();
   renderSortRow();

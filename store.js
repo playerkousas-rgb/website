@@ -91,7 +91,36 @@ function appIconHTML(app, size) {
 }
 
 // 童軍級別標籤（固定，唔可以喺後台加減）
+// ⚠️ 全名先係「真相」：DB / 搜尋 / 篩選一律用全名，一個字只係「顯示層」。
+//    點解？級別標籤嘅意思係「呢個內容係為邊個支部而設」，唔係「邊個先用得著」——
+//    所有工具本身就係畀領袖用，所以唔設「領袖」標籤（剔咗反而搞亂篩選）。
 const SCOUT_TAGS = ["小童軍", "幼童軍", "童軍", "深資童軍", "樂行童軍"];
+// 手機版一個字（領隊一眼就識，唔使睇成串「深資童軍」）
+const SCOUT_TAG_SHORT = { "小童軍": "小", "幼童軍": "幼", "童軍": "童", "深資童軍": "深", "樂行童軍": "樂" };
+function scoutTagShort(t) {
+  const s = String(t || "").trim();
+  if (!s) return "";
+  if (SCOUT_TAG_SHORT[s]) return SCOUT_TAG_SHORT[s];
+  // 未知／日後新級別名：兩字以下照樣顯示，其餘取第一字（tooltip 仍有全名）
+  return s.length > 2 ? s[0] : s;
+}
+
+// 分類／分頁名縮短（手機版 chips 用；桌面版照樣顯示全名）
+// 規則：刪走空格／括號內容 → 長過 4 字就先削冇資訊量嘅修飾詞 → 仲長就截 6 字加 …
+// 想完全控制縮寫？後台將分類改名做你想見嘅短名即可（≤4 字就原樣顯示）。
+const CAT_NOISE = ["電子", "網上", "网上", "系統", "平台", "管理", "專用", "一般", "常用", "精選", "其他", "有用", "好用", "APPS", "Apps", "apps", "APP", "App", "app"];
+function catShort(name) {
+  let s = String(name || "").replace(/\s+/g, "").replace(/[（(【\[].*?[)）】\]]/g, "");
+  const raw = s;
+  if (s.length > 4) {
+    for (const w of CAT_NOISE) {
+      if (s.length > 4 && s.includes(w)) s = s.split(w).join("");
+    }
+  }
+  if (!s) s = raw;
+  if (s.length > 6) s = s.slice(0, 6) + "…";
+  return s;
+}
 
 // Emoji 揀選器（WhatsApp 式：分「種類」tag，admin 揀 icon / 分類時用）
 const EMOJI_GROUPS = [

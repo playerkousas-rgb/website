@@ -526,9 +526,10 @@
   .chips::-webkit-scrollbar { display: none; }
   .chip {
     flex-shrink: 0; white-space: nowrap; cursor: pointer;
-    font-size: 15px; font-weight: 650; color: var(--muted);
+    display: inline-flex; align-items: center;
+    font-size: 14.5px; font-weight: 650; color: var(--muted);
     background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: 999px; padding: 10px 17px;
+    border-radius: 999px; padding: 9px 15px; min-height: 40px;
     box-shadow: var(--shadow-sm);
     transition: all .18s var(--ease);
     scroll-snap-align: start;
@@ -544,6 +545,17 @@
     box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 32%, transparent);
   }
   [data-theme="dark"] .chip.on { color: #0b0d12; }
+
+  /* ── 手機／桌面两用標籤（細屏收短，大螢幕顯示全名）──────────
+     靠 CSS 切換，唔使 JS 偵測螢幕；實際「收細」嘅規則放咗喺 style 最尾
+     （要擺喺所有 base 規則之後先至贏到 cascade）。
+     .chip-ico = emoji，兩邊都顯示。 */
+  .chip-ico { margin-right: 5px; font-size: 1.05em; line-height: 1; }
+  .narrow-only { display: none; }
+  @media (max-width: 559.98px) {
+    .wide-only { display: none !important; }
+    .narrow-only { display: inline !important; }
+  }
 
   /* ── Sections ───────────────────────── */
   #sections { min-height: 120px; }
@@ -769,6 +781,12 @@
     font-size: 12px; color: var(--muted); margin-top: 14px;
     margin-bottom: 6px; font-weight: 750; letter-spacing: .02em;
   }
+  .admin-hint {
+    font-size: 11.5px; color: var(--muted); line-height: 1.55;
+    margin-top: 8px; padding: 9px 11px;
+    background: var(--bg); border: 1px dashed var(--border-strong); border-radius: 10px;
+  }
+  .admin-hint b { color: var(--text); }
   .admin-app-row {
     display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px;
     padding: 12px 4px; border-bottom: 1px solid var(--border); font-size: 14px;
@@ -943,9 +961,10 @@
   }
   .tag-chip {
     flex-shrink: 0; white-space: nowrap; cursor: pointer;
-    font-size: 14px; font-weight: 700; color: var(--accent-text);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 13.5px; font-weight: 700; color: var(--accent-text);
     background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
-    border-radius: 999px; padding: 8px 14px; touch-action: manipulation;
+    border-radius: 999px; padding: 7px 13px; min-height: 34px; touch-action: manipulation;
     transition: all .18s var(--ease);
   }
   .tag-chip.on {
@@ -1145,6 +1164,42 @@
     font-size: 12.5px; color: var(--muted); line-height: 1.5;
     background: var(--bg); border: 1px dashed var(--border-strong);
     border-radius: 10px; padding: 12px;
+  }
+
+  /* ── ★ 手機版：成列標籤一齊收細（必須放喺 style 最尾，先贏到 cascade）
+     目的：一屏放得落「級別／排序／分類」三行，唔使撳到右先見到。 */
+  @media (max-width: 559.98px) {
+    /* 分類 chips */
+    .chips { gap: 5px; padding: 6px 2px 7px; }
+    .chip { font-size: 13px; font-weight: 700; padding: 5px 10px; min-height: 30px; }
+    .chip-ico { margin-right: 3px; }
+
+    /* 級別／排序列：得一個字／一個 emoji */
+    .tag-row { gap: 4px; padding: 5px 2px 2px; }
+    .tag-row-hint { font-size: 11.5px; padding-right: 0; }
+    .tag-chip { font-size: 12.5px; font-weight: 750; padding: 4px 9px; min-height: 27px; }
+    .tag-chip.lv-chip { padding: 4px 0; min-width: 27px; }
+    .tag-chip .chip-ico { margin-right: 0; }
+    .tag-chip.sort-chip { padding: 4px 8px; }
+
+    /* 分頁導覽 */
+    .page-nav { gap: 5px; padding: 5px 2px 3px; }
+    .page-btn { font-size: 13px; font-weight: 750; padding: 5px 10px; min-height: 30px; }
+    .page-btn[data-page="__prev"], .page-btn[data-page="__next"] { font-size: 15px; padding: 4px 8px; min-height: 30px; }
+
+    /* tile 內嘅級別小標籤：一個字，行高收埋 */
+    .tile-tags { gap: 2px; margin-top: 2px; }
+    .tile-tags span { font-size: 10px; padding: 1px 5px; }
+
+    /* 今期主打（收起狀態）：細條再細啲，唔食手機版面 */
+    .hero.collapsed { margin: 10px 0 12px; padding: 8px 10px; border-radius: 18px; }
+    .hero.collapsed .hero-card { padding: 8px 76px 8px 10px; border-radius: 14px; cursor: pointer; }
+    .hero.collapsed .hero-badge { font-size: 10px; padding: 3px 8px; }
+    .hero.collapsed .hero-title { font-size: 14px; }
+    /* 收起狀態下嘅 🔗／▾ 掣收細，留返位俾標題（8 + 30 + 4 + 30 = 72 ≤ 76 padding）；
+       展開咗就放回正常大小，因為嗰時有位，而且係主要操作區 */
+    .hero.collapsed .hero-card-tools { top: 8px; right: 8px; gap: 4px; }
+    .hero.collapsed .hero-share, .hero.collapsed .hero-collapse { width: 30px; height: 30px; font-size: 13px; }
   }
 </style>
 </head>
@@ -1377,7 +1432,9 @@ const SPOTLIGHT = {
   badge: "今期主打",
   openLabel: "立即開啟",
   allLabel: "查看全部",
-  showStats: true,          // 顯示「🔥 N 次開啟 · ⭐ N 人收藏」（數字 = 0 時自動隱藏，IG 貼圖唔會晒 0）
+  collapsedByDefault: true,  // 默認收起：淨返一條「今期主打 · 項目名」，撳先展開（用戶唔理都唔食位）
+  showStars: true,           // 展開後顯示「⭐ N 人收藏」（0 就自動唔顯示）
+                             // ⚠️ 點擊數（🔥）刻意唔顯示：主打多數係新推出，晒 0 好難睇
   preview: {
     enabled: true,                                  // Hero 入面嘅「推送通知」預覽卡
     msg: "📢 有新通告：本週活動安排已更新，記得查看！"  // 純裝飾文案，想改就改呢度
@@ -1388,22 +1445,30 @@ const heroEl = document.getElementById("hero-spotlight");
 let _sectionsBlurred = false;
 let _userRevealed = false;   // 用戶互動過一次之後，就唔會再自動朦朧
 
-// 收埋／還原今期主打（狀態記 low 度，下次開都仲係收埋緊）
-let _heroCollapsed = false;
-try { _heroCollapsed = localStorage.getItem("hero-collapsed") === "1"; } catch {}
+// 收埋／還原今期主打（狀態記喺 localStorage，下次開都記得）
+// 三態：未記過 → 用 SPOTLIGHT.collapsedByDefault（預設收起，淨顯示「今期主打 · 項目名」一條）
+//       "1" → 使用者撳過收埋；"0" → 使用者撳過展開（之後開都大圖）
+const HERO_COLLAPSE_KEY = "hero-collapsed";
+let _heroCollapsed = SPOTLIGHT.collapsedByDefault !== false;
+try {
+  const _hc = localStorage.getItem(HERO_COLLAPSE_KEY);
+  if (_hc === "1") _heroCollapsed = true;
+  else if (_hc === "0") _heroCollapsed = false;
+} catch {}
 function syncHeroCollapseBtn() {
   const btn = document.getElementById("hero-collapse");
   if (!btn) return;
   btn.textContent = _heroCollapsed ? "▾" : "▴";
-  btn.title = _heroCollapsed ? "還原" : "收埋";
-  btn.setAttribute("aria-label", _heroCollapsed ? "還原今期主打" : "收埋今期主打");
+  btn.title = _heroCollapsed ? "睇詳情" : "收埋";
+  btn.setAttribute("aria-label", _heroCollapsed ? "展開今期主打" : "收埋今期主打");
+  btn.setAttribute("aria-expanded", _heroCollapsed ? "false" : "true");
 }
 function setHeroCollapsed(on) {
   _heroCollapsed = !!on;
   if (heroEl) heroEl.classList.toggle("collapsed", _heroCollapsed);
   syncHeroCollapseBtn();
   revealSections();   // 互動過今期主打 = 已經「見識過」，唔好再自動 Blur 下面
-  try { _heroCollapsed ? localStorage.setItem("hero-collapsed", "1") : localStorage.removeItem("hero-collapsed"); } catch {}
+  try { localStorage.setItem(HERO_COLLAPSE_KEY, _heroCollapsed ? "1" : "0"); } catch {}
 }
 
 function setSectionsBlur(on) {
@@ -1448,16 +1513,15 @@ function renderSpotlight() {
     iconEl.setAttribute("aria-label", a.name || "");
   }
 
-  // meta 用真實數據；🔥／⭐ 係 0 時自動隱藏（推廣期晒 0 貼 IG 難睇）
+  // meta：⭐收藏（0 就唔顯示）＋ 🎖 級別（一個字）。
+  // 點擊數刻意唔顯示 —— 主打多數係新推出，嗰陣係 0，晒出嚟難睇。
   const metaEl = document.getElementById("hero-meta");
   if (metaEl) {
     metaEl.textContent = "";
     const bits = [];
-    if (SPOTLIGHT.showStats) {
-      if ((a.clicks || 0) > 0) bits.push("🔥 " + a.clicks.toLocaleString() + " 次開啟");
-      if ((a.stars || 0) > 0) bits.push("⭐ " + a.stars.toLocaleString() + " 人收藏");
-    }
-    if (a.tags && a.tags.length) bits.push("🎖 " + a.tags.join(" · "));
+    if (SPOTLIGHT.showStars && (a.stars || 0) > 0) bits.push("⭐ " + a.stars.toLocaleString() + " 人收藏");
+    const lv = (a.tags || []).filter(Boolean);
+    if (lv.length) bits.push("🎖 " + lv.map((t) => (typeof scoutTagShort === "function" ? scoutTagShort(t) : t)).join(" · "));
     bits.forEach((t) => {
       const s = document.createElement("span");
       s.textContent = t;                  // textContent：內容有 < > 都唔會爆版
