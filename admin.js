@@ -3,7 +3,7 @@
    隱藏入口：你嘅網址 + #admin
    兩個版面：
    ① 管理 — 分頁開/關、每頁加分類、改/刪分類、每頁加/改/刪項目、
-            童軍級別標籤、排序、公開顯示(逐個開/關)、改密碼
+            童軍支部標籤、排序、公開顯示(逐個開/關)、改密碼
    ② 總覽 — 同公開版面一樣嘅預覽（🔒 = 隱藏緊）
    額外：
    ♻️ 一鍵重設 —— 清空 DB/local 再建立「預設模板」（4分頁 + 三分類）
@@ -40,7 +40,7 @@ const ADMIN = {
       this._listener = true;
       const root = document.getElementById("admin-content");
       root.addEventListener("click", (e) => ADMIN.onAction(e));
-      // 勾選狀態即時反映喺 UI（級別標籤／分頁開關／公開顯示）
+      // 勾選狀態即時反映喺 UI（支部標籤／分頁開關／公開顯示）
       root.addEventListener("change", (e) => {
         const tc = e.target.closest(".tag-check");
         if (tc) tc.classList.toggle("on", e.target.checked);
@@ -479,11 +479,11 @@ function formHTML() {
       </select>
     </div>
     <input id="f-cat-new" placeholder="新分類名稱（喺揀定嘅分頁開新分類）" style="display:${f.category === "__new__" ? "" : "none"};margin-top:8px;min-height:44px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--bg);color:var(--text);width:100%" value="${esc(edit && !catInList ? f.category : "")}" />
-    <div class="admin-lbl">適用童軍級別（剔「呢個內容係邊個支部用」）</div>
+    <div class="admin-lbl">適用支部（呢個內容係邊個支部用？可剔幾個）</div>
     ${tagCheckHTML(f.tags)}
-    <div class="admin-hint">💡 公開版一個字就夠：<b>小／幼／童／深／樂</b>（領隊一眼就識）。
-      冇「領袖」呢個級別係刻意嘅 —— 呢度所有工具本身就係畀領隊用，所以「小童軍集會助手」剔<b>小童軍</b>就得；
-      領隊想搵自己支部嘅嘢，用上面嘅級別篩選，或者直接把分類改名做「領袖用」。</div>
+    <div class="admin-hint">💡 公開版一個字就夠：<b>小／幼／童／深／樂</b>（領隊一眼就識），用家可以<b>同時揀幾個支部</b>。
+      冇「領袖」呢個選項係刻意嘅 —— 呢度所有工具本身就係畀領隊用，所以「小童軍集會助手」剔<b>小童軍</b>就得；
+      剔埋「領袖」只會搞亂篩選（樂行領隊篩「領袖」竟然見到小童軍嘢）。想有領隊專用區，直接把分類改名做「領袖用」。</div>
     <div class="admin-lbl">介紹（公開版面顯示，可選）</div>
     <input id="f-desc" placeholder="介紹…" value="${esc(f.description || "")}" />
     <div class="admin-lbl">圖示來源</div>
@@ -554,7 +554,7 @@ function onIconSourceChange(v) {
   if (ur) ur.style.display = v === "upload" ? "" : "none";
 }
 function itemRowHTML(a) {
-  // 同公開版一樣：一個字代表一個級別（tooltip 留全名）
+  // 同公開版一樣：一個字代表一個支部（tooltip 留全名）
   const tags = a.tags && a.tags.length ? a.tags.map((t) => `<span class="mini-tag" title="${esc(t)}">${esc(scoutTagShort(t))}</span>`).join("") : "";
   const icon = appIconHTML(a, "row");
   return `
@@ -634,7 +634,7 @@ function manageHTML() {
     </div>
     <div class="banner" style="background:var(--accent-soft);color:var(--accent-text);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)">
       每頁可獨立「開放 / 關閉」（✓開放先至會喺公開版出現）。關閉咗嘅分頁內容仍然保留，隨時可以開返。<br/>
-      分類只屬某一個分頁 —— 改/刪分類、加項目都要先揀啱分頁。項目可揀童軍級別標籤，公開版畀用戶篩選。<br/>
+      分類只屬某一個分頁 —— 改/刪分類、加項目都要先揀啱分頁。項目可揀童軍支部標籤（小／幼／童／深／樂），公開版畀用戶多選篩選。<br/>
       🔥 點擊數／⭐ 收藏數都係全站累計（公開版每次打開／收藏會更新），公開版可按呢兩項排序。
     </div>
     ${ADMIN.sites.pages.map(pageGroupHTML).join("")}
