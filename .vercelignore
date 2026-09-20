@@ -1,0 +1,48 @@
+# ════════════════════════════════════════════════════════════════
+# Vercel 上傳排除清單（gitignore 語法）
+# 原則：**只上傳運行時網頁產物**。被忽略的檔案 Vercel 連建置階段都看不到，
+#       所以「建置腳本」不能放進呢度（scripts/ 要留在上傳列表先跑得住 npm run build）。
+# 詳細原因與防增肥規則見 OPTIMIZATION.md
+# ════════════════════════════════════════════════════════════════
+
+# 版本控制
+.git
+
+# 依賴（Vercel 本來就自動排除；寫明係防日後加咗 node_modules 唔知事）
+node_modules
+
+# 開發專用（生產用唔到，唔好上傳）
+dev-server.mjs
+test/
+README.md
+OPTIMIZATION.md
+
+# 備份／暫存檔（正常唔應該存在；多一層保險）
+*.bak
+*.old
+*.tmp
+*.temp
+*.log
+*.swp
+*.orig
+*~
+*-copy.*
+
+# 測試上傳／用戶上傳資料夾（永遠唔入部署）
+uploads/
+
+# 建置快取／產物（本專案係純靜態站，本應冇呢啲；防日後加框架時爆肥）
+dist/
+build/
+.next/
+.nuxt/
+.cache/
+.turbo/
+coverage/
+
+# 系統雜檔
+.DS_Store
+Thumbs.db
+
+# Vercel 本地快取
+.vercel/

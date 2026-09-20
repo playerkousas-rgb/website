@@ -1355,7 +1355,12 @@
   <div id="admin-content"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<!-- Supabase UMD（全站唯一外部依賴，靠 CDN 輕量引入，唔入 dependencies）：
+     ⚠️ 一定要鎖死確實版本 + integrity（SRI）：用 @2/@latest 嘅話，CDN 一改版全站跟住變，
+     新版隨時更肥更慢；SRI 令瀏覽器拒收畀人改過嘅檔案（供應鏈防護）。
+     升級方法：npm view @supabase/supabase-js dist-tags → 揀 latest，
+     curl 個新 UMD 檔計 sha384（方法見 OPTIMIZATION.md「CDN 依賴升級 SOP」）→ 更新版本號同 hash。 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/dist/umd/supabase.js" integrity="sha384-iLddHTLokph6Omwoyid4XKxHaWa6w41BnoEj0q5oOrzmYPpHIKt1wyjReA7s//pP" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="store.js"></script>
 <script src="admin.js"></script>
 <script src="app.js"></script>
