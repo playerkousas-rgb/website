@@ -1,0 +1,32 @@
+# 依賴 —— 永遠唔 commit（Vercel 自己會 install）
+node_modules/
+
+# 備份／暫存／日誌 —— 備份用 git commit，唔好用 copy 檔案
+*.log
+*.tmp
+*.temp
+*.bak
+*.old
+*.swp
+*.orig
+*~
+*-copy.*
+
+# 測試上傳／用戶上傳
+uploads/
+
+# 建置快取／產物（純靜態站本應冇產物；防日後加框架）
+dist/
+build/
+.next/
+.nuxt/
+.cache/
+.turbo/
+coverage/
+
+# 系統雜檔
+.DS_Store
+Thumbs.db
+
+# Vercel 本地
+.vercel/

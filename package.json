@@ -1,0 +1,16 @@
+{
+  "name": "scout-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "童軍小工具 — PWA 分類展示櫃（純靜態站 + Vercel serverless /api/favicon，零運行期依賴）",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node test/favicon.test.js && node test/labels.test.js",
+    "lint": "node scripts/lint.js",
+    "check": "npm run lint && npm run test",
+    "build": "npm run check && node scripts/verify-assets.js",
+    "preview": "node dev-server.mjs"
+  }
+}
