@@ -30,7 +30,7 @@ const DEPLOY = [
 ];
 /* 純開發用（.vercelignore 擋走，或者 Vercel build 用完即棄） */
 const DEV_ONLY = [
-  "package.json", "package-lock.json",
+  "package.json", "package-lock.json", "vercel.json",
   ".vercelignore", ".gitignore",
   "README.md", "OPTIMIZATION.md",
   "dev-server.mjs",

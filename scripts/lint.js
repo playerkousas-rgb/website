@@ -40,6 +40,26 @@ for (const must of ["test/", "scripts/"]) {
   else ok(`.vercelignore 無擋住「${must}」（build 閘門用得到）`);
 }
 
+/* ── 1c) vercel.json：部署設定要钉死，唔准 drift ───────────────
+   Vercel 一見 package.json 有 build script 就自動跑 build 之後搵 public/
+   目錄——本站係「根目錄直上」，冇 public/，會爆
+   「No Output Directory named "public" found」（2026-09 試過真爆）。
+   vercel.json 明確聲明 framework=null + outputDirectory="."，
+   呢兩個值一改，部署就會爆或者開始亂上傳，所以喺度鎖死。 */
+if (!exists("vercel.json")) {
+  bad("vercel.json 唔見咗 —— Vercel 會自動偵測 build 然後搵 public/ 目錄，部署會爆（見 OPTIMIZATION.md 教訓 #2）");
+} else {
+  try {
+    const vj = JSON.parse(read("vercel.json"));
+    if (vj.framework === null) ok("vercel.json framework=null（唔靠自動偵測）");
+    else bad("vercel.json framework 一定要係 null —— 畀 Vercel 自動偵測會揀錯 preset");
+    if (vj.outputDirectory === ".") ok("vercel.json outputDirectory=.（根目錄直上）");
+    else bad(`vercel.json outputDirectory 應該係 \".\"（而家係 ${JSON.stringify(vj.outputDirectory)}）`);
+    if (vj.buildCommand === "npm run build") ok("vercel.json buildCommand=npm run build（Vercel 上都會過 lint+單測閘門）");
+    else bad("vercel.json buildCommand 應該係 \"npm run build\"");
+  } catch (e) { bad("vercel.json 解析唔到： " + e.message); }
+}
+
 /* ── 2) .vercelignore 必須存在而且擋住 node_modules ───────────── */
 if (!exists(".vercelignore")) {
   bad("根目錄冇 .vercelignore —— 部署會成個 repo 上傳（死重來源）。要加返。");

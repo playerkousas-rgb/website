@@ -44,7 +44,8 @@
 | `sw.js` | Service worker（離線可開） |
 | `icons/` | 桌面圖標（已壓縮；新圖片規則見 OPTIMIZATION.md） |
 | `package.json` | 極簡腳本：`npm run check`／`build`／`preview` —— **刻意零 dependencies** |
-| `.vercelignore` / `.gitignore` | 部署／commit 排除清單 —— 防死重上傳 Vercel |
+| `vercel.json` | 鎖死部署設定（framework null／build `npm run build`／輸出＝根目錄），唔靠 Vercel 自動偵測 |
+| `.vercelignore` / `.gitignore` | 部署／commit 排除清單 —— 防死重上傳 Vercel（**test/、scripts/ 唔准擋**，build 閘門用得到） |
 | `scripts/` | `lint.js`（防增肥守護）＋ `verify-assets.js`（部署清單核對），零依賴 |
 | `OPTIMIZATION.md` | ⭐ 瘦身紀錄＋防增肥守則 —— **加套件／加圖片之前必讀** |
 

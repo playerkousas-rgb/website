@@ -50,6 +50,19 @@ convert icons/icon-512.png -strip -colors 256 -depth 8 icons/icon-512.png
   `apps.json` 永不入 SW cache；`index.html` 導航 no-cache + controllerchange reload 機制。
   `store.js` 內 `SUPABASE_CONFIG.anonKey` 係公開 anon key，安全性靠 Supabase RLS（全表 SELECT 公開、寫入限 authenticated），屬設計之內。
 
+### 🔥 教訓（2026-09-21，PR #13 Vercel 部署失敗）
+兩層原因，逐層揭：
+1. **`test/` 曾經被放入 `.vercelignore`** —— Vercel 行 `npm run build` → `npm run check`
+   → `node test/*.js` 時 `MODULE_NOT_FOUND`，build 直接爆。
+   **規則：`.vercelignore` 只准擋「build 完全用唔到」嘅嘢。
+   `test/`、`scripts/`、`package.json`、`package-lock.json` 係 build 閘門嘅一部分，
+   必須上傳（夾埋先 ~90KB，唔係死重）。** `scripts/lint.js` 已加規則自動把關。
+2. **Vercel 一見 `package.json` 有 `build` script 就自動行，行完預設搵 `public/` 目錄做輸出** ——
+   本站係「根目錄直上」，冇 `public/`，就算 build 成功都會爆
+   `No Output Directory named "public" found`。
+   **規則：`vercel.json` 鎖死 `framework: null` + `buildCommand: npm run build` +
+   `outputDirectory: "."`，唔好靠自動偵測。** `scripts/lint.js` 亦鎖埋呢三個值。
+
 ---
 
 ## 📏 鐵律（改版前必讀，違者 lint 會擋）
@@ -110,7 +123,7 @@ Vercel 會喺每次 push 自動行 `npm run build` —— **測試唔過 = 部�
 ---
 
 ## 🖥 Vercel 設定（維持呢個樣）
-- Framework Preset：**Other**；Root Directory：repo 根
-- Build Command：`npm run build`（有 `package.json#scripts.build` 時自動偵測）；Output：靜態根
+- `vercel.json` 已鎖死：`framework: null`、`buildCommand: npm run build`、`outputDirectory: "."`
+  —— 呢三個值係 PR #13 部署爆咗兩次嘅教訓，**唔好改返做自動偵測**（lint 會擋）。
 - `api/` 自動變 serverless（`/api/favicon`），唔使設定
 - Quota 喺 **Vercel Dashboard → Settings → Usage** 睇；部署 artifact 淨係 ≈349 KB，點都食唔爆
