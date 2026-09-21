@@ -87,6 +87,14 @@ openssl dgst -sha384 -binary package/dist/umd/supabase.js | openssl base64 -A
 - 新加**會部署**嘅檔案 → 加入 `scripts/verify-assets.js` 嘅 `DEPLOY` 白名單；
 - 新加**純開發**嘅檔案 → 加入 `DEV_ONLY`，並確認 `.vercelignore` 擋住佢。
 - 跑 `npm run build` 就會印出部署總體積＋揪出「無主」檔案，數字突然暴增即係有嘢漏擋。
+- ⚠️ **`test/`、`scripts/`、`package*.json` 永遠唔准入 `.vercelignore`**
+  （Vercel 喺上傳集上面行 `npm run build`，擋走佢 = 部署爆 MODULE_NOT_FOUND）。
+  改完 `.vercelignore` 想本地驗證？模擬 Vercel 上傳集跑一次：
+  ```bash
+  rm -rf /tmp/vsim && cp -r . /tmp/vsim/ && cd /tmp/vsim
+  rm -rf .git node_modules dev-server.mjs README.md OPTIMIZATION.md
+  npm run build   # 呢個狀態行唔過，Vercel 都一樣會爆
+  ```
 
 ### 6. 改咗 core 檔案（index.html / store.js / app.js / admin.js / icons）→ `sw.js` Cache 版本 +1
 檔案頂有註解慣例：`scout-tools-vN` +1，activate 自動清舊 cache，用戶即刻攞到新版。

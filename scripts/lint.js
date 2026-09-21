@@ -27,6 +27,19 @@ const devDeps = Object.keys(pkg.devDependencies || {});
 if (devDeps.length) warn(`package.json 有 devDependencies：${devDeps.join(", ")} —— 可以，但每個都要有存在理由（見 OPTIMIZATION.md）`);
 else ok("package.json 連 devDependencies 都係零（lint/test 全用 node 內建模組）");
 
+/* ── 1b) build script 用到嘅檔案唔可以被 .vercelignore 擋走 ────
+   Vercel 會喺佢收到嘅檔案集上面行 `npm run build` → `npm run check`
+   → `node test/*.js`。test/ 或者 scripts/ 一旦入咗 .vercelignore，
+   Vercel build 就 MODULE_NOT_FOUND（2026-09 試過真爆）。
+   呢度確保佢哋永遠唔會再被擋。 */
+const viRaw = exists(".vercelignore") ? read(".vercelignore") : "";
+const ignoredLines = viRaw.split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
+for (const must of ["test/", "scripts/"]) {
+  const hit = ignoredLines.some((l) => l === must || l === must.replace(/\/$/, "") || l.startsWith(must));
+  if (hit) bad(`.vercelignore 擋住咗「${must}」—— Vercel build 要用佢行 npm run build，一擋就 MODULE_NOT_FOUND`);
+  else ok(`.vercelignore 無擋住「${must}」（build 閘門用得到）`);
+}
+
 /* ── 2) .vercelignore 必須存在而且擋住 node_modules ───────────── */
 if (!exists(".vercelignore")) {
   bad("根目錄冇 .vercelignore —— 部署會成個 repo 上傳（死重來源）。要加返。");

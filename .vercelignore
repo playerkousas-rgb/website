@@ -12,8 +12,10 @@
 node_modules
 
 # 開發專用（生產用唔到，唔好上傳）
+# ⚠️ 注意：test/ 同 scripts/ **唔可以**放喺度！Vercel 會行 `npm run build` →
+#    `npm run check` → `node test/*.js` —— ignore 咗佢 Vercel 就搵唔到單測，
+#    部署會 MODULE_NOT_FOUND 爆掉（2026-09 試過，見 OPTIMIZATION.md「教訓」）。
 dev-server.mjs
-test/
 README.md
 OPTIMIZATION.md
 
