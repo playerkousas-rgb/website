@@ -482,6 +482,20 @@
     border-radius: 999px;
   }
   .foot-copy { white-space: nowrap; }
+  /* 後台細入口：© 旁邊嘅「edit」，撳落行去 #admin（未登入要密碼） */
+  .foot-edit {
+    flex: 0 0 auto; padding: 2px 7px;
+    font-size: 10.5px; font-weight: 600; letter-spacing: .02em;
+    color: var(--muted); background: transparent;
+    border: 1px dashed var(--border); border-radius: 6px;
+    cursor: pointer; opacity: .7;
+    transition: opacity .15s, color .15s, border-color .15s, transform .1s;
+  }
+  .foot-edit:hover, .foot-edit:focus-visible {
+    opacity: 1; color: var(--accent-text);
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  .foot-edit:active { transform: scale(.94); }
 
   /* ── QR Modal ── */
   .modal { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -1343,6 +1357,7 @@
       <button class="btn-secondary" id="ig-qr-btn" type="button">🔳 QR</button>
       <span class="foot-meta" id="foot-count">載入中…</span>
       <span class="foot-copy">© 2026 Scout System · App Store Edition</span>
+      <button class="foot-edit" id="foot-edit" type="button" title="進入後台" aria-label="進入後台">edit</button>
     </div>
   </footer>
 </div>
@@ -1666,7 +1681,7 @@ document.getElementById("hero-share").addEventListener("click", () => {
 });
 
 // Instagram 推廣（改帳號／網址只改呢度）
-const IG = { url: "https://www.instagram.com/aiscout_system/", handle: "@aiscout_system" };
+const IG = { url: "https://www.instagram.com/noscout.system/", handle: "@noscout.system" };
 const igModal = document.getElementById("ig-modal");
 (function initIG() {
   const h = document.getElementById("ig-handle-modal"); if (h) h.textContent = IG.handle;
@@ -1679,6 +1694,14 @@ document.getElementById("ig-qr-btn").addEventListener("click", () => { igModal.h
 document.getElementById("ig-x").addEventListener("click", () => { igModal.hidden = true; });
 document.getElementById("ig-close").addEventListener("click", () => { igModal.hidden = true; });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") igModal.hidden = true; });
+
+// 後台入口：最底 © 旁邊嘅細小「edit」掣 → #admin（未登入會先彈密碼頁）
+const footEdit = document.getElementById("foot-edit");
+if (footEdit) footEdit.addEventListener("click", () => {
+  if (isAdminRoute()) return;
+  location.hash = "admin";
+  window.scrollTo({ top: 0 });
+});
 
 // 解除朦朧：搜尋、撳「查看全部」、撳工具區、捲過 hero
 searchEl.addEventListener("focus", revealSections);
