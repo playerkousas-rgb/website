@@ -625,7 +625,7 @@ function itemRowHTML(a) {
     ${a.featured ? '<span class="feat-tag">📣 今期推廣中</span>' : ""}
     ${a.visible === false ? '<span class="lock-tag">🔒 隱藏</span>' : ""}
     ${tags ? `<span class="mini-tag-row">${tags}</span>` : ""}
-    <span class="u" title="${esc(a.note || "")}">${esc(a.url)}${a.note ? " · 📌" : ""}${a.clicks ? ` · 🔥 ${a.clicks} 次` : ""}${a.stars ? ` · ⭐ ${a.stars}` : ""}</span>
+    <span class="u" title="${esc(a.note || "")}">${esc(a.url)}${a.note ? " · 📌" : ""}${a.clicks ? ` · 🔥 ${a.clicks} 次` : ""}${a.stars ? ` · ⭐ ${a.stars}` : ""}${a.hearts ? ` · ❤️ ${a.hearts}` : ""}</span>
     <div class="admin-app-actions">
       <button class="mini-btn${a.featured ? " primary" : ""}" data-act="item-feature" data-id="${a._id}" data-dir="${a.featured ? 0 : 1}" title="${a.featured ? "取消今期推廣" : "設為今期推廣（會喺公開版頂部做大圖推薦）"}">${a.featured ? "✅ 推廣中" : "📣 今期推廣"}</button>
       <button class="mini-btn iconish" data-act="item-move" data-id="${a._id}" data-dir="-1" title="上移">▲</button>
@@ -696,7 +696,7 @@ function manageHTML() {
     <div class="banner" style="background:var(--accent-soft);color:var(--accent-text);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)">
       每頁可獨立「開放 / 關閉」（✓開放先至會喺公開版出現）。關閉咗嘅分頁內容仍然保留，隨時可以開返。<br/>
       分類只屬某一個分頁 —— 改/刪分類、加項目都要先揀啱分頁。項目可揀童軍支部標籤（小／幼／童／深／樂），公開版畀用戶多選篩選。<br/>
-      🔥 點擊數／⭐ 收藏數都係全站累計（公開版每次打開／收藏會更新），公開版可按呢兩項排序。
+      🔥 點擊數／⭐ 收藏數／❤️ 心數都係全站累計（公開版每次打開／收藏／讚好會更新），「排行榜」可按呢三項排名（「探索分類」永遠用下面 ▲▼ 排好嘅預設順序）。
     </div>
     ${ADMIN.sites.pages.map(pageGroupHTML).join("")}
   </div>`;
