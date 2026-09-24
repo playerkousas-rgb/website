@@ -52,8 +52,9 @@ function openApp(app) {
 }
 
 function iconHTML(app) {
-  // 圖示直接放大，唔加底色
-  return `<div class="tile-icon">${appIconHTML(app, "tile")}</div>`;
+  // App Store 式：每粒 icon 用名稱 hash 穩定取色嘅圓角漸變底
+  const [g1, g2] = tileBg(app.name);
+  return `<div class="tile-icon" style="background:linear-gradient(145deg,${g1},${g2})">${appIconHTML(app, "tile")}</div>`;
 }
 
 // ── 公開版面狀態 ─────────────────────────────────────────────
@@ -478,7 +479,7 @@ async function main() {
     renderPages();
     const pages = enabledPages();
     const total = pages.reduce((n, p) => n + p.categories.reduce((m, c) => m + c.apps.filter((a) => a.visible !== false).length, 0), 0);
-    footCount.textContent = `共 ${total} 個項目 · ${pages.length} 個分頁`;
+    footCount.textContent = `${sites.name || "童軍小工具"} · 共 ${total} 個項目 · ${pages.length} 個分頁`;
     render();
   } catch (e) {
     sectionsEl.innerHTML = "";

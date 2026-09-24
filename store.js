@@ -14,9 +14,10 @@
 const SUPABASE_CONFIG = {
   url: "https://visqyeskdauipodudpxz.supabase.co",
   anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpc3F5ZXNrZGF1aXBvZHVkcHh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0MjQ5MjUsImV4cCI6MjEwNDAwMDkyNX0.Ct2jJpJUtRFiVSux774aGRdegFG8fr5mWeD1RMm_dXs",
-  // 你 admin 帳號嘅 email（可以用假嘅，例如 "admin@troop"）。
-  // 填咗之後，管理面板登入頁會預填 email，其他人只需要打密碼。
-  adminEmail: "ai@scoutsystem.com"
+  // 你 admin 帳號嘅 email —— 必須同 Supabase Authentication 嘅管理員用戶、
+  // Vercel 環境變數 ADMIN_EMAIL、同 migrations SQL 入面 is_store_admin() 嘅 email 完全一致，
+  // 否則登入後會話會計為非管理員（後台入唔到／RLS 寫唔到）。
+  adminEmail: "ai@skwscout.org.hk"
 };
 
 const LS_KEY = "showcase-admin-demo";
@@ -66,11 +67,11 @@ function favImgOnErr(img) {
 
 // 渲染 item 嘅圖示 HTML（公開 tile / 後台列表 / 總覽預覽 共用）
 // app.iconSource: "favicon" (預設) | "emoji" | "upload" | "none"
-//   舊資料冇 iconSource 時：icon 為 https URL 視為 "upload"；其他非空字串視為 "emoji"；空字串視為 "favicon"
+//   舊資料冇 iconSource 時：icon 為 https URL 或 data:image/（後台本機上傳）視為 "upload"；其他非空字串視為 "emoji"；空字串視為 "favicon"
 function resolveIconSource(app) {
   if (app.iconSource === "favicon" || app.iconSource === "emoji" ||
       app.iconSource === "upload" || app.iconSource === "none") return app.iconSource;
-  if (app.icon && /^https?:\/\//i.test(app.icon)) return "upload";
+  if (app.icon && (/^https?:\/\//i.test(app.icon) || app.icon.startsWith("data:image/"))) return "upload";
   if (app.icon && app.icon.length) return "emoji";
   return "favicon";
 }
