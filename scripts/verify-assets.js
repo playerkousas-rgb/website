@@ -21,7 +21,7 @@ const DEPLOY = [
   "sw.js",
   "store.js",
   "admin.js",
-  "app.js",
+  "app.js", "market.js", "market.css", "api/admin-login.js",
   "apps.json",
   "api/favicon.js",
   "icons/icon-192.png",
@@ -35,6 +35,7 @@ const DEV_ONLY = [
   "README.md", "OPTIMIZATION.md",
   "dev-server.mjs",
   "scripts/lint.js", "scripts/verify-assets.js",
+  "migrations/20260924-market.sql", "test/market.test.js",
   "test/favicon.test.js", "test/labels.test.js"
 ];
 

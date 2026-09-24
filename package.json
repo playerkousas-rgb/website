@@ -7,7 +7,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node test/favicon.test.js && node test/labels.test.js",
+    "test": "node test/favicon.test.js && node test/labels.test.js && node test/market.test.js",
     "lint": "node scripts/lint.js",
     "check": "npm run lint && npm run test",
     "build": "npm run check && node scripts/verify-assets.js",

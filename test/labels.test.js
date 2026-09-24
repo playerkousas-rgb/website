@@ -156,3 +156,20 @@ assert.ok(!/bits\.push\("🔥/.test(html), "hero 唔再顯示點擊數（新项�
 assert.ok(!html.includes("SPOTLIGHT.showStats"), "showStats 已換成 showStars");
 
 console.log("✅ labels.test.js 全部通過");
+
+// Store charts: aggregate across categories, apply filters and exclude hidden works.
+els.search.value = '';
+run(`SITES = ${JSON.stringify(SITES)}; tagFilter=[]; activeChip='all'; setMarketView('charts');`);
+const chartNames = () => (els.sections.innerHTML.match(/<h3>([^<]*)<\/h3>/g) || []).map(x => x.replace(/<\/?h3>/g,''));
+assert.deepStrictEqual(chartNames(), ['幼童軍專章追蹤','行軍地圖計算','小童軍集會助手']);
+run("setSort('stars');");
+assert.deepStrictEqual(chartNames(), ['行軍地圖計算','幼童軍專章追蹤','小童軍集會助手']);
+run("activeChip='cat-0'; render();");
+assert.equal(chartNames().length,2);
+run("activeChip='all'; SITES.pages[0].categories[1].apps[0].visible=false; render();");
+assert.ok(!chartNames().includes('行軍地圖計算'));
+els.search.value = '幼童軍'; run('render();');
+assert.deepStrictEqual(chartNames(), ['幼童軍專章追蹤']);
+run('setMarketView("discover");');
+assert.deepStrictEqual(names(), ['幼童軍專章追蹤']);
+console.log('✅ charts: counts, cross-category ranking, visibility, search and navigation passed');
