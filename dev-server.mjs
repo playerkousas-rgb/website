@@ -7,6 +7,8 @@ import { existsSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import faviconHandler from "./api/favicon.js";
 
+import loginHandler from "./api/admin-login.js";
+
 const PORT = Number(process.argv[2] || 8080);
 const ROOT = process.cwd();
 const MIME = {
@@ -22,7 +24,7 @@ const MIME = {
 };
 
 const server = http.createServer(async (req, res) => {
-  if (req.method !== "GET" && req.method !== "HEAD") {
+  if (!req.url.startsWith("/api/admin-login") && req.method !== "GET" && req.method !== "HEAD") {
     res.writeHead(405).end();
     return;
   }
@@ -38,7 +40,11 @@ const server = http.createServer(async (req, res) => {
       send(b) { res.writeHead(this.code, this.headers); res.end(req.method === "HEAD" ? undefined : b); }
     };
     try {
-      await faviconHandler({ url: req.url }, mock);
+      if (u.pathname === '/api/admin-login') {
+        let body = '';
+        for await (const chunk of req) { body += chunk; if (body.length > 4096) { res.writeHead(413).end(); return; } }
+        await loginHandler({ method: req.method, headers: req.headers, socket: req.socket, body }, mock);
+      } else await faviconHandler({ url: req.url }, mock);
     } catch (e) {
       console.error("api error:", e);
       if (!res.headersSent) res.writeHead(500, { "content-type": "text/plain" });
@@ -49,7 +55,8 @@ const server = http.createServer(async (req, res) => {
 
   // 靜態檔案
   let p = normalize(join(ROOT, u.pathname === "/" ? "/index.html" : u.pathname));
-  if (!p.startsWith(ROOT)) { res.writeHead(403).end(); return; }
+  if (u.pathname.split("/").some(x => x.startsWith(".")) || u.pathname.startsWith("/migrations/")) { res.writeHead(403).end(); return; }
+  if (!p.startsWith(ROOT + "/")) { res.writeHead(403).end(); return; }
   if (!existsSync(p) || !extname(p)) { res.writeHead(404, { "content-type": "text/plain" }).end("not found"); return; }
   try {
     const b = await readFile(p);

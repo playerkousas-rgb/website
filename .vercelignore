@@ -48,3 +48,6 @@ Thumbs.db
 
 # Vercel 本地快取
 .vercel/
+
+# Database migrations are applied manually, never served publicly
+migrations/

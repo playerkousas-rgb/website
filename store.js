@@ -179,7 +179,7 @@ function emojiRecentPush(e) {
 
 function getSB() {
   if (SUPABASE_CONFIG.url && typeof window.supabase !== "undefined") {
-    if (!_sb) _sb = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+    if (!_sb) _sb = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, { auth: { storage: sessionStorage } });
   }
   return _sb;
 }

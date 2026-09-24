@@ -1226,6 +1226,7 @@
     .hero.collapsed .hero-share, .hero.collapsed .hero-collapse { width: 30px; height: 30px; font-size: 13px; }
   }
 </style>
+<link rel="stylesheet" href="market.css" />
 </head>
 <body>
 <div class="wrap">
@@ -1254,6 +1255,15 @@
     </header>
   </div>
 
+  <section class="market-intro">
+    <div><span class="market-eyebrow">SCOUT APP STORE</span><h2>好工具，讓童軍生活更精彩。</h2><p>探索實用作品、發掘人氣應用，也分享你的創意。</p></div>
+    <button type="button" class="market-submit" onclick="submissionOpen()">＋ 提交我的作品</button>
+  </section>
+  <nav class="market-nav" aria-label="商店導覽">
+    <button class="on" data-market="discover" onclick="setMarketView('discover')">探索分類</button>
+    <button data-market="charts" onclick="setMarketView('charts')">排行榜</button>
+    <span>由社群創作 · 管理員審核上架</span>
+  </nav>
   <nav class="page-nav" id="page-nav" aria-label="分頁" hidden></nav>
   <div class="tag-row" id="tag-row" hidden></div>
   <div class="tag-row sort-row" id="sort-row" hidden></div>
@@ -1364,6 +1374,24 @@
 <script src="store.js"></script>
 <script src="admin.js"></script>
 <script src="app.js"></script>
+<dialog id="submit-dialog" class="submit-dialog" aria-labelledby="submit-title">
+  <button type="button" class="dialog-close" onclick="document.getElementById('submit-dialog').close()" aria-label="關閉投稿">×</button>
+  <span class="market-eyebrow">MADE BY YOU</span><h2 id="submit-title">分享你的作品</h2>
+  <p>填上作品連結及標籤。提交後由管理員審核，批准後才會公開上架。</p>
+  <form id="submit-form">
+    <label>作品名稱<input name="name" maxlength="80" required placeholder="例如：露營裝備清單" /></label>
+    <label>作品連結<input name="url" type="url" maxlength="2048" required placeholder="https://…" /></label>
+    <label>作者名稱<input name="author" maxlength="80" required placeholder="你的名字或團隊名稱" /></label>
+    <div class="form-columns"><label>作品類型<select name="page" required></select></label><label>分類<select name="category" required></select></label></div>
+    <label>作品簡介<textarea name="description" maxlength="1000" required rows="3" placeholder="作品有甚麼用途？適合誰使用？"></textarea></label>
+    <label>自訂標籤<input name="tags" maxlength="180" placeholder="例如：童軍、露營、實用工具" /></label>
+    <small>用逗號分隔，最多 8 個，每個最多 20 字。可加入支部全名以供篩選。</small>
+    <label class="consent"><input type="checkbox" required />我確認有權分享此作品，並同意上述作品資料在批核後公開。</label>
+    <button type="submit" class="market-submit">提交審核 →</button>
+    <p id="submit-result" role="status" aria-live="polite"></p>
+  </form>
+</dialog>
+<script src="market.js"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════
    啟動 boot：主題／安裝 PWA／返回頂部／金手指／路由
@@ -1506,6 +1534,7 @@ function jumpTo(id) { revealSections(); if (typeof publicJumpTo === "function") 
 
 function setSectionsBlur(on) {
   if (!sectionsEl) return;
+  on = false; // 商店內容毋須先互動才可瀏覽
   sectionsEl.classList.toggle("sections-blur", !!on);
   sectionsEl.classList.toggle("active", !on);
   _sectionsBlurred = !!on;

@@ -12,7 +12,7 @@
    ════════════════════════════════════════════════════════════════ */
 
 function isAdminRoute() {
-  return location.hash === "#admin";
+  return location.hash.toLowerCase() === "#admin";
 }
 const val = (id) => {
   const el = document.getElementById(id);
@@ -31,10 +31,12 @@ const ADMIN = {
     document.getElementById("admin-panel").hidden = false;
     const sb = getSB();
     if (sb) {
-      const { data } = await sb.auth.getSession();
-      this.authed = !!data?.session;
+      try {
+        const { data } = await sb.auth.getSession();
+        this.authed = data?.session?.user?.email === SUPABASE_CONFIG.adminEmail;
+      } catch { this.authed = false; }
     } else {
-      this.authed = true;
+      this.authed = false;
     }
     if (!this._listener) {
       this._listener = true;
@@ -70,13 +72,25 @@ const ADMIN = {
   setTab(t) { this.tab = t; renderAdmin(); },
 
   async login() {
-    const sb = getSB();
-    const email = SUPABASE_CONFIG.adminEmail || val("l-email");
-    if (!email) { document.getElementById("l-err").textContent = "請填 email"; return; }
-    const { error } = await sb.auth.signInWithPassword({ email, password: val("l-pass") });
-    if (error) { document.getElementById("l-err").textContent = error.message; return; }
-    this.authed = true;
-    await this.refresh();
+    if (this.loggingIn) return;
+    this.loggingIn = true;
+    try {
+      const sb = getSB();
+      if (!sb) throw new Error("登入服務未能載入，請連線後重試。");
+      const response = await fetch('/api/admin-login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: val("l-pass") })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "登入失敗");
+      const { error } = await sb.auth.setSession(data);
+      if (error) throw error;
+      this.authed = true;
+      await this.refresh();
+    } catch (error) {
+      const el = document.getElementById("l-err");
+      if (el) el.textContent = error.message;
+    } finally { this.loggingIn = false; }
   },
   async logout() {
     await getSB().auth.signOut();
@@ -84,13 +98,7 @@ const ADMIN = {
     renderAdmin();
   },
   async changePassword() {
-    const p1 = prompt("新密碼（至少 8 個字符）：");
-    if (!p1) return;
-    if (p1.length < 8) { alert("密碼要至少 8 個字符"); return; }
-    const p2 = prompt("請再輸入一次新密碼：");
-    if (p1 !== p2) { alert("兩次輸入唔同"); return; }
-    try { await adminChangePassword(p1); alert("改咗密碼 ✅"); }
-    catch (e) { alert("改密碼失敗：" + e.message + "\n（可以去 Supabase Dashboard → Authentication → Users 改）"); }
+    alert("後台登入密碼由伺服器管理。請在 Vercel 環境變數修改 ADMIN_PIN 並重新部署；請勿在此修改 Supabase 帳戶密碼。");
   },
 
   // ── 資料輔助 ─────────────────────────────
@@ -126,6 +134,8 @@ const ADMIN = {
       const el = document.getElementById("tag-" + t);
       return el && el.checked;
     });
+    tags.push(...val("f-custom-tags").split(/[,，、]/).map(t => t.trim()).filter(t => t && !tags.includes(t)));
+    if (tags.length > 8 || tags.some(t => t.length > 20)) { alert("最多 8 個標籤，每個最多 20 字"); return; }
     const visEl = document.getElementById("f-visible");
     // 圖示來源：radio 值優先；冇 radio 嘅就睇舊 icon 內容猜
     const srcRadio = document.querySelector('input[name="f-iconSource"]:checked');
@@ -295,6 +305,7 @@ const ADMIN = {
 
   // ── 委派動作 ─────────────────────────────
   onAction(e) {
+    if (!this.authed) return;
     const t = e.target.closest("[data-act]");
     if (!t) return;
     const act = t.dataset.act;
@@ -481,6 +492,8 @@ function formHTML() {
     <input id="f-cat-new" placeholder="新分類名稱（喺揀定嘅分頁開新分類）" style="display:${f.category === "__new__" ? "" : "none"};margin-top:8px;min-height:44px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--bg);color:var(--text);width:100%" value="${esc(edit && !catInList ? f.category : "")}" />
     <div class="admin-lbl">適用支部（呢個內容係邊個支部用？可剔幾個）</div>
     ${tagCheckHTML(f.tags)}
+    <label class="admin-lbl" for="f-custom-tags">自訂標籤（逗號分隔）</label>
+    <input id="f-custom-tags" value="${esc((f.tags || []).filter(t => !SCOUT_TAGS.includes(t)).join('、'))}" placeholder="露營、實用工具" />
     <div class="admin-hint">💡 公開版一個字就夠：<b>小／幼／童／深／樂</b>（領隊一眼就識），用家可以<b>同時揀幾個支部</b>。
       冇「領袖」呢個選項係刻意嘅 —— 呢度所有工具本身就係畀領隊用，所以「小童軍集會助手」剔<b>小童軍</b>就得；
       剔埋「領袖」只會搞亂篩選（樂行領隊篩「領袖」竟然見到小童軍嘢）。想有領隊專用區，直接把分類改名做「領袖用」。</div>
@@ -689,7 +702,7 @@ function renderAdmin() {
   const el = document.getElementById("admin-content");
   const sb = getSB();
 
-  if (sb && !ADMIN.authed) {
+  if (!ADMIN.authed) {
     el.innerHTML = loginHTML();
     const pass = document.getElementById("l-pass");
     if (pass) { pass.focus(); pass.addEventListener("keydown", (e) => { if (e.key === "Enter") ADMIN.login(); }); }
@@ -712,6 +725,7 @@ function renderAdmin() {
     ${sb
       ? '<div class="banner ok">已連接 Supabase — 改動即時生效，所有人都見到</div>'
       : '<div class="banner warn">⚠️ Demo 模式：改動只存喺呢部裝置。配置方法見 README.md</div>'}
+    <div id="review-panel"></div>
     <div class="tab-bar">
       <button type="button" class="tab-btn ${ADMIN.tab === "manage" ? "on" : ""}" onclick="ADMIN.setTab('manage')">🛠 管理</button>
       <button type="button" class="tab-btn ${ADMIN.tab === "all" ? "on" : ""}" onclick="ADMIN.setTab('all')">👀 總覽</button>
@@ -727,6 +741,8 @@ function renderAdmin() {
       ${sb && ADMIN.authed ? '<button type="button" class="mini-btn danger" onclick="ADMIN.logout()">登出</button>' : ""}
     </div>
   </div>`;
+
+  if (typeof loadReviews === "function") loadReviews();
 
   // 新增/編輯項目：分頁 → 分類 連動
   const pageSel = document.getElementById("f-page");

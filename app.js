@@ -71,6 +71,25 @@ let REG = [];
 let SITES = null;
 let ACTIVE_PAGE = null;
 let activeChip = "all";
+let marketView = "discover";
+function setMarketView(view) {
+  marketView = view;
+  if (view === 'charts' && sortMode === 'default') sortMode = 'clicks';
+  document.querySelectorAll('[data-market]').forEach(b => {
+    b.classList.toggle('on', b.dataset.market === view);
+    b.setAttribute('aria-pressed', String(b.dataset.market === view));
+  });
+  render();
+}
+function chartHTML(apps) {
+  const metric = sortMode === 'stars' ? 'stars' : 'clicks';
+  const ranked = [...apps].sort((a,b) => (b[metric] || 0) - (a[metric] || 0) || a.name.localeCompare(b.name, 'zh-HK')).slice(0, 50);
+  if (!ranked.length) return '';
+  return `<section class="chart-section"><div class="sec-head"><h2>${metric === 'stars' ? '收藏榜' : '人氣榜'}</h2><span class="num">TOP ${ranked.length}</span></div><p class="chart-note">目前分頁及篩選內的累計${metric === 'stars' ? '收藏' : '開啟'}次數排名 · 同分按名稱排序</p><div class="chart-list">${ranked.map((a,i) => {
+    const idx = REG.push(a)-1;
+    return `<a class="chart-item tile" href="${esc(a.url)}" data-idx="${idx}" data-id="${esc(a._id)}"><span class="chart-rank">${String(i+1).padStart(2,'0')}</span>${iconHTML(a)}<div class="chart-copy"><h3>${esc(a.name)}</h3><p>${esc(a.description || '')}</p><div class="tile-tags">${(a.tags || []).map(t=>`<span>${esc(t)}</span>`).join('')}</div></div><div class="chart-score"><b>${Number(a[metric] || 0).toLocaleString()}</b><small>${metric === 'stars' ? '收藏' : '次開啟'}</small></div><span class="chart-open">開啟 ↗</span></a>`;
+  }).join('')}</div></section>`;
+}
 // 適用支部篩選：可以**同時揀幾個**（OR —— 揀「小＋幼」= 兩個支部嘅嘢都俾我睇）
 // 儲存仍係全名（小童軍／幼童軍…），公開版顯示做一個字
 let tagFilter = [];
@@ -307,7 +326,7 @@ function renderSortRow() {
   sortRowEl.hidden = false;
   sortRowEl.innerHTML =
     `<span class="tag-row-hint">↕<span class="wide-only"> 排序</span>：</span>` +
-    SORTS.map((s) => {
+    SORTS.filter(s => marketView !== "charts" || s.id !== "default").map((s) => {
       const on = sortMode === s.id;
       return `<button type="button" class="tag-chip sort-chip ${on ? "on" : ""}" ` +
         `onclick="setSort('${s.id}')" title="${esc(s.label)} — ${esc(s.hint)}" ` +
@@ -372,6 +391,12 @@ function render() {
     html += catIdx.map(({ c, i }) => sectionHTML(c.name, c.icon, shownOf(c), "cat-" + i)).join("");
   }
 
+  if (marketView === 'charts') {
+    let chartApps = catIdx.flatMap(({c,i}) => activeChip === 'all' || activeChip === 'fav' || activeChip === 'cat-' + i ? c.apps.filter(visible).filter(match) : []);
+    if (activeChip === 'fav') chartApps = chartApps.filter(a => favIds.has(a._id));
+    REG.length = 0;
+    html = chartHTML(chartApps);
+  }
   sectionsEl.innerHTML = html;
   if (html) {
     emptyEl.style.display = "none";

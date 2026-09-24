@@ -5,8 +5,8 @@
 //      v19 = 手機版標籤收細（支部一個字／排序得 emoji／分類短名）＋ 今期主打默認收起
 //      v20 = 「適用級別」改叫「適用支部」＋支部篩選改做可多選（OR）＋分類 chips 識轉行
 //      v21 = 瘦身版：icon PNG 壓縮（612K→172K 視覺不變）＋ Supabase CDN 鎖版本＋SRI
-const CACHE = 'scout-tools-v21';
-const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/icons/icon-192.png', '/icons/icon-512.png'];
+const CACHE = 'scout-tools-v22';
+const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
@@ -28,6 +28,7 @@ self.addEventListener('fetch', (e) => {
   // 唔好俾瀏覽器 HTTP cache 攞住舊 index.html（「舊版殘留」主因之一）
   let pathname = "";
   try { pathname = new URL(e.request.url).pathname; } catch {}
+  if (pathname.startsWith("/api/")) return;
   const isShell = e.request.mode === "navigate" || /\/(index\.html)?\/?$/.test(pathname);
   e.respondWith(
     // 核心 JS 行 network-first：有新部署即刻攞新版本（舊版行 cache-first，

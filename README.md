@@ -327,3 +327,33 @@ const SUPABASE_CONFIG = {
 - 密碼**唔喺**靜態代碼入面，喺 Supabase 用戶資料庫，同部署無關。
 - 共用帳號：所有人都用同一個（`ai@scoutsystem.com`），登入頁自動預填，只打密碼。
 - 收回權限 = 改密碼（舊 session 約 1 小時內自動到期）。
+
+## 2026-09 商店升級：分類、排行榜、社群投稿
+
+- 公開版新增「探索分類／排行榜」，人氣榜按累計開啟次數、收藏榜按累計收藏數排序；套用目前分頁、分類、搜尋、支部篩選，同分按作品名稱排序，最多 50 個。不是每週榜或防作弊的獨立訪客統計。
+- 「提交我的作品」接受名稱、HTTP(S) 連結、作者、簡介、分類及最多 8 個自訂標籤。不會自動上架，也不會假裝只存本機就是投稿成功。
+- 後台新增待審核、已上架、已拒絕清單。批准時由資料庫交易一次過建立作品及更新審核狀態，避免重複批准。拒絕的作品不進公開商店。
+- `/#admin` 及 `/#ADMIN` 都會進入登入頁。CDN 載入失敗或未設定服務時不會再自動取得管理權限。
+
+### 必須完成的一次性部署設定
+
+**只有修改程式碼並不會自動修改遠端 Supabase 或 Vercel 設定。未完成下列步驟時，登入／投稿會清楚顯示尚未設定，不會繞過權限。**
+
+1. 先備份資料庫；在 Supabase SQL Editor 執行 `migrations/20260924-market.sql`（依賴本文原有 pages/categories/apps 基礎結構）。此升級保留作品，但會替換這三張表原有 RLS policies；若有其他服務共用，先審閱其權限需求。不要在升級後重新執行上方舊版寬鬆 policies。
+2. Supabase Authentication 保留一個已確認的管理員帳戶 `ai@scoutsystem.com`，為它設定**高強度的 Supabase 密碼**。建議關閉公開註冊。SQL 的管理員 email、`store.js` 的 adminEmail 和下列 ADMIN_EMAIL 必須相同。一般已登入使用者不會有管理權。
+3. 在 Vercel 專案設定新增下列環境變數（Preview / Production 分開設定），然後重新部署：
+
+   | 變數 | 值 |
+   | --- | --- |
+   | `ADMIN_PIN` | 使用者要求的 `0728`；保留開頭 0 |
+   | `SUPABASE_URL` | 與 store.js 相同的 Supabase 專案 URL |
+   | `SUPABASE_ANON_KEY` | 與 store.js 相同的公開 anon key |
+   | `ADMIN_EMAIL` | `ai@scoutsystem.com` |
+   | `ADMIN_AUTH_PASSWORD` | 第 2 步的真實強密碼，只放伺服器環境變數，切勿提交到 Git |
+
+   不需要 service-role key。伺服器驗證 PIN 後才向 Supabase 換取管理員 session；前端只保存 sessionStorage（分頁工作階段），不是保存 PIN 或底層帳戶密碼。變更 PIN 用 ADMIN_PIN，而不是舊的 Supabase 改密碼功能。已有 session 不會因改 PIN 自動撤銷，必要時在 Supabase 撤銷登入工作階段。
+
+4. **四位 PIN 保護有限。** API 有單一執行個體每 IP 15 分鐘 5 次的基本限制，但 serverless 冷啟動／多執行個體可重設；正式對外前請在 Vercel Firewall 對 `/api/admin-login` 加跨執行個體 rate-limit，最好改用更長密碼。匿名投稿亦建議啟用 Supabase 端流量監控及 CAPTCHA／閘道限制，現版本只防重複連結及驗證內容長度，不是完整反垃圾系統。
+5. 驗收：無痕視窗錯誤 PIN 應拒絕、正確 PIN 可登入；另一裝置提交作品後公開頁不應見到；後台批准後公開頁重新整理可見；拒絕後仍不可见；匿名直接寫入 apps、非管理員 review_work 應被拒絕。
+
+本機以環境變數啟動 `npm run preview`，同樣走 `/api/admin-login`。`npm run build` 包含登入 API 模擬測試和 JS 語法檢查；真實 RLS／跨裝置審核須在 SQL 升級及遠端設定完成後驗收。
