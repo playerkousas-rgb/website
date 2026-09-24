@@ -144,10 +144,10 @@ hero 右上角仲有一粒 **🔗 分享掣**：用 Web Share API 分享該項�
 |---|---|---|
 | 🌐 **App 自帶 Logo**（預設） | GitHub repo 欄（或 URL 本身係 github.com）有填 → 用 repo 主人嘅 GitHub 頭像（64px）；否則自動攞該網站 favicon，順序：① 我哋 `/api/favicon`（同 Chrome 分頁標籤一樣自己讀該站 HTML）→ ② Google s2 備援 → ③ 全站 Logo | 對外連結到自己嘅 Vercel/網站，最方便 |
 | 😀 **Emoji** | 由你揀一個字符 | 自家內部工具、快速標記 |
-| 🖼 **圖片網址** | 貼一張 https 圖片連結 | 想用特定 PNG / 設計過嘅 logo |
+| 🖼 **上傳圖片／圖片網址** | 後台直接由本機上傳圖片（自動縮到 192px 內、壓做 data URL），或者貼一張 https 圖片連結 | 想用特定 PNG / 設計過嘅 logo |
 | 🚫 **不用** | 直接用我哋全站 Logo | 想統一一個 brand |
 
-> 舊資料冇 `icon_source` 欄位會自動推測：icon 係 https URL 視為「圖片網址」；
+> 舊資料冇 `icon_source` 欄位會自動推測：icon 係 https URL 或 `data:image/…`（後台上傳）視為「上傳圖片」；
 > 其他非空字串視為「Emoji」；空字串視為「App 自帶 Logo」—— 行為兼容唔使人手改。
 
 ### 🌐 自動 favicon 係點做嘅（Chrome 嗰個原理）
@@ -302,7 +302,7 @@ $$;
 
 ### 建 admin 帳號（如果未建）
 
-Dashboard → Authentication → Users → Add user → 填假 email（例 `ai@scoutsystem.com`）、
+Dashboard → Authentication → Users → Add user → 填假 email（例 `ai@skwscout.org.hk`）、
 勾 **Auto-confirm user**、設密碼。呢個密碼就係管理面板登入密碼。
 
 ### 填配置
@@ -313,7 +313,7 @@ Dashboard → Authentication → Users → Add user → 填假 email（例 `ai@s
 const SUPABASE_CONFIG = {
   url: "https://xxxx.supabase.co",
   anonKey: "eyJhbGci...",
-  adminEmail: "ai@scoutsystem.com"
+  adminEmail: "ai@skwscout.org.hk"
 };
 ```
 
@@ -325,7 +325,7 @@ const SUPABASE_CONFIG = {
 ## Admin 帳號同密碼備忘
 
 - 密碼**唔喺**靜態代碼入面，喺 Supabase 用戶資料庫，同部署無關。
-- 共用帳號：所有人都用同一個（`ai@scoutsystem.com`），登入頁自動預填，只打密碼。
+- 共用帳號：所有人都用同一個（`ai@skwscout.org.hk`），登入頁自動預填，只打密碼。
 - 收回權限 = 改密碼（舊 session 約 1 小時內自動到期）。
 
 ## 2026-09 商店升級：分類、排行榜、社群投稿
@@ -340,7 +340,7 @@ const SUPABASE_CONFIG = {
 **只有修改程式碼並不會自動修改遠端 Supabase 或 Vercel 設定。未完成下列步驟時，登入／投稿會清楚顯示尚未設定，不會繞過權限。**
 
 1. 先備份資料庫；在 Supabase SQL Editor 執行 `migrations/20260924-market.sql`（依賴本文原有 pages/categories/apps 基礎結構）。此升級保留作品，但會替換這三張表原有 RLS policies；若有其他服務共用，先審閱其權限需求。不要在升級後重新執行上方舊版寬鬆 policies。
-2. Supabase Authentication 保留一個已確認的管理員帳戶 `ai@scoutsystem.com`，為它設定**高強度的 Supabase 密碼**。建議關閉公開註冊。SQL 的管理員 email、`store.js` 的 adminEmail 和下列 ADMIN_EMAIL 必須相同。一般已登入使用者不會有管理權。
+2. Supabase Authentication 保留一個已確認的管理員帳戶 `ai@skwscout.org.hk`，為它設定**高強度的 Supabase 密碼**。建議關閉公開註冊。SQL 的管理員 email、`store.js` 的 adminEmail 和下列 ADMIN_EMAIL 必須相同。一般已登入使用者不會有管理權。
 3. 在 Vercel 專案設定新增下列環境變數（Preview / Production 分開設定），然後重新部署：
 
    | 變數 | 值 |
@@ -348,7 +348,7 @@ const SUPABASE_CONFIG = {
    | `ADMIN_PIN` | 使用者要求的 `0728`；保留開頭 0 |
    | `SUPABASE_URL` | 與 store.js 相同的 Supabase 專案 URL |
    | `SUPABASE_ANON_KEY` | 與 store.js 相同的公開 anon key |
-   | `ADMIN_EMAIL` | `ai@scoutsystem.com` |
+   | `ADMIN_EMAIL` | `ai@skwscout.org.hk` |
    | `ADMIN_AUTH_PASSWORD` | 第 2 步的真實強密碼，只放伺服器環境變數，切勿提交到 Git |
 
    不需要 service-role key。伺服器驗證 PIN 後才向 Supabase 換取管理員 session；前端只保存 sessionStorage（分頁工作階段），不是保存 PIN 或底層帳戶密碼。變更 PIN 用 ADMIN_PIN，而不是舊的 Supabase 改密碼功能。已有 session 不會因改 PIN 自動撤銷，必要時在 Supabase 撤銷登入工作階段。

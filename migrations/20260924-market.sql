@@ -2,7 +2,7 @@
 begin;
 create or replace function public.is_store_admin() returns boolean
 language sql stable security invoker set search_path = public
-as $$ select coalesce(auth.jwt()->>'email' = 'ai@scoutsystem.com', false) $$;
+as $$ select coalesce(auth.jwt()->>'email' = 'ai@skwscout.org.hk', false) $$;
 
 -- Replace legacy broad authenticated/anonymous write policies.
 do $$ declare t text; p record; begin

@@ -507,9 +507,10 @@ function formHTML() {
         <button class="mini-btn" onclick="pickIntoInput('f-icon')">🎨 揀 emoji</button>
       </div>
       <div class="admin-row" id="f-upload-row" style="${iconSourceOf(f) === "upload" ? "" : "display:none"}">
-        <input id="f-icon-url" placeholder="圖片網址 https://…" value="${esc(f.icon || "")}" style="flex:2" inputmode="url" />
-        <span class="muted" style="font-size:12px">用 https 開頭嘅圖片連結</span>
+        <input id="f-icon-url" placeholder="圖片網址 https://… 或上傳後自動填入" value="${esc(f.icon || "")}" style="flex:2" inputmode="url" />
+        <label class="mini-btn" style="cursor:pointer;margin:0">📤 上傳圖片<input type="file" accept="image/*" hidden onchange="onIconFilePick(this)" /></label>
       </div>
+      <div class="admin-hint" id="f-upload-hint" style="${iconSourceOf(f) === "upload" ? "" : "display:none"}">貼 https 圖片連結，或者撳「📤 上傳圖片」由本機揀一張（自動縮到 192px 內、轉做 data URL，唔使開 storage bucket）。</div>
     </div>
     <div class="admin-row">
       <input id="f-gh" placeholder="GitHub repo（可選）" value="${esc(f.github || "")}" inputmode="url" />
@@ -534,7 +535,7 @@ function formHTML() {
 function iconSourceOf(f) {
   if (f.iconSource === "favicon" || f.iconSource === "emoji" ||
       f.iconSource === "upload" || f.iconSource === "none") return f.iconSource;
-  if (f.icon && /^https?:\/\//i.test(f.icon)) return "upload";
+  if (f.icon && (/^https?:\/\//i.test(f.icon) || /^data:image\//i.test(f.icon))) return "upload";
   if (f.icon && f.icon.length) return "emoji";
   return "favicon";
 }
@@ -550,7 +551,7 @@ function iconSourceHTML(f) {
   return `<div class="icon-src-row">
     ${opt("favicon", "🌐 App 自帶 Logo", "有 GitHub repo 用 repo 頭像，否則用該網站 favicon")}
     ${opt("emoji", "😀 Emoji", "由你揀一個字符")}
-    ${opt("upload", "🖼 圖片網址", "貼一張 https 圖片 URL")}
+    ${opt("upload", "🖼 上傳圖片／網址", "本機上傳一張圖，或者貼 https 圖片 URL")}
     ${opt("none", "🚫 不用", "直接用我哋全站 Logo")}
   </div>`;
 }
@@ -563,8 +564,55 @@ function onIconSourceChange(v) {
   });
   const er = document.getElementById("f-emoji-row");
   const ur = document.getElementById("f-upload-row");
+  const uh = document.getElementById("f-upload-hint");
   if (er) er.style.display = v === "emoji" ? "" : "none";
   if (ur) ur.style.display = v === "upload" ? "" : "none";
+  if (uh) uh.style.display = v === "upload" ? "" : "none";
+}
+
+/* 後台上傳 ICON：本機圖片 → canvas 縮到 ≤192px → data URL 填入 #f-icon-url。
+   唔使 Supabase storage bucket；store.js resolveIconSource 已識 data:image/ 做 "upload"。
+   動態 GIF 會變第一格靜態圖（圖示位細，可接受）。 */
+function onIconFilePick(input) {
+  const file = input.files && input.files[0];
+  input.value = ""; // 同一隻檔重揀都會照觸發 change
+  if (!file) return;
+  if (!/^image\//.test(file.type)) { alert("請揀圖片檔（PNG／JPG／WebP…）"); return; }
+  if (file.size > 5 * 1024 * 1024) { alert("圖片太大（超過 5MB），請先縮細再上傳"); return; }
+  const fr = new FileReader();
+  fr.onerror = () => alert("讀唔到呢個檔案，再試一次");
+  fr.onload = () => {
+    const img = new Image();
+    img.onerror = () => alert("讀唔到圖片內容，試下換一張 PNG／JPG");
+    img.onload = () => {
+      const MAX = 192;
+      const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.max(1, Math.round(img.naturalWidth * scale));
+      const h = Math.max(1, Math.round(img.naturalHeight * scale));
+      const cv = document.createElement("canvas");
+      cv.width = w; cv.height = h;
+      const ctx = cv.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+      let dataUrl = "";
+      try { dataUrl = cv.toDataURL("image/webp", 0.85); } catch {}
+      if (!dataUrl || !dataUrl.startsWith("data:image/webp")) {
+        dataUrl = cv.toDataURL("image/png"); // 舊 browser 唔支援 webp 編碼 → PNG 備援
+      }
+      if (dataUrl.length > 200 * 1024) {
+        alert("縮完都仲太大（>200KB base64），換張細啲／簡單啲嘅圖再試");
+        return;
+      }
+      const el = document.getElementById("f-icon-url");
+      if (el) el.value = dataUrl;
+      // 同步 radio 去「上傳圖片／網址」並顯示個輸入框
+      const radio = document.querySelector('input[name="f-iconSource"][value="upload"]');
+      if (radio) { radio.checked = true; onIconSourceChange("upload"); }
+      const hint = document.getElementById("f-upload-hint");
+      if (hint) hint.textContent = `已上傳：${file.name}（縮到 ${w}×${h}，${Math.round(dataUrl.length / 1024)}KB）。記得撳「儲存」先生效。`;
+    };
+    img.src = fr.result;
+  };
+  fr.readAsDataURL(file);
 }
 function itemRowHTML(a) {
   // 同公開版一樣：一個字代表一個支部（tooltip 留全名）

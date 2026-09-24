@@ -188,6 +188,18 @@
     .install-btn { padding: 10px 12px; }
   }
 
+  /* 「＋ 提交我的作品」釘喺右上角 head-actions（同安裝並排）；
+     market-submit 原身係大細（market.css .market-submit 0,1,0），
+     呢度用兩層選擇器蓋細做 pill，跟返 header 尺寸。 */
+  .head-actions .market-submit {
+    padding: 10px 14px; font-size: 13px; border-radius: 999px;
+    box-shadow: 0 5px 14px rgba(37, 99, 235, .22);
+  }
+  .head-actions .market-submit:active { transform: scale(.96); }
+  @media (max-width: 420px) {
+    .head-actions .market-submit { padding: 9px 10px; font-size: 12px; }
+  }
+
   /* Search */
   .search-wrap { position: relative; margin-top: 12px; padding-bottom: 4px; }
   .search {
@@ -439,43 +451,37 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-  /* ── 底部統一卡（IG 推廣＋安裝提示＋站內資訊，收埋做同一張卡）── */
+  /* ── 底部統一卡（安裝提示＋最底一條線：IG／統計／版權一齊）── */
   .foot-card {
-    margin-top: 30px; padding: 16px;
-    border-radius: 20px;
+    margin-top: 22px; padding: 12px 14px;
+    border-radius: 18px;
     background: var(--bg-card);
     border: 1px solid var(--border);
     box-shadow: var(--shadow-sm);
   }
-  .foot-card .ig-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 13px 14px; border-radius: 14px;
-    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%);
-    border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
-  }
-  .ig-emoji { font-size: 26px; flex-shrink: 0; }
-  .ig-body { flex: 1; min-width: 0; }
-  .ig-title { font-weight: 800; font-size: 14.5px; }
-  .ig-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .ig-actions { display: flex; gap: 8px; flex-shrink: 0; }
-  .ig-actions .btn-primary, .ig-actions .btn-secondary { flex: 0 0 auto; padding: 9px 13px; font-size: 12.5px; }
   .foot-card .tip {
-    font-size: 13px; color: var(--muted); line-height: 1.65;
-    margin: 14px 4px 0;
+    font-size: 12.5px; color: var(--muted); line-height: 1.6;
+    margin: 0 2px;
   }
   .foot-card .tip b { color: var(--text); }
-  .foot-bottom {
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    flex-wrap: wrap;
-    margin-top: 14px; padding-top: 13px;
+  /* 最底一條線：IG 推廣＋站點統計＋版權收做一行（闊度唔夠先自然轉行） */
+  .foot-line {
+    display: flex; align-items: center; justify-content: center;
+    flex-wrap: wrap; gap: 4px 10px;
+    margin-top: 10px; padding-top: 9px;
     border-top: 1px solid var(--border);
-    font-size: 12.5px; color: var(--muted);
+    font-size: 11.5px; color: var(--muted);
+  }
+  .foot-line .ig-emoji { font-size: 13px; line-height: 1; }
+  .foot-line .ig-title { font-weight: 750; color: var(--text); }
+  .foot-line .ig-sub { color: var(--muted); }
+  .foot-line .btn-primary,
+  .foot-line .btn-secondary {
+    flex: 0 0 auto; padding: 4px 10px;
+    font-size: 11px; font-weight: 700;
+    border-radius: 999px;
   }
   .foot-copy { white-space: nowrap; }
-  @media (max-width: 430px) {
-    .foot-card .ig-row { flex-wrap: wrap; row-gap: 10px; }
-    .foot-card .ig-actions { width: 100%; justify-content: flex-end; }
-  }
 
   /* ── QR Modal ── */
   .modal { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -714,15 +720,16 @@
     100% { background-position: -200% 0; }
   }
 
-  /* Footer（統一底卡，見 .foot-card） */
+  /* Footer（統一底卡＋最底一行，見 .foot-card / .foot-line） */
   footer a { color: var(--accent-text); font-weight: 600; }
   .foot-meta {
     display: inline-flex; align-items: center; gap: 6px;
     background: var(--accent-soft);
     border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
     color: var(--accent-text);
-    border-radius: 999px; padding: 5px 12px;
-    font-size: 12.5px; font-weight: 700;
+    border-radius: 999px; padding: 3px 10px;
+    font-size: 11px; font-weight: 700;
+    white-space: nowrap;
   }
 
   /* Back to top */
@@ -1241,6 +1248,7 @@
           <div class="head-sub">童軍工具 · 應用商店</div>
         </div>
         <div class="head-actions">
+          <button type="button" class="market-submit head-submit" onclick="submissionOpen()">＋ 提交我的作品</button>
           <button class="install-btn" id="install-btn" type="button" aria-label="安裝 App">
             ⬇️ <span class="install-label">安裝</span>
           </button>
@@ -1257,7 +1265,6 @@
 
   <section class="market-intro">
     <div><span class="market-eyebrow">SCOUT APP STORE</span><h2>好工具，讓童軍生活更精彩。</h2><p>探索實用作品、發掘人氣應用，也分享你的創意。</p></div>
-    <button type="button" class="market-submit" onclick="submissionOpen()">＋ 提交我的作品</button>
   </section>
   <nav class="market-nav" aria-label="商店導覽">
     <button class="on" data-market="discover" onclick="setMarketView('discover')">探索分類</button>
@@ -1324,22 +1331,16 @@
     <p>試下改關鍵字，或者撳「全部」／轉第二個分頁睇下</p>
   </div>
 
-  <!-- 底部統一卡：Instagram 推廣＋安裝提示＋站內資訊
-       （以前 4 樣分開置底、樣式各異，而家收埋做同一張卡） -->
+  <!-- 底部統一卡：安裝提示＋最底一行式資訊
+       （IG 推廣、站點統計、版權全部收做 foot-line 一條，唔再各自一整行食位） -->
   <footer class="foot-card" aria-label="底部資訊">
-    <section class="ig-row" aria-label="Instagram">
-      <div class="ig-emoji">📸</div>
-      <div class="ig-body">
-        <div class="ig-title">追蹤我哋嘅 Instagram</div>
-        <div class="ig-sub" id="ig-handle">童軍工具 · 教學 · 活動花絮</div>
-      </div>
-      <div class="ig-actions">
-        <button class="btn-primary" id="ig-follow" type="button">追蹤</button>
-        <button class="btn-secondary" id="ig-qr-btn" type="button">🔳 QR</button>
-      </div>
-    </section>
     <p class="tip">💡 <b>提示：</b>喺瀏覽器選單選「加入主畫面 / 安裝 App」（Android 可撳右上角「安裝」），呢個「童軍小工具」就會變成電話桌面嘅一個 App。所有童軍工具、圖卡、簡報同連結都由呢度入。</p>
-    <div class="foot-bottom">
+    <div class="foot-line">
+      <span class="ig-emoji" aria-hidden="true">📸</span>
+      <span class="ig-title">追蹤我哋嘅 Instagram</span>
+      <span class="ig-sub" id="ig-handle">童軍工具 · 教學 · 活動花絮</span>
+      <button class="btn-primary" id="ig-follow" type="button">追蹤</button>
+      <button class="btn-secondary" id="ig-qr-btn" type="button">🔳 QR</button>
       <span class="foot-meta" id="foot-count">載入中…</span>
       <span class="foot-copy">© 2026 Scout System · App Store Edition</span>
     </div>

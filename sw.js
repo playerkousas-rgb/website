@@ -5,7 +5,8 @@
 //      v19 = 手機版標籤收細（支部一個字／排序得 emoji／分類短名）＋ 今期主打默認收起
 //      v20 = 「適用級別」改叫「適用支部」＋支部篩選改做可多選（OR）＋分類 chips 識轉行
 //      v21 = 瘦身版：icon PNG 壓縮（612K→172K 視覺不變）＋ Supabase CDN 鎖版本＋SRI
-const CACHE = 'scout-tools-v22';
+//      v23 = App Store 式 tile 漸變底＋提交按鈕移右上角＋footer 收做一行＋後台可本機上傳 ICON
+const CACHE = 'scout-tools-v23';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
