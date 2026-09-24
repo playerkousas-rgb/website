@@ -82,13 +82,18 @@ function setMarketView(view) {
   });
   render();
 }
+// 分數要夠 100 先喺排行榜顯示 —— 太細嘅數字（例如 3 次開啟）擺上嚟唔好睇，
+// 排名照舊顯示，只收埋右邊個分數格
+const CHART_SCORE_MIN = 100;
 function chartHTML(apps) {
   const metric = sortMode === 'stars' ? 'stars' : 'clicks';
   const ranked = [...apps].sort((a,b) => (b[metric] || 0) - (a[metric] || 0) || a.name.localeCompare(b.name, 'zh-HK')).slice(0, 50);
   if (!ranked.length) return '';
-  return `<section class="chart-section"><div class="sec-head"><h2>${metric === 'stars' ? '收藏榜' : '人氣榜'}</h2><span class="num">TOP ${ranked.length}</span></div><p class="chart-note">目前分頁及篩選內的累計${metric === 'stars' ? '收藏' : '開啟'}次數排名 · 同分按名稱排序</p><div class="chart-list">${ranked.map((a,i) => {
+  return `<section class="chart-section"><div class="sec-head"><h2>${metric === 'stars' ? '收藏榜' : '人氣榜'}</h2><span class="num">TOP ${ranked.length}</span></div><p class="chart-note">目前分頁及篩選內的累計${metric === 'stars' ? '收藏' : '開啟'}次數排名 · 同分按名稱排序 · 滿 ${CHART_SCORE_MIN} 先顯示次數</p><div class="chart-list">${ranked.map((a,i) => {
     const idx = REG.push(a)-1;
-    return `<a class="chart-item tile" href="${esc(a.url)}" data-idx="${idx}" data-id="${esc(a._id)}"><span class="chart-rank">${String(i+1).padStart(2,'0')}</span>${iconHTML(a)}<div class="chart-copy"><h3>${esc(a.name)}</h3><p>${esc(a.description || '')}</p><div class="tile-tags">${(a.tags || []).map(t=>`<span>${esc(t)}</span>`).join('')}</div></div><div class="chart-score"><b>${Number(a[metric] || 0).toLocaleString()}</b><small>${metric === 'stars' ? '收藏' : '次開啟'}</small></div><span class="chart-open">開啟 ↗</span></a>`;
+    const score = Number(a[metric] || 0);
+    const scoreHTML = score >= CHART_SCORE_MIN ? `<div class="chart-score"><b>${score.toLocaleString()}</b><small>${metric === 'stars' ? '收藏' : '次開啟'}</small></div>` : '';
+    return `<a class="chart-item tile" href="${esc(a.url)}" data-idx="${idx}" data-id="${esc(a._id)}"><span class="chart-rank">${String(i+1).padStart(2,'0')}</span>${iconHTML(a)}<div class="chart-copy"><h3>${esc(a.name)}</h3><p>${esc(a.description || '')}</p><div class="tile-tags">${(a.tags || []).map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>${scoreHTML}<span class="chart-open">開啟 ↗</span></a>`;
   }).join('')}</div></section>`;
 }
 // 適用支部篩選：可以**同時揀幾個**（OR —— 揀「小＋幼」= 兩個支部嘅嘢都俾我睇）
