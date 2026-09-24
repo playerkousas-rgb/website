@@ -27,7 +27,7 @@ function tileBg(name) {
 }
 // esc() 喺 store.js 內定義（global），呢度直接用
 
-// ── 我的最愛 ─────────────────────────────────────────────
+// ── 我的收藏（⭐ 每人自己嘅收藏清單，存瀏覽器）──────────────
 const FAV_KEY = "showcase-favorites";
 function getFavorites() { try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; } catch { return []; } }
 function isFavorite(id) { return getFavorites().includes(id); }
@@ -37,7 +37,7 @@ function toggleFavorite(id) {
   if (had) favs = favs.filter((x) => x !== id);
   else favs.unshift(id);
   localStorage.setItem(FAV_KEY, JSON.stringify(favs));
-  // 全站累計收藏數（「最多人收藏」排序用）；本地即刻同步，唔使等 reload
+  // 全站累計收藏數（「最多人收藏」排行榜用）；本地即刻同步，唔使等 reload
   if (SITES) {
     for (const p of SITES.pages) for (const c of p.categories) {
       const a = c.apps.find((x) => x._id === id);
@@ -45,6 +45,26 @@ function toggleFavorite(id) {
     }
   }
   if (typeof trackStar === "function") trackStar(id, had ? -1 : 1);
+}
+
+// ── 讚好（❤️ 「最受歡迎」排行用；唔係收藏清單，撳過會記住）───
+const HEART_KEY = "showcase-hearts";
+function getHearted() { try { return JSON.parse(localStorage.getItem(HEART_KEY)) || []; } catch { return []; } }
+function isHearted(id) { return getHearted().includes(id); }
+function toggleHeart(id) {
+  let hearts = getHearted();
+  const had = hearts.includes(id);
+  if (had) hearts = hearts.filter((x) => x !== id);
+  else hearts.unshift(id);
+  localStorage.setItem(HEART_KEY, JSON.stringify(hearts));
+  // 全站累計心數（「最受歡迎」排行榜用）；本地即刻同步
+  if (SITES) {
+    for (const p of SITES.pages) for (const c of p.categories) {
+      const a = c.apps.find((x) => x._id === id);
+      if (a) a.hearts = Math.max(0, (a.hearts || 0) + (had ? -1 : 1));
+    }
+  }
+  if (typeof trackHeart === "function") trackHeart(id, had ? -1 : 1);
 }
 function openApp(app) {
   trackClick(app._id);
@@ -73,9 +93,14 @@ let SITES = null;
 let ACTIVE_PAGE = null;
 let activeChip = "all";
 let marketView = "discover";
+const CHART_METRICS = {
+  clicks: { title: "🔥 最多人點擊", unit: "次開啟", note: "開啟次數" },
+  stars:  { title: "⭐ 最多人收藏", unit: "收藏",   note: "收藏人數" },
+  hearts: { title: "❤️ 最受歡迎",   unit: "個心",   note: "讚好心數" }
+};
 function setMarketView(view) {
   marketView = view;
-  if (view === 'charts' && sortMode === 'default') sortMode = 'clicks';
+  if (!SORTS.some((s) => s.id === sortMode)) sortMode = "clicks";
   document.querySelectorAll('[data-market]').forEach(b => {
     b.classList.toggle('on', b.dataset.market === view);
     b.setAttribute('aria-pressed', String(b.dataset.market === view));
@@ -86,13 +111,14 @@ function setMarketView(view) {
 // 排名照舊顯示，只收埋右邊個分數格
 const CHART_SCORE_MIN = 100;
 function chartHTML(apps) {
-  const metric = sortMode === 'stars' ? 'stars' : 'clicks';
+  const metric = CHART_METRICS[sortMode] ? sortMode : 'clicks';
+  const m = CHART_METRICS[metric];
   const ranked = [...apps].sort((a,b) => (b[metric] || 0) - (a[metric] || 0) || a.name.localeCompare(b.name, 'zh-HK')).slice(0, 50);
   if (!ranked.length) return '';
-  return `<section class="chart-section"><div class="sec-head"><h2>${metric === 'stars' ? '收藏榜' : '人氣榜'}</h2><span class="num">TOP ${ranked.length}</span></div><p class="chart-note">目前分頁及篩選內的累計${metric === 'stars' ? '收藏' : '開啟'}次數排名 · 同分按名稱排序 · 滿 ${CHART_SCORE_MIN} 先顯示次數</p><div class="chart-list">${ranked.map((a,i) => {
+  return `<section class="chart-section"><div class="sec-head"><h2>${m.title}</h2><span class="num">TOP ${ranked.length}</span></div><p class="chart-note">目前分頁及篩選內的累計${m.note}排名 · 同分按名稱排序 · 滿 ${CHART_SCORE_MIN} 先顯示次數</p><div class="chart-list">${ranked.map((a,i) => {
     const idx = REG.push(a)-1;
     const score = Number(a[metric] || 0);
-    const scoreHTML = score >= CHART_SCORE_MIN ? `<div class="chart-score"><b>${score.toLocaleString()}</b><small>${metric === 'stars' ? '收藏' : '次開啟'}</small></div>` : '';
+    const scoreHTML = score >= CHART_SCORE_MIN ? `<div class="chart-score"><b>${score.toLocaleString()}</b><small>${m.unit}</small></div>` : '';
     return `<a class="chart-item tile" href="${esc(a.url)}" data-idx="${idx}" data-id="${esc(a._id)}"><span class="chart-rank">${String(i+1).padStart(2,'0')}</span>${iconHTML(a)}<div class="chart-copy"><h3>${esc(a.name)}</h3><p>${esc(a.description || '')}</p><div class="tile-tags">${(a.tags || []).map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>${scoreHTML}<span class="chart-open">開啟 ↗</span></a>`;
   }).join('')}</div></section>`;
 }
@@ -116,34 +142,22 @@ function persistTagFilter() {
   try { localStorage.setItem(TAGFILTER_KEY, JSON.stringify({ page: ACTIVE_PAGE, tags: tagFilter })); } catch {}
 }
 
-// ── 排序模式 ─────────────────────────────────────────────────
+// ── 排行榜指標（只在「排行榜」視圖揀；「探索分類」永遠用後台預設順序）──
 // 手機版淨係顯示 emoji（文字包咗喺 .wide-only，細屏被 CSS 收埋）
 const SORT_KEY = "showcase-sort";
 const SORTS = [
-  { id: "default", ico: "🗂", label: "預設順序", hint: "用後台排好嘅順序" },
-  { id: "clicks",  ico: "🔥", label: "最多人點擊", hint: "按開啟次數排序" },
-  { id: "stars",   ico: "⭐", label: "最多人收藏", hint: "按全站收藏人數排序" }
+  { id: "clicks", ico: "🔥", label: "最多人點擊", hint: "按開啟次數排名" },
+  { id: "stars",  ico: "⭐", label: "最多人收藏", hint: "按全站收藏人數排名" },
+  { id: "hearts", ico: "❤️", label: "最受歡迎",   hint: "按全站讚好心數排名" }
 ];
 let sortMode = SORTS.some((s) => s.id === localStorage.getItem(SORT_KEY))
-  ? localStorage.getItem(SORT_KEY) : "default";
+  ? localStorage.getItem(SORT_KEY) : "clicks";
 
 function setSort(m) {
   if (!SORTS.some((s) => s.id === m)) return;
   sortMode = m;
   localStorage.setItem(SORT_KEY, m);
   render();
-}
-
-// 穩定排序：同分時保留原本嘅 sort_order
-function sortApps(list) {
-  const byOrder = (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0);
-  if (sortMode === "clicks") {
-    return [...list].sort((a, b) => (b.clicks || 0) - (a.clicks || 0) || byOrder(a, b));
-  }
-  if (sortMode === "stars") {
-    return [...list].sort((a, b) => (b.stars || 0) - (a.stars || 0) || (b.clicks || 0) - (a.clicks || 0) || byOrder(a, b));
-  }
-  return list;
 }
 
 function enabledPages() { return (SITES.pages || []).filter((p) => p.enabled); }
@@ -214,10 +228,12 @@ function tileHTML(idx, delay) {
   const d = Math.min(delay || 0, 12) * 30;
   const tags = (app.tags || []).filter(Boolean);
   const starred = isFavorite(app._id);
+  const hearted = isHearted(app._id);
   return `
   <a class="tile" href="${esc(app.url)}" title="${esc((app.description || app.name) + (tags.length ? " 標籤：" + tags.join("、") : ""))}"
      data-idx="${idx}" data-id="${esc(app._id || "")}" style="animation-delay:${d}ms">
-    <span class="fav-star ${starred ? "on" : ""}" title="加入我的最愛" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); toggleFav(this)"></span>
+    <span class="fav-star ${starred ? "on" : ""}" title="⭐ 加入收藏" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); toggleFav(this)"></span>
+    <span class="fav-heart ${hearted ? "on" : ""}" title="❤️ 讚好（最受歡迎排行用）" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); toggleHeartBtn(this)"></span>
     ${app.github ? `<span class="gh-badge" title="GitHub repo" onclick="event.preventDefault(); event.stopPropagation(); window.open('${esc(app.github)}','_blank')">GH</span>` : ""}
     ${iconHTML(app)}
     <div class="tile-name">${esc(app.name)}</div>
@@ -231,6 +247,13 @@ function toggleFav(el) {
   if (!id) return;
   toggleFavorite(id);
   el.classList.toggle("on", isFavorite(id));
+}
+
+function toggleHeartBtn(el) {
+  const id = el.dataset.id;
+  if (!id) return;
+  toggleHeart(id);
+  el.classList.toggle("on", isHearted(id));
 }
 
 function sectionHTML(title, icon, apps, id) {
@@ -319,20 +342,23 @@ function renderTagRow() {
       : `<span class="tag-row-hint wide-only muted-hint">（可多選）</span>`);
 }
 
-// ── 排序列 ───────────────────────────────────────────────────
-// 手機：🔥／⭐／🗂 三個 emoji；桌面：emoji + 全名
+// ── 排行榜指標列 ─────────────────────────────────────────────
+// 只喺「排行榜」視圖顯示：🔥 最多人點擊｜⭐ 最多人收藏｜❤️ 最受歡迎。
+// 「探索分類」冇排序列 —— 永遠用後台排好嘅預設順序（排名啲嘢晒咗喺排行榜）。
+// 手機：🔥／⭐／❤️ 三個 emoji；桌面：emoji + 全名
 function renderSortRow() {
   if (!sortRowEl) return;
+  if (marketView !== "charts") { sortRowEl.hidden = true; sortRowEl.innerHTML = ""; return; }
   const pg = activePage();
   const count = pg
     ? (pg.categories || []).reduce((n, c) => n + c.apps.filter((a) => a.visible !== false).length, 0)
     : 0;
-  // 得 0／1 個項目就唔使排序
-  if (count < 2) { sortRowEl.hidden = true; return; }
+  // 得 0／1 個項目就唔使排
+  if (count < 2) { sortRowEl.hidden = true; sortRowEl.innerHTML = ""; return; }
   sortRowEl.hidden = false;
   sortRowEl.innerHTML =
-    `<span class="tag-row-hint">↕<span class="wide-only"> 排序</span>：</span>` +
-    SORTS.filter(s => marketView !== "charts" || s.id !== "default").map((s) => {
+    `<span class="tag-row-hint">🏆<span class="wide-only"> 排行榜</span>：</span>` +
+    SORTS.map((s) => {
       const on = sortMode === s.id;
       return `<button type="button" class="tag-chip sort-chip ${on ? "on" : ""}" ` +
         `onclick="setSort('${s.id}')" title="${esc(s.label)} — ${esc(s.hint)}" ` +
@@ -375,18 +401,19 @@ function render() {
   const visible = (a) => a.visible !== false;
 
   let html = "";
-  const shownOf = (c) => sortApps(c.apps.filter(visible).filter(match));
+  // 探索分類 = 永遠預設順序（後台排好嗰個）；排名交返排行榜嗰三個指標
+  const shownOf = (c) => c.apps.filter(visible).filter(match);
   // 呢頁「有內容」嘅分類 —— 唔畀目前搜尋／支部篩選收窄，
   // 咁分類同適用支部先至可以同時撳（唔會「LOCK 死」）。
   const catIdx = [];
   pg.categories.forEach((c, i) => { if (c.apps.some(visible)) catIdx.push({ c, i }); });
 
-  // 「我的最愛」／單一分類／全部 —— 全部都同搜尋、支部篩選疊加（AND；支部之間係 OR）
+  // 「我的收藏」／單一分類／全部 —— 全部都同搜尋、支部篩選疊加（AND；支部之間係 OR）
   const favIds = new Set(getFavorites());
   if (activeChip === "fav") {
     const favApps = [];
     for (const { c } of catIdx) for (const a of shownOf(c)) if (favIds.has(a._id)) favApps.push(a);
-    html += sectionHTML("我的最愛", "⭐", favApps, "favorites");
+    html += sectionHTML("我的收藏", "⭐", favApps, "favorites");
   } else if (activeChip !== "all") {
     // 揀咗某個分類 chip → 只顯示嗰個分類（可疊加支部／搜尋）
     const selIdx = Number(String(activeChip).replace("cat-", ""));
@@ -411,8 +438,8 @@ function render() {
     const b = emptyEl.querySelector("b");
     const p = emptyEl.querySelector("p");
     if (activeChip === "fav") {
-      b.textContent = "暫時未有我的最愛";
-      p.textContent = "喺項目右上角撳 ☆ 就可以加入收藏！";
+      b.textContent = "暫時未有收藏嘅項目";
+      p.textContent = "喺項目右上角撳 ☆ 就可以加入我的收藏！";
     } else if (activeChip !== "all") {
       b.textContent = "呢個分類暫時冇項目";
       p.textContent = tagFilter.length
@@ -430,16 +457,23 @@ function render() {
     }
   }
 
-  // Build chip bar with 「我的最愛」chip
-  // 手機版用短名（全部／最愛／進度紀錄…），桌面版用全名；emoji 兩邊都顯示
-  const chipBtn = (id, ico, full, short) =>
+  // Build chip bar — 純文字（emoji 圖示阻位，被刻意抽走）；
+  // 「我的收藏」唔再係 chip，搬咗去搜尋欄嗰行（#fav-jump）。
+  // 手機版用短名（全部／進度紀錄…），桌面版用全名。
+  const chipBtn = (id, full, short) =>
     `<button type="button" class="chip ${activeChip === id ? "on" : ""}" data-chip="${esc(id)}" ` +
-    `onclick="jumpTo('${esc(id)}')" title="${esc(full)}">` +
-    `${ico ? `<span class="chip-ico">${esc(ico)}</span>` : ""}${chipTxt(full, short)}</button>`;
+    `onclick="jumpTo('${esc(id)}')" title="${esc(full)}">${chipTxt(full, short)}</button>`;
   chipsEl.innerHTML =
-    chipBtn("all", "⌂", "全部", "全部") +
-    chipBtn("fav", "⭐", "我的最愛", "最愛") +
-    catIdx.map(({ c, i }) => chipBtn("cat-" + i, c.icon, c.name, catShort(c.name))).join("");
+    chipBtn("all", "全部", "全部") +
+    catIdx.map(({ c, i }) => chipBtn("cat-" + i, c.name, catShort(c.name))).join("");
+
+  // 搜尋欄隔籬嘅「⭐ 我的收藏」掣：收藏視圖時高亮
+  const favJump = document.getElementById("fav-jump");
+  if (favJump) {
+    const on = activeChip === "fav";
+    favJump.classList.toggle("on", on);
+    favJump.setAttribute("aria-pressed", on ? "true" : "false");
+  }
 
   renderTagRow();
   renderSortRow();
@@ -453,7 +487,7 @@ let _io = null;
 function watchSections() {
   if (_io) _io.disconnect();
   if (!("IntersectionObserver" in window)) return;
-  // 單一分類模式或我的最愛模式時，唔需要用 observer
+  // 單一分類模式或我的收藏模式時，唔需要用 observer
   if (activeChip !== "all" || searchEl.value.trim() || tagFilter.length) return;
   const secs = sectionsEl.querySelectorAll("section[id]");
   if (!secs.length) return;

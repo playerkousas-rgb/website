@@ -8,7 +8,9 @@
 //      v23 = App Store 式 tile 漸變底＋提交按鈕移右上角＋footer 收做一行＋後台可本機上傳 ICON
 //      v24 = 刪走商店介紹區（market-intro 太占位置）＋排行榜分數滿 100 先顯示
 //      v25 = 全站改名「SCOUT APP STORE」＋副標題改「好工具，讓童軍生活更精彩。」
-const CACHE = 'scout-tools-v25';
+//      v26 = 排行榜三指標（🔥點擊／⭐收藏／❤️讚好）＋項目加心心＋探索分類走排序列
+//            ＋「我的收藏」搬入搜尋行＋分類標籤改純文字＋「提交作品」按鈕改名
+const CACHE = 'scout-tools-v26';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

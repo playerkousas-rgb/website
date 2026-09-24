@@ -78,11 +78,11 @@ const SITES = {
     id: "apps", label: "小工具 Apps", icon: "🧰", enabled: true,
     categories: [
       { name: "電子進度紀錄", icon: "🧭", apps: [
-        { _id: "1", name: "小童軍集會助手", url: "https://a", description: "集會流程", tags: ["小童軍"], clicks: 0, stars: 0, visible: true, sort_order: 1 },
-        { _id: "2", name: "幼童軍專章追蹤", url: "https://b", description: "", tags: ["幼童軍"], clicks: 12, stars: 3, visible: true, sort_order: 2 }
+        { _id: "1", name: "小童軍集會助手", url: "https://a", description: "集會流程", tags: ["小童軍"], clicks: 0, stars: 0, hearts: 2, visible: true, sort_order: 1 },
+        { _id: "2", name: "幼童軍專章追蹤", url: "https://b", description: "", tags: ["幼童軍"], clicks: 12, stars: 3, hearts: 7, visible: true, sort_order: 2 }
       ] },
       { name: "小工具", icon: "🧰", apps: [
-        { _id: "3", name: "行軍地圖計算", url: "https://c", description: "", tags: ["童軍", "深資童軍", "樂行童軍"], clicks: 5, stars: 9, visible: true, sort_order: 1 }
+        { _id: "3", name: "行軍地圖計算", url: "https://c", description: "", tags: ["童軍", "深資童軍", "樂行童軍"], clicks: 5, stars: 9, hearts: 1, visible: true, sort_order: 1 }
       ] },
       { name: "小遊戲", icon: "🎮", apps: [] }
     ]
@@ -99,7 +99,9 @@ assert.ok(!tagRow.includes("適用級別") && !appSrc.includes("適用級別"), 
 assert.ok(/aria-pressed="false"[^>]*>小</.test(tagRow) && !/class="tag-chip lv-chip on"/.test(tagRow), "未揀就唔可以有 on 狀態");
 assert.ok(tagRow.includes("（可多選）"), "桌面提示可多選");
 assert.ok(!tagRow.includes("✕ 清除"), "冇揀就唔擺清除掣");
-assert.ok(/class="tag-chip sort-chip on"[^>]*aria-pressed="true"/.test(els["sort-row"].innerHTML), "排序列保留目前選項嘅高亮");
+assert.ok(els["sort-row"].hidden === true && els["sort-row"].innerHTML === "", "探索分類唔再有排序列（排名晒喺排行榜）");
+assert.ok(els.sections.innerHTML.includes("fav-heart"), "每個項目星星下方都有心心");
+assert.ok(els.sections.innerHTML.includes("fav-star"), "項目保留收藏星星");
 
 // 多選 = OR
 run("setTag('小童軍'); setTag('幼童軍');");
@@ -114,10 +116,10 @@ run("setTag('童軍');");
 assert.strictEqual(names().length, 3);
 run("setTag('童軍');");
 assert.strictEqual(names().length, 2, "再撳多次係取消該支部");
-// 排序照舊用得（同篩選疊加）
+// 探索分類唔再跟排序指標 —— 永遠預設順序（排行榜指標淨係影響排行榜）
 run("setSort('clicks');");
-assert.deepStrictEqual(names(), ["幼童軍專章追蹤", "小童軍集會助手"], "排序 + 支部篩選要疊加");
-run("setSort('default'); clearTags();");
+assert.deepStrictEqual(names(), ["小童軍集會助手", "幼童軍專章追蹤"], "探索分類永遠預設順序");
+run("clearTags();");
 assert.strictEqual(names().length, 3, "清除之後返晒");
 assert.strictEqual(JSON.parse(mem.get("scout-tag-filter")).tags.length, 0);
 
@@ -132,10 +134,26 @@ els.search.value = "";
 run("render();");
 assert.ok(html.includes('placeholder="搜尋支部／分類／項目…"'), "搜尋欄提示順序 = 支部／分類／項目");
 
-// chip markup：短名只喺手機顯示
+// chip markup：純文字（冇 emoji 阻位）；短名只喺手機顯示
 assert.ok(els.chips.innerHTML.includes('<span class="wide-only">電子進度紀錄</span><span class="narrow-only">進度紀錄</span>'), "分類 chip：桌面全名／手機短名");
-assert.ok(els.chips.innerHTML.includes('<span class="wide-only">我的最愛</span><span class="narrow-only">最愛</span>'), "我的最愛 -> 最愛");
+assert.ok(!els.chips.innerHTML.includes("chip-ico"), "分類標籤純文字，冇圖示阻位");
+assert.ok(!els.chips.innerHTML.includes('data-chip="fav"'), "「我的收藏」唔再係下方標籤");
+assert.ok(!els.chips.innerHTML.includes("收藏"), "下方標籤唔再有收藏入口");
+assert.ok(html.includes('id="fav-jump"') && html.includes('onclick="jumpTo(\'fav\')"'), "搜尋行有「我的收藏」入口");
+assert.ok(html.includes("我的收藏"), "入口叫「我的收藏」，唔係「我的最愛」");
+assert.ok(html.includes("提交作品") && !html.includes("提交我的作品"), "投稿掣改名做「提交作品」");
 assert.ok(els.sections.innerHTML.includes('<div class="tile-tags"><span title="小童軍">小</span></div>'), "tile 小標籤 = 一個字 + 全名 tooltip");
+
+// 心心（讚好）：撳 = +1 並記住，再撳 = 取消
+run("SITES.pages[0].categories[1].apps[0].hearts = 1;");
+assert.strictEqual(run("isHearted('3')"), false, "一開始未讚好");
+run("toggleHeart('3');");
+assert.strictEqual(run("isHearted('3')"), true, "撳咗就記住");
+assert.strictEqual(run("SITES.pages[0].categories[1].apps[0].hearts"), 2, "讚好即時 +1");
+assert.deepStrictEqual(JSON.parse(mem.get("showcase-hearts")), ["3"], "讚好紀錄存瀏覽器");
+run("toggleHeart('3');");
+assert.strictEqual(run("isHearted('3')"), false, "再撳係取消");
+assert.strictEqual(run("SITES.pages[0].categories[1].apps[0].hearts"), 1, "取消即時 -1");
 // jumpTo 有 boot 跳板（要順帶解除朦朧）
 assert.ok(appSrc.includes("function publicJumpTo(id)"), "app.js 暴露 publicJumpTo");
 assert.ok(html.includes("function jumpTo(id) { revealSections();"), "boot 有 jumpTo 跳板");
@@ -164,6 +182,11 @@ const chartNames = () => (els.sections.innerHTML.match(/<h3>([^<]*)<\/h3>/g) || 
 assert.deepStrictEqual(chartNames(), ['幼童軍專章追蹤','行軍地圖計算','小童軍集會助手']);
 run("setSort('stars');");
 assert.deepStrictEqual(chartNames(), ['行軍地圖計算','幼童軍專章追蹤','小童軍集會助手']);
+run("setSort('hearts');");
+assert.deepStrictEqual(chartNames(), ['幼童軍專章追蹤','小童軍集會助手','行軍地圖計算'], "❤️ 最受歡迎按心數排名");
+assert.ok(els["sort-row"].innerHTML.includes("最多人點擊") && els["sort-row"].innerHTML.includes("最多人收藏") && els["sort-row"].innerHTML.includes("最受歡迎"), "排行榜指標列 = 🔥⭐❤️ 三選一");
+assert.ok(els.sections.innerHTML.includes("❤️ 最受歡迎"), "排行榜標題跟指標改");
+run("setSort('clicks');");
 run("activeChip='cat-0'; render();");
 assert.equal(chartNames().length,2);
 run("activeChip='all'; SITES.pages[0].categories[1].apps[0].visible=false; render();");

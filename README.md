@@ -95,18 +95,20 @@ hero 右上角仲有一粒 **🔗 分享掣**：用 Web Share API 分享該項�
 > 徽章／按鈕嘅**文案**、`collapsedByDefault`（默認收起）、`showStars`（要不要顯示收藏數）
 > 都改 `index.html` boot script 入面嘅 `SPOTLIGHT` 物件。
 
-### 🔥 排序（預設／最多人點擊／最多人收藏）
+### 🏆 排行榜（🔥 最多人點擊／⭐ 最多人收藏／❤️ 最受歡迎）
 
-公開版分類 chips 下面有一列「排序」：**🗂 預設順序｜🔥 最多人點擊｜⭐ 最多人收藏**。
-手機版（<560px）只見到三個 emoji **🗂｜🔥｜⭐**（撳住有提示），省返成排位。
+「排行榜」視圖入面有一列指標掣：**🔥 最多人點擊｜⭐ 最多人收藏｜❤️ 最受歡迎**。
+「探索分類」**冇排序列** —— 永遠用後台 ▲▼ 排好嘅預設順序（排名嘅嘢全部集中喺排行榜）。
+手機版（<560px）只見到三個 emoji **🔥｜⭐｜❤️**（撳住有提示），省返成排位。
 
 - `clicks` —— 每次喺公開版打開項目就 `+1`（`bump_clicks` RPC，舊站已自動累計）
 - `stars` —— 每次 ⭐ 收藏 `+1`、取消 `-1`（`bump_stars` RPC）；全站累計，唔係個人
-- 同分時保留後台嘅 ▲▼ 手動順序；項目少過 2 個唔顯示排序列
-- 「⭐ 我的最愛」chip 仍係每個人自己嘅（存瀏覽器），同全站 `stars` 並存
+- `hearts` —— 每個項目星星下方仲有粒 ♡，每次讚好 `+1`、取消 `-1`（`bump_hearts` RPC）
+- 同分按名稱排序；排名分數夠 100 先顯示（排名照舊顯示）
+- 「⭐ 我的收藏」喺搜尋欄嗰行（唔再係分類 chip）：係每個人自己嘅清單（存瀏覽器），同全站 `stars` 並存
 
-> `clicks`／`stars` 都**唔使**理會 migration 都會安全（未加欄位就自動甩走再存）；
-> 但要「最多人收藏」有真實數據，就要跑上面 `stars` 欄＋`bump_stars`。
+> `clicks`／`stars`／`hearts` 都**唔使**理會 migration 都會安全（未加欄位就自動甩走再存）；
+> 但要「最受歡迎」有真實數據，就要跑 `migrations/20260924-hearts.sql`（`hearts` 欄＋`bump_hearts`）。
 
 ### 📱 手機版：標籤點收細（同一個掣，細屏短、大螢幕全名）
 
@@ -117,16 +119,19 @@ hero 右上角仲有一粒 **🔗 分享掣**：用 Web Share API 分享該項�
 |---|---|---|
 | 分頁導覽 | 🧰 小工具 | 🧰 小工具 Apps |
 | 適用支部（可多選） | 小／幼／童／深／樂 | 同一個字（tooltip 有全名） |
-| 排序 | 🗂／🔥／⭐ | 🗂 預設順序／🔥 最多人點擊／⭐ 最多人收藏 |
-| 分類 chips | emoji + 短名（`catShort()`） | emoji + 全名 |
+| 排行榜指標（只在排行榜） | 🔥／⭐／❤️ | 🔥 最多人點擊／⭐ 最多人收藏／❤️ 最受歡迎 |
+| 分類 chips | 純文字短名（`catShort()`） | 純文字全名 |
 | tile 小標籤 | 一個字 | 一個字 |
 
 **分類 chips 唔會再俾人截**：`flex-wrap: wrap` —— 一行放唔低就轉第二行
 （以前得返一行橫捲，「小工具」之後幾個永遠睇唔到）。sticky 高度由 `measurePanes()`
 實測，寫入 `--chip-h`，所以 `section` 嘅 `scroll-margin-top` 永遠啱。
 
-**未撳 ≠ 已撳**：支部／排序 chip 未揀時用**中性外殼**（`--bg-card` + 灰字），
-揀咗先變 accent 漸層；行頭有 `🔍 適用支部：`／`↕ 排序：` 同「（可多選）」提示，
+**分類 chips 係純文字**：emoji 圖示會阻位，所以抽走咗；「⭐ 我的收藏」都唔再係 chip，
+搬咗入搜尋欄嗰行（撳入收藏視圖時粒掣會高亮）。
+
+**未撳 ≠ 已撳**：支部／排行榜 chip 未揀時用**中性外殼**（`--bg-card` + 灰字），
+揀咗先變 accent 漸層；行頭有 `🔍 適用支部：`／`🏆 排行榜：` 同「（可多選）」提示，
 避免一睇以為已經揀咗、唔知可以撳。
 
 `catShort()`（喺 `store.js`）嘅規則：≤4 字原樣顯示 → 削走括號內容 →
@@ -228,6 +233,7 @@ create table if not exists apps (
   visible boolean not null default true,
   clicks int not null default 0,
   stars int not null default 0,
+  hearts int not null default 0,
   featured boolean not null default false,
   sort_order int not null default 0,
   created_at timestamptz not null default now()
@@ -239,6 +245,7 @@ alter table apps add column if not exists page text not null default 'apps';
 alter table apps add column if not exists tags text[];
 alter table apps add column if not exists icon_source text;
 alter table apps add column if not exists stars int not null default 0;
+alter table apps add column if not exists hearts int not null default 0;
 alter table apps add column if not exists featured boolean not null default false;
 
 -- 2) 分類改用「(page, name)」組合主鍵，先可以每個分頁獨立用同名分類
@@ -297,6 +304,16 @@ security definer
 set search_path = public
 as $$
   update apps set stars = greatest(0, stars + p_delta) where id = p_id;
+$$;
+
+-- 7) 讚好心數（公開頁 ♡ 讚好／取消會調用；p_delta 传 1 或 -1）
+create or replace function bump_hearts(p_id uuid, p_delta int default 1)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update apps set hearts = greatest(0, hearts + p_delta) where id = p_id;
 $$;
 ```
 
