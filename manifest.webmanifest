@@ -1,7 +1,7 @@
 {
-  "name": "童軍小工具",
-  "short_name": "童軍工具",
-  "description": "童軍小工具 — 童軍 Apps／學習圖卡／PPT／有用連結 的分類展示櫃，一個入口打開全部",
+  "name": "SCOUT APP STORE",
+  "short_name": "SCOUT STORE",
+  "description": "SCOUT APP STORE — 童軍 Apps／學習圖卡／PPT／有用連結 的分類展示櫃，一個入口打開全部",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

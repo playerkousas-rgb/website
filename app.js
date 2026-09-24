@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════════
-   公開版面 app.js  (童軍小工具 · 多分頁渲染)
+   公開版面 app.js  (SCOUT APP STORE · 多分頁渲染)
    store.js 載入後、admin.js 之後載入。
    全站 = 4 個分頁（每個可獨立開放/關閉）；每頁有自己的分類；
    每頁項目全部係「連結」，逐個可開/關，並可帶童軍支部標籤篩選（可多選）。
@@ -484,7 +484,7 @@ async function main() {
     renderPages();
     const pages = enabledPages();
     const total = pages.reduce((n, p) => n + p.categories.reduce((m, c) => m + c.apps.filter((a) => a.visible !== false).length, 0), 0);
-    footCount.textContent = `${sites.name || "童軍小工具"} · 共 ${total} 個項目 · ${pages.length} 個分頁`;
+    footCount.textContent = `${sites.name || "SCOUT APP STORE"} · 共 ${total} 個項目 · ${pages.length} 個分頁`;
     render();
   } catch (e) {
     sectionsEl.innerHTML = "";

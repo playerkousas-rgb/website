@@ -7,7 +7,8 @@
 //      v21 = 瘦身版：icon PNG 壓縮（612K→172K 視覺不變）＋ Supabase CDN 鎖版本＋SRI
 //      v23 = App Store 式 tile 漸變底＋提交按鈕移右上角＋footer 收做一行＋後台可本機上傳 ICON
 //      v24 = 刪走商店介紹區（market-intro 太占位置）＋排行榜分數滿 100 先顯示
-const CACHE = 'scout-tools-v24';
+//      v25 = 全站改名「SCOUT APP STORE」＋副標題改「好工具，讓童軍生活更精彩。」
+const CACHE = 'scout-tools-v25';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
