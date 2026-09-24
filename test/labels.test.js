@@ -167,11 +167,12 @@ assert.ok(style.includes(".narrow-only { display: none; }"), "桌面預設唔顯
 // 未揀嘅 chip 唔好有 accent 底（會令人以為已經揀咗）
 const tagChipRule = style.slice(style.indexOf(".tag-chip {"), style.indexOf(".tag-chip:hover"));
 assert.ok(tagChipRule.includes("var(--bg-card)") && !tagChipRule.includes("--accent-soft"), "未揀嘅 tag-chip 用中性外殼");
-// 今期主打：默認收起 + 唔顯示點擊數
+// 今期主打：默認收起 + 唔顯示點擊數 + 收藏／讚好滿 100 先顯示
 assert.ok(/collapsedByDefault:\s*true/.test(html), "SPOTLIGHT 默認收起");
 assert.ok(/showStars:\s*true/.test(html), "SPOTLIGHT 保留收藏數");
 assert.ok(!/bits\.push\("🔥/.test(html), "hero 唔再顯示點擊數（新项目多數 0 次）");
 assert.ok(!html.includes("SPOTLIGHT.showStats"), "showStats 已換成 showStars");
+assert.ok(/\(a\.stars \|\| 0\) >= minShow/.test(html) && /\(a\.hearts \|\| 0\) >= minShow/.test(html), "今期主打 ⭐／❤️ 滿 100 先顯示（同排行榜一樣）");
 
 console.log("✅ labels.test.js 全部通過");
 

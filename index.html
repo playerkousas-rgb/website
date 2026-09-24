@@ -1552,8 +1552,9 @@ const SPOTLIGHT = {
   openLabel: "立即開啟",
   allLabel: "查看全部",
   collapsedByDefault: true,  // 默認收起：淨返一條「今期主打 · 項目名」，撳先展開（用戶唔理都唔食位）
-  showStars: true,           // 展開後顯示「⭐ N 人收藏」「❤️ N 人讚好」（0 就自動唔顯示）
-                             // ⚠️ 點擊數（🔥）刻意唔顯示：主打多數係新推出，晒 0 好難睇
+  showStars: true,           // 展開後顯示「⭐ N 人收藏」「❤️ N 人讚好」—— 滿 100 先顯示
+                             //（同排行榜一樣，主打多數係新推出，晒 3、5 個好難睇）
+                             // ⚠️ 點擊數（🔥）一樣刻意唔顯示
   preview: {
     enabled: true,                                  // Hero 入面嘅「推送通知」預覽卡
     msg: "📢 有新通告：本週活動安排已更新，記得查看！"  // 純裝飾文案，想改就改呢度
@@ -1637,14 +1638,15 @@ function renderSpotlight() {
     iconEl.setAttribute("aria-label", a.name || "");
   }
 
-  // meta：⭐收藏＋❤️讚好（0 就唔顯示）＋ 🎖 支部（一個字）。
+  // meta：⭐收藏＋❤️讚好（滿 CHART_SCORE_MIN 先顯示，同排行榜一樣——晒個位數／零難睇）＋ 🎖 支部（一個字）。
   // 點擊數刻意唔顯示 —— 主打多數係新推出，嗰陣係 0，晒出嚟難睇。
   const metaEl = document.getElementById("hero-meta");
   if (metaEl) {
     metaEl.textContent = "";
     const bits = [];
-    if (SPOTLIGHT.showStars && (a.stars || 0) > 0) bits.push("⭐ " + a.stars.toLocaleString() + " 人收藏");
-    if (SPOTLIGHT.showStars && (a.hearts || 0) > 0) bits.push("❤️ " + a.hearts.toLocaleString() + " 人讚好");
+    const minShow = typeof CHART_SCORE_MIN === "number" ? CHART_SCORE_MIN : 100;
+    if (SPOTLIGHT.showStars && (a.stars || 0) >= minShow) bits.push("⭐ " + a.stars.toLocaleString() + " 人收藏");
+    if (SPOTLIGHT.showStars && (a.hearts || 0) >= minShow) bits.push("❤️ " + a.hearts.toLocaleString() + " 人讚好");
     const lv = (a.tags || []).filter(Boolean);
     if (lv.length) bits.push("🎖 " + lv.map((t) => (typeof scoutTagShort === "function" ? scoutTagShort(t) : t)).join(" · "));
     bits.forEach((t) => {
