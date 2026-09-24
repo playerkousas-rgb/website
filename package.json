@@ -2,7 +2,7 @@
   "name": "scout-tools",
   "version": "1.0.0",
   "private": true,
-  "description": "童軍小工具 — PWA 分類展示櫃（純靜態站 + Vercel serverless /api/favicon，零運行期依賴）",
+  "description": "SCOUT APP STORE — PWA 分類展示櫃（純靜態站 + Vercel serverless /api/favicon，零運行期依賴）",
   "engines": {
     "node": ">=18"
   },

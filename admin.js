@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════════
-   管理面板 admin.js（童軍小工具 · 多分頁）
+   管理面板 admin.js（SCOUT APP STORE · 多分頁）
    隱藏入口：你嘅網址 + #admin
    兩個版面：
    ① 管理 — 分頁開/關、每頁加分類、改/刪分類、每頁加/改/刪項目、
@@ -767,7 +767,7 @@ function renderAdmin() {
       <img class="admin-logo" src="/icons/icon-192.png" alt="" onclick="goldfingerClick()" />
       <div>
         <h2>⚙️ 管理面板</h2>
-        <div style="font-size:12px;color:var(--muted);margin-top:-2px">分頁／分類／項目管理 · 童軍小工具</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:-2px">分頁／分類／項目管理 · SCOUT APP STORE</div>
       </div>
     </div>
     ${sb

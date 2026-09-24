@@ -73,7 +73,7 @@ vm.createContext(ctx);
 vm.runInContext(storeSrc + "\n" + appSrc, ctx);
 
 const SITES = {
-  name: "童軍小工具",
+  name: "SCOUT APP STORE",
   pages: [{
     id: "apps", label: "小工具 Apps", icon: "🧰", enabled: true,
     categories: [

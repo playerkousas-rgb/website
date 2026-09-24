@@ -3,7 +3,7 @@
    讀取優先序：Supabase（已配置）→ localStorage（demo）→ apps.json
 
    ── 新版結構（多分頁）────────────────────────────────────
-   全站改名「童軍小工具」，含 4 個可分頁（每頁可獨立開放/關閉）：
+   全站名「SCOUT APP STORE」，含 4 個可分頁（每頁可獨立開放/關閉）：
      apps  (小工具/Apps)   cards(學習圖卡)   ppt(簡報)   links(有用連結)
    每個分頁有自己嘅一套分類；每頁入面嘅項目(全部係「連結」)逐個
    可開/關。每個項目可揀 童軍支部標籤（小童軍/幼童軍/童軍/深資童軍/樂行童軍）；
@@ -188,7 +188,7 @@ function getSB() {
 // ── 預設模板（一鍵重設 & apps.json fallback 用）──────────────
 function makeDefaultSite() {
   return {
-    name: "童軍小工具",
+    name: "SCOUT APP STORE",
     pages: [
       {
         id: "apps", label: "小工具 Apps", icon: "🧰", enabled: true,
