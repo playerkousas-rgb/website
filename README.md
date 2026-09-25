@@ -38,6 +38,7 @@
 | `store.js` | ⭐ 數據層 — **Supabase 配置填呢度**（`SUPABASE_CONFIG`）；兼預設模板 `makeDefaultSite()` |
 | `admin.js` | 管理面板邏輯 |
 | `app.js` | 公開版面渲染（分頁＋分類＋支部多選篩選） |
+| `api/notify-admin.js` | ⭐ 投稿「多送一份」去 Scout Admin（Google Apps Script：登記 Sheet＋電郵通知管理員）；Vercel serverless |
 | `api/favicon.js` | ⭐ 伺服器端 favicon（Vercel serverless）—— 用 Chrome 分頁標籤嗰個原理，自己攞別站 HTML 讀 `<link rel="icon">` |
 | `dev-server.mjs` | 本地 dev server（靜態＋`/api/favicon`，同 Vercel 行為一致） |
 | `manifest.webmanifest` | PWA 配置 |
@@ -46,6 +47,7 @@
 | `package.json` | 極簡腳本：`npm run check`／`build`／`preview` —— **刻意零 dependencies** |
 | `vercel.json` | 鎖死部署設定（framework null／build `npm run build`／輸出＝根目錄），唔靠 Vercel 自動偵測 |
 | `.vercelignore` / `.gitignore` | 部署／commit 排除清單 —— 防死重上傳 Vercel（**test/、scripts/ 唔准擋**，build 閘門用得到） |
+| `migrations/` | 手動執行嘅 SQL 升級（唔會上線，`.vercelignore` 已擋）；投稿相關見 `20260925-submission-contact.sql` |
 | `scripts/` | `lint.js`（防增肥守護）＋ `verify-assets.js`（部署清單核對），零依賴 |
 | `OPTIMIZATION.md` | ⭐ 瘦身紀錄＋防增肥守則 —— **加套件／加圖片之前必讀** |
 
@@ -348,9 +350,75 @@ const SUPABASE_CONFIG = {
 ## 2026-09 商店升級：分類、排行榜、社群投稿
 
 - 公開版新增「探索分類／排行榜」，人氣榜按累計開啟次數、收藏榜按累計收藏數排序；套用目前分頁、分類、搜尋、支部篩選，同分按作品名稱排序，最多 50 個。不是每週榜或防作弊的獨立訪客統計。
-- 「提交我的作品」接受名稱、HTTP(S) 連結、作者、簡介、分類及最多 8 個自訂標籤。不會自動上架，也不會假裝只存本機就是投稿成功。
+- 「提交我的作品」接受名稱、HTTP(S) 連結、作者、簡介、分類及最多 8 個自訂標籤（另有選填嘅聯絡電郵／電話）。不會自動上架，也不會假裝只存本機就是投稿成功。
+- 投稿寫入 Supabase 嘅**同時**會多送一份去 Scout Admin（Google Sheet「作品投稿」登記＋電郵通知管理員，佢登記後轉寄負責人）；詳情見下面「📮 投稿 → Scout Admin 登記＋電郵通知」。
 - 後台新增待審核、已上架、已拒絕清單。批准時由資料庫交易一次過建立作品及更新審核狀態，避免重複批准。拒絕的作品不進公開商店。
 - `/#admin` 及 `/#ADMIN` 都會進入登入頁。CDN 載入失敗或未設定服務時不會再自動取得管理權限。
+
+### 📮 投稿 → Scout Admin 登記＋電郵通知（2026-09-25）
+
+公開版「＋ 提交作品」而家係**兩步**（第一步完全冇改動）：
+
+1. **寫入 Supabase**（照舊）：瀏覽器直接 call `submit_work` RPC → `submissions` 表，`status=pending`。
+2. **多送一份去 Scout Admin**（新增）：入庫成功之後，前端打 `/api/notify-admin`，由 Vercel serverless 轉送同一份資料去
+   Scout Admin 嘅 **Google Apps Script**（`type:"appstore"`）。Apps Script 會：
+   - **登記**喺 Google Sheet「作品投稿」工作表（提交時間／作品名稱／作品連結／作者名稱／作品類型／分類／作品簡介／標籤／狀態＝待審核／編號）；
+   - **發電郵**畀佢自己嘅 `ADMIN_EMAIL`（而家係 `playerkousas@hotmail.com`），信入面照列全部欄位＋原始 JSON。
+   管理員喺電郵／Sheet 登記完，再**轉寄**俾負責人（見下面「轉寄」掣）。
+
+我哋额外送嘅欄位會由 Apps Script **自動加欄**收低（唔使人改 Sheet），所以管理員喺一封信／一行就睇齊：
+`商店編號`（= Supabase 投稿 id，兩邊對數用）、`聯絡電郵`、`聯絡電話`、`審核頁`（返嚟批准／拒絕嘅連結）、`轉寄給`（負責人信箱）。
+
+**點解要經 `/api/notify-admin`，唔係前端直接寄 Apps Script？**
+Apps Script 唔回 CORS 標頭 → 瀏覽器 `no-cors` 直送**讀唔到回應**，送失敗都會當成功（假成功）。
+經自己嘅 serverless 先至攞到 Apps Script 嘅 `{status:"success"/"error"}` 回報，用家見到嘅先係真話。
+（前端仍然留咗 `no-cors` 後備：如果嗰個環境根本冇 serverless（404／405），先退回直送，並誠實標明「未確認送達」。）
+
+**通知失敗唔會弄壊投稿**：資料已經喺 Supabase，用家會見到「⚠️ 電郵通知未送達…管理員仍可喺後台審核，唔使人手重交」，
+管理員喺 `#admin` 嘅「作品審核」一樣見到嗰單。同一個 `商店編號` 5 分鐘內唔會重送（防撳兩下）。
+
+#### 管理員側要做嘅（一次過）
+
+1. Scout Admin 嗰邊已經有接收端（佢哋嘅 📜 Apps Script 分頁，`SHEET_CFG.appstore` ＋ `FIELD_MAP`）；
+   **我哋呢邊唔使新裝嘢**。若佢哋日後重新部署換咗 `/exec` 網址，喺 Vercel 加 `SCOUT_APPS_SCRIPT_URL` 覆寫即可。
+2. （選填，建議）跑 `migrations/20260925-submission-contact.sql`：俾投稿多存 **聯絡電郵／聯絡電話**（用家喺表單選填），
+   批准時會一併寫入項目 `note`（內部備註，公開版唔顯示）。**未跑都唔影響投稿**：
+   `submit_work` 係 `security definer` 嘅 jsonb 函數，舊版會自動忽略多出嘅鍵，電郵照樣出現喺通知信＋Sheet。
+3. 收到通知信 → 喺 Sheet 登記／備註 → 開 `https://scoutappstore.vercel.app/#admin` 嘅「作品審核」
+   撳「批准上架」或「拒絕」；每單都仲有 **📧 轉寄負責人**（預填好全部資料嘅 email，一撳就寄得出）、
+   **✉️ 回覆作者**（用家留咗電郵先見到）同事 **📤 補送通知**（用家話收唔到、或者信 Fail 咗，即刻補送一份去
+   Scout Admin；5 分鐘內同一單唔會重送）。
+
+#### 環境變數（全部**選填**；Vercel → Settings → Environment Variables）
+
+| 變數 | 用途 | 唔填會點 |
+| --- | --- | --- |
+| `SCOUT_APPS_SCRIPT_URL` | Scout Admin 嘅 Apps Script `/exec` 接收端 | 用 `api/notify-admin.js` 內嘅預設（即 Scout Admin 說明書嗰條） |
+| `ADMIN_FORWARD_EMAIL` | 通知信入面寫明「登記後轉寄俾邊個」 | 預設 `playerkousas@hotmail.com`（＝ Apps Script `ADMIN_EMAIL`，即收件人自己，所以封信本身就係副本） |
+| `STORE_REVIEW_URL` | 信入面畀管理員返嚟審核嘅連結 | 用請求嘅 origin ＋ `/#admin` |
+| `STORE_NOTIFY_DISABLED` | 設 `1` 即完全唔送通知（測試環境用） | 正常送 |
+
+> ⚠️ **呢個 endpoint 係公開嘅**（同 Scout Admin 所有提交表一樣，任何提交都唔需要 Key）。
+> 我哋喺度做咗：來源檢查（origin＝host）、欄位白名單（唔畀人喺管理員張 Sheet 隨意加欄）、
+> 每欄長度上限、換行／控制字符清洗（唔畀人喺「簡介」入面偽造電郵欄位）、`type` 由伺服器釘死做 `appstore`、
+> `轉寄給`／`審核頁` 由 env／origin 話事（唔信客端值，免成 phishing 連結）、每 IP 15 分鐘 8 次限流、body 上限 16KB。
+> 仍然**唔係**完整反垃圾系統（serverless 多執行個體可以各自計數）；正式對外前請喺 Vercel Firewall
+> 對 `/api/notify-admin` 加跨執行個體 rate-limit 或 CAPTCHA，同 Scout Admin 嗰邊一樣嘅建議。
+
+#### 驗收（唔使真係寄信俾管理員）
+
+本地行一個假接收端，再將 env 指過去，確認「送達／未送達」兩句話都講得啱：
+
+```bash
+# 1) 假 Apps Script（只印出收到嘅 JSON）
+node -e 'http=require("node:http");http.createServer((q,s)=>{let b="";q.on("data",c=>b+=c);q.on("end",()=>{console.log("RECEIVED",b);s.end(JSON.stringify({status:"success"}))})}).listen(9099,"0.0.0.0")' &
+# 2) dev server 指向假接收端
+SCOUT_APPS_SCRIPT_URL=http://127.0.0.1:9099/exec node dev-server.mjs 8080
+# 3) 另一邊用 curl 直接打我哋嘅 endpoint（唔經瀏覽器，唔會污染 DB）
+curl -s -X POST http://127.0.0.1:8080/api/notify-admin -H 'content-type: application/json' \
+  --data '{"name":"測試作品","url":"https://example.org/x","author":"測試","page":"apps","category":"小工具","description":"測試","tags":"童軍","商店編號":"curl-1"}'
+# 期望：{"ok":true,"sent":true,...} 而且假接收端印出 type=appstore、冇 apikey／evil 呢類野欄位
+```
 
 ### 必須完成的一次性部署設定
 
@@ -367,6 +435,8 @@ const SUPABASE_CONFIG = {
    | `SUPABASE_ANON_KEY` | 與 store.js 相同的公開 anon key |
    | `ADMIN_EMAIL` | `ai@skwscout.org.hk` |
    | `ADMIN_AUTH_PASSWORD` | 第 2 步的真實強密碼，只放伺服器環境變數，切勿提交到 Git |
+
+   投稿通知（`/api/notify-admin`）另外有 4 個**選填**變數，見下方「📮 投稿 → Scout Admin 登記＋電郵通知」。
 
    不需要 service-role key。伺服器驗證 PIN 後才向 Supabase 換取管理員 session；前端只保存 sessionStorage（分頁工作階段），不是保存 PIN 或底層帳戶密碼。變更 PIN 用 ADMIN_PIN，而不是舊的 Supabase 改密碼功能。已有 session 不會因改 PIN 自動撤銷，必要時在 Supabase 撤銷登入工作階段。
 
