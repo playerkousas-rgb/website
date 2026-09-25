@@ -20,6 +20,25 @@ const SUPABASE_CONFIG = {
   adminEmail: "ai@skwscout.org.hk"
 };
 
+/* ⚙️ Scout Admin（旅團接入管理中心 https://scout-admin-blue.vercel.app/）对接配置
+   投稿寫入 Supabase **之後**，會「多送一份」去呢度：
+     Google Apps Script → ① 登記喺 Google Sheet「作品投稿」② MailApp 發電郵畀 ADMIN_EMAIL
+     → 管理員喺 Sheet／電郵登記完，再按「轉寄給」嗰個信箱轉交負責人。
+   呢度只係「瀏覽器用嘅預設值」；正式部署建議用 Vercel 環境變數覆寫
+   （SCOUT_APPS_SCRIPT_URL / ADMIN_FORWARD_EMAIL），改嘢唔使人手改代碼。
+   ⚠️ Apps Script 網址同 ADMIN 信箱本身都唔係秘密（Scout Admin 說明書公開晒），
+      而且任何提交都唔需要 Key；真正嘅寫入權限仍然靠 Supabase RLS。 */
+const SCOUT_ADMIN_CONFIG = {
+  // Scout Admin 接收端（Apps Script Web App /exec）。留空 = 唔送通知。
+  execUrl: "https://script.google.com/macros/s/AKfycbxj5BDDGgjs559smkK4Z5aYImWYeXbN5af8U1ObON0z9WnsN6QJW4I1XWolhs5kQ_H-UQ/exec",
+  // 管理員登記後要轉寄俾邊個（同 Apps Script ADMIN_EMAIL 一樣 = 自己收咗就有副本）
+  forwardEmail: "playerkousas@hotmail.com",
+  // 通知信入面俾管理員返嚟審核嘅連結（留空 = 用而家嘅 domain + /#admin）
+  reviewUrl: "",
+  // Scout Admin 後台（管理員喺呢度睇 Sheet 登記結果）；留空 = 我哋後台唔顯示連結
+  recordsUrl: "https://scout-admin-blue.vercel.app/"
+};
+
 const LS_KEY = "showcase-admin-demo";
 let _sb = null;
 
@@ -183,6 +202,125 @@ function getSB() {
     if (!_sb) _sb = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, { auth: { storage: sessionStorage } });
   }
   return _sb;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Scout Admin 投稿通知 — 欄位對齊＋清洗（全部純函數，單測覆蓋）
+   Apps Script「作品投稿」工作表靠 FIELD_MAP 對名：
+     作品名稱←name｜作品連結←url｜作者名稱←author｜作品類型←page
+     分類←category｜作品簡介←description｜標籤←tags
+   我哋多送嘅欄位（商店編號／聯絡電郵／聯絡電話／審核頁／轉寄給）
+   佢會**自動加欄**寫入 Sheet，同時照樣列進電郵內文 → 管理員一次過睇齊，
+   登記完撳「📧 轉寄」就交得出畀負責人。
+   ⚠️ 所有值一律壓做單行 + 截長：否則有人喺「簡介」入面插行，
+      就可以喺管理員嗰封電郵偽造多幾行「欄位」。
+   ════════════════════════════════════════════════════════════════ */
+const SCOUT_ADMIN_FIELD_CAPS = {
+  name: 80, url: 2048, author: 80, page: 40, category: 60,
+  description: 1000, tag: 20, contact: 160, phone: 40
+};
+
+// 任意欄位 → 單行安全字串（控制字符／換行變空格，再截上限）
+function scoutAdminText(value, max) {
+  const oneLine = String(value ?? "")
+    .replace(/[\u0000-\u001f\u007f\u2000-\u200f\u2028\u2029\ufeff]/g, " ")
+    .replace(/\s+/g, " ").trim();
+  const limit = Number(max) || 500;
+  return oneLine.length > limit ? oneLine.slice(0, Math.max(0, limit - 1)) + "…" : oneLine;
+}
+// 電郵：格式唔啱就当冇（唔好將垃圾送進管理員信箱）
+function scoutAdminEmail(value) {
+  const v = scoutAdminText(value, SCOUT_ADMIN_FIELD_CAPS.contact);
+  return /^[^\s@,;:]+@[^\s@,;.]+\.[^\s@,;.]{2,}$/.test(v) ? v : "";
+}
+// 電話：只留可讀字元（隔住 tel:／mailto: 注入）
+function scoutAdminPhone(value) {
+  return scoutAdminText(value, SCOUT_ADMIN_FIELD_CAPS.phone).replace(/[^\d+()\-\s.,]/g, "").trim();
+}
+// 管理員返嚟審核嘅連結
+function scoutAdminReviewUrl() {
+  const cfg = (typeof SCOUT_ADMIN_CONFIG === "object" && SCOUT_ADMIN_CONFIG) || {};
+  if (cfg.reviewUrl) return scoutAdminText(cfg.reviewUrl, 300);
+  const origin = typeof location !== "undefined" && location.origin ? String(location.origin) : "";
+  return origin ? origin + "/#admin" : "";
+}
+// 組裝「多送一份」嘅 payload（鍵名就是 Apps Script FIELD_MAP 認嘅名）
+function scoutAdminSubmissionPayload(record) {
+  const r = record || {};
+  const cap = SCOUT_ADMIN_FIELD_CAPS;
+  const tagList = Array.isArray(r.tags)
+    ? r.tags
+    : String(r.tags ?? "").split(/[,，、\n]/);
+  const out = {
+    type: "appstore",                       // Apps Script doPost 分流用（唔係 Sheet 欄位）
+    sourceApp: "SCOUT APP STORE",            // 邊個送嚟（Scout Admin 其他表都用呢個鍵）
+    name: scoutAdminText(r.name, cap.name),
+    url: scoutAdminText(r.url, cap.url),
+    author: scoutAdminText(r.author, cap.author),
+    page: scoutAdminText(r.page, cap.page),
+    category: scoutAdminText(r.category, cap.category),
+    description: scoutAdminText(r.description, cap.description),
+    // Sheet 嗰欄係文字，用「、」分隔最啱睇（DB 嗰份照舊係 text[]）
+    tags: [...new Set(tagList.map(t => scoutAdminText(t, cap.tag)).filter(Boolean))].slice(0, 8).join("、"),
+    商店編號: scoutAdminText(r.id, 64),
+    聯絡電郵: scoutAdminEmail(r.contact),
+    聯絡電話: scoutAdminPhone(r.phone),
+    審核頁: scoutAdminReviewUrl(),
+    轉寄給: scoutAdminEmail(SCOUT_ADMIN_CONFIG.forwardEmail)
+  };
+  // 空欄位唔好送（免得 Sheet 多列「：」、電郵內文多行廢話）
+  for (const k of Object.keys(out)) if (out[k] === "") delete out[k];
+  return out;
+}
+
+// 電郵內文用嘅「逐欄列出」（管理員掃一眼就夠，唔使開返後台）
+function scoutAdminRecordLines(s) {
+  const r = s || {};
+  const out = [
+    "作品名稱：" + scoutAdminText(r.name, SCOUT_ADMIN_FIELD_CAPS.name),
+    "作品連結：" + scoutAdminText(r.url, SCOUT_ADMIN_FIELD_CAPS.url),
+    "作者：" + scoutAdminText(r.author, SCOUT_ADMIN_FIELD_CAPS.author),
+    "分頁／分類：" + [scoutAdminText(r.page, 40), scoutAdminText(r.category, 60)].filter(Boolean).join(" / "),
+    "簡介：" + scoutAdminText(r.description, SCOUT_ADMIN_FIELD_CAPS.description),
+    "標籤：" + (Array.isArray(r.tags) ? r.tags : String(r.tags ?? "").split(/[,，、]/)).map(t => scoutAdminText(t, 20)).filter(Boolean).join("、"),
+    "聯絡電郵：" + scoutAdminEmail(r.contact),
+    "聯絡電話：" + scoutAdminPhone(r.phone),
+    "投稿編號：" + scoutAdminText(r.id, 64),
+    "提交時間：" + (r.created_at ? new Date(r.created_at).toLocaleString("zh-HK") : ""),
+    "狀態：" + scoutAdminText(r.status, 20)
+  ];
+  return out.filter(line => !line.endsWith("："));
+}
+// ↗️「轉寄俾負責人」：預填好嘅 mailto（冇郵件伺服器都做得到，管理員執一撳就寄出）
+function scoutAdminForwardMailto(s) {
+  const to = scoutAdminEmail((s && s.轉寄給) || SCOUT_ADMIN_CONFIG.forwardEmail);
+  if (!to) return "";
+  const subject = "[SCOUT APP STORE] 新投稿跟進：" + scoutAdminText(s && s.name, 80);
+  const body = [
+    "以下投稿已寫入 Supabase，請登記後轉交負責人處理／回覆作者。",
+    "",
+    ...scoutAdminRecordLines(s),
+    "",
+    "審核頁：" + (scoutAdminReviewUrl() || "（請開 #admin 嘅「作品審核」）"),
+    "",
+    "— 由 SCOUT APP STORE 自動產生"
+  ].join("\n");
+  return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+// 📧「回覆作者」（只有用家留咗電郵先會見到呢粒掣）
+function scoutAdminReplyMailto(s) {
+  const to = scoutAdminEmail(s && s.contact);
+  if (!to) return "";
+  const subject = "[SCOUT APP STORE] 你嘅作品《" + scoutAdminText(s.name, 60) + "》審核跟進";
+  const body = [
+    scoutAdminText(s.author, 80) + " 你好，",
+    "",
+    "多謝你投稿 SCOUT APP STORE。關於你嘅作品：",
+    ...scoutAdminRecordLines(s).slice(0, 6),
+    "",
+    "（請喺呢度回覆）"
+  ].join("\n");
+  return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 // ── 預設模板（一鍵重設 & apps.json fallback 用）──────────────

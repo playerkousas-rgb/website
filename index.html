@@ -1439,7 +1439,7 @@
 <dialog id="submit-dialog" class="submit-dialog" aria-labelledby="submit-title">
   <button type="button" class="dialog-close" onclick="document.getElementById('submit-dialog').close()" aria-label="關閉投稿">×</button>
   <span class="market-eyebrow">MADE BY YOU</span><h2 id="submit-title">分享你的作品</h2>
-  <p>填上作品連結及標籤。提交後由管理員審核，批准後才會公開上架。</p>
+  <p>填上作品連結及標籤。提交後會寫入商店資料庫，並同時登記到管理員嘅投稿表＋電郵通知管理員；批核後才會公開上架。</p>
   <form id="submit-form">
     <label>作品名稱<input name="name" maxlength="80" required placeholder="例如：露營裝備清單" /></label>
     <label>作品連結<input name="url" type="url" maxlength="2048" required placeholder="https://…" /></label>
@@ -1448,6 +1448,11 @@
     <label>作品簡介<textarea name="description" maxlength="1000" required rows="3" placeholder="作品有甚麼用途？適合誰使用？"></textarea></label>
     <label>自訂標籤<input name="tags" maxlength="180" placeholder="例如：童軍、露營、實用工具" /></label>
     <small>用逗號分隔，最多 8 個，每個最多 20 字。可加入支部全名以供篩選。</small>
+    <div class="form-columns">
+      <label>聯絡電郵（選填）<input name="contact" type="email" maxlength="160" autocomplete="email" placeholder="例子：me@example.com" /></label>
+      <label>聯絡電話（選填）<input name="phone" maxlength="40" autocomplete="tel" inputmode="tel" placeholder="例如：9123 4567" /></label>
+    </div>
+    <small>留低聯絡方式，管理員先至可以回覆你（呢兩項只用作是次投稿跟進，唔會公開）。</small>
     <label class="consent"><input type="checkbox" required />我確認有權分享此作品，並同意上述作品資料在批核後公開。</label>
     <button type="submit" class="market-submit">提交審核 →</button>
     <p id="submit-result" role="status" aria-live="polite"></p>

@@ -31,14 +31,78 @@ document.getElementById('submit-form').addEventListener('submit', async event =>
     work.url = url.href;
     work.tags = [...new Set(work.tags.split(/[,，、\n]/).map(t => t.trim()).filter(Boolean))];
     if (work.tags.length > 8 || work.tags.some(t => t.length > 20)) throw new Error('最多 8 個標籤，每個最多 20 字。');
+    // 聯絡方式：選填；填錯格式即場提示，唔好等人交咗先知（DB 嗰份照樣會擋）
+    work.contact = (work.contact || '').trim();
+    work.phone = (work.phone || '').trim();
+    if (work.contact && !scoutAdminEmail(work.contact)) throw new Error('聯絡電郵格式唔正確（例子：name@example.com）。留空就唔會送。');
+    if (work.phone && !scoutAdminPhone(work.phone)) throw new Error('聯絡電話只可以用數字同 + - ( ) 空格。留空就唔會送。');
+    // ① 寫入 Supabase（原路徑唔變：瀏覽器直接 call RPC，權限模型一樣）
     const { data, error } = await sb.rpc('submit_work', { work });
     if (error) throw new Error(error.code === 'PGRST202' ? '投稿服務尚未啟用，請管理員先執行資料庫升級。' : error.message);
     form.reset();
-    result.textContent = `已收到作品！批核後才會公開上架。投稿編號：${data}`;
+    // ② 「多送一份」畀 Scout Admin → 登記 Google Sheet「作品投稿」＋ 電郵通知管理員（佢再轉寄負責人）
+    //    呢步失敗唔會抹走已入庫嘅投稿，只會講明，等管理員喺後台手理。
+    const notify = await notifyScoutAdmin({ ...work, id: data });
+    result.textContent = `已收到作品！批核後才會公開上架。投稿編號：${data}` + scoutAdminNotifyNote(notify);
   } catch (error) { result.textContent = error.message || '提交失敗，請再試。'; }
   finally { button.disabled = false; }
 });
+
+/* ── ② 送通知去 Scout Admin（Google Apps Script：Sheet 登記 ＋ 電郵畀 ADMIN）──────
+   行法：先打我哋自己嘅 /api/notify-admin（伺服器代送，先至讀到 Apps Script 嘅
+   真結果）；如果呢個站冇 serverless（純靜態主機／未部署），先退回瀏覽器
+   no-cors 直送 — 送得出去但讀唔到回應，所以只能講「未確認」，唔好扮成功。 */
+async function notifyScoutAdmin(record) {
+  const payload = scoutAdminSubmissionPayload(record);
+  try {
+    const res = await fetch('/api/notify-admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      ...(typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? { signal: AbortSignal.timeout(15000) } : {})
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data && data.sent) return { sent: true, verified: true, deduped: !!data.deduped, warnings: data.warnings || [] };
+    // 404／405 = 呢個部署冇呢個 endpoint（例如純靜態主機）→ 退回前端直送
+    if (res.status === 404 || res.status === 405) return notifyScoutAdminDirect(payload);
+    return { sent: false, verified: false, error: (data && data.error) || `通知失敗（HTTP ${res.status}）`, warnings: (data && data.warnings) || [] };
+  } catch {
+    return notifyScoutAdminDirect(payload);
+  }
+}
+async function notifyScoutAdminDirect(payload) {
+  const url = (typeof SCOUT_ADMIN_CONFIG === 'object' && SCOUT_ADMIN_CONFIG.execUrl) || '';
+  if (!url) return { sent: false, verified: false, error: '通知未設定' };
+  try {
+    // no-cors：Apps Script 冇回 CORS 標頭，讀唔到回應；body 用純字串先唔會触发 preflight
+    await fetch(url, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+    return { sent: true, verified: false };
+  } catch {
+    return { sent: false, verified: false, error: '通知送唔出' };
+  }
+}
+// 結果文案：老實講邊度成功邊度未成功（投稿本身永遠以 Supabase 為準）
+function scoutAdminNotifyNote(notify) {
+  if (notify && notify.deduped) return '\n📮 呢單 5 分鐘內已送過 Scout Admin，唔會重送（管理員已經收到）。';
+  if (notify && notify.verified && notify.sent) return '\n✅ 已登記喺 Scout Admin（Google Sheet＋電郵通知管理員，登記後會轉寄負責人）。';
+  if (notify && notify.sent) return '\n📮 已送交 Scout Admin 登記（呢個環境讀唔到送達回執，管理員會核對）。';
+  const reason = notify && notify.error ? `（${notify.error}）` : '';
+  return `\n⚠️ Scout Admin 電郵通知未送達${reason}：你嘅投稿已喺資料庫，管理員仍可喺後台審核，唔使人手重交。`;
+}
+
 let reviewFilter = 'pending';
+// 審核卡：除咗批准／拒絕，仲有「📧 轉寄」（預填好嘅 email，畀 ADMIN 登記後轉交負責人）
+// 同「✉️ 回覆作者」（只有用家留咗聯絡電郵先見到）。
+function reviewCardHTML(s) {
+  const contactBits = [
+    s.contact ? `<a href="mailto:${esc(s.contact)}">${esc(s.contact)}</a>` : '',
+    s.phone ? `📞 ${esc(s.phone)}` : ''
+  ].filter(Boolean);
+  const forward = scoutAdminForwardMailto(s);
+  const reply = scoutAdminReplyMailto(s);
+  return `<article class="review-item"><h4>${esc(s.name)}</h4><p>${esc(s.description)}</p><p class="admin-hint">${esc(s.author)} · ${esc(s.category)} · ${new Date(s.created_at).toLocaleDateString('zh-HK')}</p>${contactBits.length ? `<p class="admin-hint">📧 聯絡：${contactBits.join(' · ')}</p>` : ''}<p>${s.tags.map(t => `<span class="market-tag">${esc(t)}</span>`).join('')}</p><a href="${esc(/^https?:\/\//i.test(s.url) ? s.url : '#')}" target="_blank" rel="noopener noreferrer">查看作品 ↗</a><div class="admin-actions">${reviewFilter==='pending'?`<button class="mini-btn primary" data-review="${s.id}" data-approve="true">批准上架</button><button class="mini-btn danger" data-review="${s.id}" data-approve="false">拒絕</button>`:''}${forward?`<a class="mini-btn" href="${esc(forward)}" title="將呢個投稿嘅資料用電郵轉交負責人">📧 轉寄負責人</a>`:''}${reviewFilter==='pending'?`<button class="mini-btn" data-resend="${s.id}" title="如果用家話收唔到／電郵通知Fail咗，撳呢度補送一份去 Scout Admin">📤 補送通知</button>`:''}${reply?`<a class="mini-btn" href="${esc(reply)}">✉️ 回覆作者</a>`:''}</div></article>`;
+}
+
 async function loadReviews() {
   const panel = document.getElementById('review-panel');
   if (!panel || !ADMIN.authed) return;
@@ -47,8 +111,19 @@ async function loadReviews() {
     const { data, error } = await getSB().from('submissions').select('*').eq('status', reviewFilter).order('created_at', { ascending: false }).limit(100);
     if (error) throw error;
     if (!panel.isConnected) return;
-    panel.innerHTML = `<section class="review-box"><h3>作品審核</h3><div class="admin-actions">${[['pending','待審核'],['approved','已上架'],['rejected','已拒絕']].map(([id,label]) => `<button class="mini-btn ${reviewFilter===id?'primary':''}" data-review-filter="${id}">${label}</button>`).join('')}</div><p class="admin-hint">最多顯示最近 100 筆；只有批准的作品才會出現在商店。</p>${data.length ? data.map(s => `<article class="review-item"><h4>${esc(s.name)}</h4><p>${esc(s.description)}</p><p class="admin-hint">${esc(s.author)} · ${esc(s.category)} · ${new Date(s.created_at).toLocaleDateString('zh-HK')}</p><p>${s.tags.map(t => `<span class="market-tag">${esc(t)}</span>`).join('')}</p><a href="${esc(/^https?:\/\//i.test(s.url) ? s.url : '#')}" target="_blank" rel="noopener noreferrer">查看作品 ↗</a>${reviewFilter==='pending'?`<div class="admin-actions"><button class="mini-btn primary" data-review="${s.id}" data-approve="true">批准上架</button><button class="mini-btn danger" data-review="${s.id}" data-approve="false">拒絕</button></div>`:''}</article>`).join(''):'<p class="review-empty">暫時沒有這個狀態的投稿。</p>'}</section>`;
+    panel.innerHTML = `<section class="review-box"><h3>作品審核</h3><div class="admin-actions">${[['pending','待審核'],['approved','已上架'],['rejected','已拒絕']].map(([id,label]) => `<button class="mini-btn ${reviewFilter===id?'primary':''}" data-review-filter="${id}">${label}</button>`).join('')}</div><p class="admin-hint">最多顯示最近 100 筆；只有批准的作品才會出現在商店。每筆投稿提交時已同時送一份去 Scout Admin（Google Sheet「作品投稿」＋電郵通知）${SCOUT_ADMIN_CONFIG.recordsUrl ? '，<a href="' + esc(SCOUT_ADMIN_CONFIG.recordsUrl) + '" target="_blank" rel="noopener noreferrer">開啟 Scout Admin</a>' : ''}。</p>${data.length ? data.map(reviewCardHTML).join(''):'<p class="review-empty">暫時沒有這個狀態的投稿。</p>'}</section>`;
     panel.querySelectorAll('[data-review-filter]').forEach(btn => btn.onclick = () => { reviewFilter = btn.dataset.reviewFilter; loadReviews(); });
+    panel.querySelectorAll('[data-resend]').forEach(btn => btn.onclick = async (ev) => {
+      const row = data.find(x => x.id === btn.dataset.resend);
+      if (!row) return;
+      btn.disabled = true;
+      const tip = document.getElementById('resend-note') || Object.assign(document.createElement('p'), { className: 'admin-hint', id: 'resend-note' });
+      tip.textContent = '補送中…';
+      if (!tip.isConnected) panel.querySelector('.review-box').appendChild(tip);
+      const note = await notifyScoutAdmin(row);
+      tip.textContent = scoutAdminNotifyNote(note).replace(/^\n+/, '');
+      btn.disabled = false;
+    });
     panel.querySelectorAll('[data-review]').forEach(btn => btn.onclick = async () => {
       const approve = btn.dataset.approve === 'true';
       if (!confirm(approve ? '批准此作品並公開上架？' : '確定拒絕此作品？')) return;

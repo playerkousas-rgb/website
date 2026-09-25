@@ -8,6 +8,7 @@ import { extname, join, normalize } from "node:path";
 import faviconHandler from "./api/favicon.js";
 
 import loginHandler from "./api/admin-login.js";
+import notifyHandler from "./api/notify-admin.js";
 
 const PORT = Number(process.argv[2] || 8080);
 const ROOT = process.cwd();
@@ -24,7 +25,8 @@ const MIME = {
 };
 
 const server = http.createServer(async (req, res) => {
-  if (!req.url.startsWith("/api/admin-login") && req.method !== "GET" && req.method !== "HEAD") {
+  const isApiPost = u0 => u0.startsWith("/api/admin-login") || u0.startsWith("/api/notify-admin");
+  if (!isApiPost(req.url) && req.method !== "GET" && req.method !== "HEAD") {
     res.writeHead(405).end();
     return;
   }
@@ -40,10 +42,12 @@ const server = http.createServer(async (req, res) => {
       send(b) { res.writeHead(this.code, this.headers); res.end(req.method === "HEAD" ? undefined : b); }
     };
     try {
-      if (u.pathname === '/api/admin-login') {
+      if (u.pathname === '/api/admin-login' || u.pathname === '/api/notify-admin') {
+        const limit = u.pathname === '/api/notify-admin' ? 20480 : 4096;
         let body = '';
-        for await (const chunk of req) { body += chunk; if (body.length > 4096) { res.writeHead(413).end(); return; } }
-        await loginHandler({ method: req.method, headers: req.headers, socket: req.socket, body }, mock);
+        for await (const chunk of req) { body += chunk; if (body.length > limit) { res.writeHead(413).end(); return; } }
+        const reqObj = { method: req.method, headers: req.headers, socket: req.socket, body };
+        await (u.pathname === '/api/admin-login' ? loginHandler : notifyHandler)(reqObj, mock);
       } else await faviconHandler({ url: req.url }, mock);
     } catch (e) {
       console.error("api error:", e);
