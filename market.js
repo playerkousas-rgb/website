@@ -14,6 +14,127 @@ function submissionOpen() {
   updateCategories();
   dialog.showModal();
 }
+
+/* 問題回報／意見回饋：留在本站，payload 欄位對齊 Scout Admin 官方 widget.js。 */
+const REPORT_SOURCE_APP = 'SCOUT APP STORE';
+let reportKind = 'issue';
+function reportSetKind(kind) {
+  reportKind = kind === 'feedback' ? 'feedback' : 'issue';
+  document.querySelectorAll('.report-tab').forEach(button => {
+    const active = button.dataset.reportKind === reportKind;
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  document.querySelectorAll('[data-report-pane]').forEach(pane => {
+    const active = pane.dataset.reportPane === reportKind;
+    pane.classList.toggle('is-active', active);
+    pane.hidden = !active;
+  });
+  const title = document.getElementById('report-title');
+  if (title) title.textContent = reportKind === 'issue' ? '問題回報' : '意見回饋';
+  const button = document.getElementById('report-submit');
+  if (button) button.textContent = reportKind === 'issue' ? '提交問題回報' : '提交意見回饋';
+  const status = document.getElementById('report-status');
+  if (status) { status.textContent = ''; status.className = 'report-status'; }
+}
+function reportOpen(kind) {
+  const dialog = document.getElementById('report-dialog');
+  if (!dialog) return;
+  reportSetKind(kind || reportKind);
+  dialog.showModal();
+}
+function buildIssueReportPayload(fields) {
+  return {
+    type: 'issue',
+    sourceApp: REPORT_SOURCE_APP,
+    title: String(fields.title || '').trim(),
+    desc: String(fields.problem || '').trim(),
+    severity: String(fields.severity || '').trim() || '中',
+    troopId: String(fields.troopId || '').trim(),
+    name: String(fields.name || '').trim(),
+    contact: String(fields.contact || '').trim()
+  };
+}
+function buildFeedbackReportPayload(fields) {
+  return {
+    type: 'feedback',
+    sourceApp: REPORT_SOURCE_APP,
+    fbType: String(fields.fbType || '').trim() || '建議',
+    content: String(fields.opinion || '').trim(),
+    troopId: String(fields.troopId || '').trim(),
+    name: String(fields.name || '').trim(),
+    contact: String(fields.contact || '').trim()
+  };
+}
+function validateReportForm(kind, fields) {
+  if (kind === 'issue') {
+    if (!String(fields.title || '').trim()) return '請填寫問題標題。';
+    if (!String(fields.problem || '').trim()) return '請填寫問題詳情。';
+  } else if (!String(fields.opinion || '').trim()) {
+    return '請填寫意見內容。';
+  }
+  return '';
+}
+
+const reportForm = document.getElementById('report-form');
+if (reportForm) {
+  const reportDialog = document.getElementById('report-dialog');
+  const reportStatus = document.getElementById('report-status');
+  const reportSubmit = document.getElementById('report-submit');
+  const setReportStatus = (message, state = '') => {
+    reportStatus.textContent = message;
+    reportStatus.className = 'report-status' + (state ? ' ' + state : '');
+  };
+  document.querySelectorAll('.report-tab').forEach(button => {
+    button.addEventListener('click', () => reportSetKind(button.dataset.reportKind));
+  });
+  reportDialog.addEventListener('click', event => {
+    if (event.target === reportDialog) reportDialog.close();
+  });
+  reportForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const fields = reportKind === 'issue' ? {
+      title: document.getElementById('report-issue-title').value,
+      problem: document.getElementById('report-problem').value,
+      severity: document.getElementById('report-severity').value,
+      troopId: document.getElementById('report-issue-troop').value,
+      name: document.getElementById('report-issue-name').value,
+      contact: document.getElementById('report-issue-contact').value
+    } : {
+      fbType: document.querySelector('input[name="feedback-type"]:checked')?.value || '建議',
+      opinion: document.getElementById('report-opinion').value,
+      troopId: document.getElementById('report-feedback-troop').value,
+      name: document.getElementById('report-feedback-name').value,
+      contact: document.getElementById('report-feedback-contact').value
+    };
+    const validationError = validateReportForm(reportKind, fields);
+    if (validationError) { setReportStatus(validationError, 'is-error'); return; }
+    if (navigator.onLine === false) { setReportStatus('目前離線，請連線後再提交。', 'is-error'); return; }
+    const endpoint = (typeof SCOUT_ADMIN_CONFIG === 'object' && SCOUT_ADMIN_CONFIG.execUrl) || '';
+    if (!endpoint) { setReportStatus('回報服務尚未設定，請稍後再試。', 'is-error'); return; }
+    const payload = reportKind === 'issue'
+      ? buildIssueReportPayload(fields)
+      : buildFeedbackReportPayload(fields);
+    reportSubmit.disabled = true;
+    setReportStatus('提交中…');
+    try {
+      // 使用 Scout Admin 官方 widget 相同欄位與 Apps Script 接收端；no-cors 直接送出。
+      await fetch(endpoint, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+      setReportStatus(reportKind === 'issue'
+        ? '問題回報已提交，多謝！管理員會盡快跟進。'
+        : '意見已收到，多謝你！', 'is-good');
+      if (reportKind === 'issue') {
+        document.getElementById('report-issue-title').value = '';
+        document.getElementById('report-problem').value = '';
+      } else document.getElementById('report-opinion').value = '';
+    } catch {
+      setReportStatus('提交失敗，請稍後再試。', 'is-error');
+    } finally {
+      reportSubmit.disabled = false;
+    }
+  });
+}
+
 document.getElementById('submit-form').addEventListener('submit', async event => {
   event.preventDefault();
   const form = event.currentTarget;

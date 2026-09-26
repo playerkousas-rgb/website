@@ -1537,7 +1537,7 @@
         </div>
         <div class="head-actions">
           <button type="button" class="market-submit head-submit" onclick="submissionOpen()">＋ 提交作品</button>
-          <a class="market-submit head-submit feedback-btn" href="https://scout-circulars.vercel.app/" target="_blank" rel="noopener" title="回報 / 意見（開新分頁）">回報/意見</a>
+          <button type="button" class="market-submit head-submit feedback-btn" onclick="reportOpen()" aria-haspopup="dialog" aria-controls="report-dialog" title="問題回報 / 意見回饋">回報/意見</button>
           <button class="install-btn" id="install-btn" type="button" aria-label="安裝 App">
             ⬇️ <span class="install-label">安裝</span>
           </button>
@@ -1747,6 +1747,76 @@
     <label class="consent"><input type="checkbox" required />我確認有權分享此作品，並同意上述作品資料在批核後公開。</label>
     <button type="submit" class="market-submit">提交審核 →</button>
     <p id="submit-result" role="status" aria-live="polite"></p>
+  </form>
+</dialog>
+<dialog id="report-dialog" class="submit-dialog report-dialog" aria-labelledby="report-title">
+  <button type="button" class="dialog-close" onclick="document.getElementById('report-dialog').close()" aria-label="關閉回報表格">×</button>
+  <span class="market-eyebrow">REPORT / FEEDBACK</span>
+  <h2 id="report-title">問題回報 / 意見回饋</h2>
+  <p class="report-intro">送到 Scout Admin，管理員會盡快跟進。可匿名提交，聯絡資料均為選填。</p>
+  <p class="report-source">來源 APP：<b>SCOUT APP STORE</b></p>
+  <div class="report-tabs" role="tablist" aria-label="回報類型">
+    <button type="button" id="report-tab-issue" class="report-tab is-active" role="tab" aria-selected="true" aria-controls="report-pane-issue" data-report-kind="issue">🐛 問題回報</button>
+    <button type="button" id="report-tab-feedback" class="report-tab" role="tab" aria-selected="false" aria-controls="report-pane-feedback" data-report-kind="feedback">💬 意見回饋</button>
+  </div>
+  <form id="report-form" class="report-form" novalidate>
+    <div class="report-pane is-active" id="report-pane-issue" role="tabpanel" aria-labelledby="report-tab-issue" data-report-pane="issue">
+      <label class="report-field" for="report-issue-title">標題 <span class="report-required">*</span>
+        <input id="report-issue-title" name="title" maxlength="120" placeholder="例：搜尋結果沒有顯示" />
+      </label>
+      <label class="report-field" for="report-problem">問題詳情 <span class="report-required">*</span>
+        <textarea id="report-problem" name="problem" maxlength="2000" rows="4" placeholder="發生了什麼？如何重現？"></textarea>
+      </label>
+      <div class="report-fields-grid">
+        <label class="report-field" for="report-severity">嚴重度
+          <select id="report-severity" name="severity">
+            <option value="低">低</option><option value="中" selected>中</option><option value="高">高</option><option value="緊急">緊急</option>
+          </select>
+        </label>
+        <label class="report-field" for="report-issue-troop">旅團號（選填）
+          <input id="report-issue-troop" name="troopId" maxlength="40" placeholder="例如：0082" />
+        </label>
+      </div>
+      <div class="report-fields-grid">
+        <label class="report-field" for="report-issue-name">姓名（選填，可匿名）
+          <input id="report-issue-name" name="name" maxlength="80" autocomplete="name" placeholder="留空＝匿名" />
+        </label>
+        <label class="report-field" for="report-issue-contact">聯絡方式（選填）
+          <input id="report-issue-contact" name="contact" maxlength="160" autocomplete="off" placeholder="電郵／電話，方便回覆你" />
+        </label>
+      </div>
+    </div>
+    <div class="report-pane" id="report-pane-feedback" role="tabpanel" aria-labelledby="report-tab-feedback" data-report-pane="feedback" hidden>
+      <div class="report-field">
+        <span class="report-field-label">類型</span>
+        <div class="report-radios" role="radiogroup" aria-label="意見類型">
+          <label><input type="radio" name="feedback-type" value="建議" checked /> 💡 建議</label>
+          <label><input type="radio" name="feedback-type" value="讚" /> 👍 讚</label>
+          <label><input type="radio" name="feedback-type" value="批評" /> 👎 批評</label>
+          <label><input type="radio" name="feedback-type" value="其他" /> 📝 其他</label>
+        </div>
+      </div>
+      <label class="report-field" for="report-opinion">內容 <span class="report-required">*</span>
+        <textarea id="report-opinion" name="opinion" maxlength="2000" rows="4" placeholder="想說什麼就寫什麼…"></textarea>
+      </label>
+      <div class="report-fields-grid">
+        <label class="report-field" for="report-feedback-troop">旅團號（選填）
+          <input id="report-feedback-troop" name="troopId" maxlength="40" placeholder="例如：0082" />
+        </label>
+        <label class="report-field" for="report-feedback-name">姓名（選填，可匿名）
+          <input id="report-feedback-name" name="name" maxlength="80" autocomplete="name" placeholder="留空＝匿名" />
+        </label>
+      </div>
+      <label class="report-field" for="report-feedback-contact">聯絡方式（選填）
+        <input id="report-feedback-contact" name="contact" maxlength="160" autocomplete="off" placeholder="電郵／電話，方便回覆你" />
+      </label>
+    </div>
+    <p class="report-hint">姓名、聯絡方式及旅團號全部選填；可以匿名提交。</p>
+    <button type="submit" class="market-submit" id="report-submit">提交問題回報</button>
+    <p id="report-status" class="report-status" role="status" aria-live="polite"></p>
+    <ul class="report-privacy">
+      <li>資料會直接送到 Scout Admin（Google Sheet），唔經本站伺服器。</li>
+    </ul>
   </form>
 </dialog>
 <script src="market.js"></script>
