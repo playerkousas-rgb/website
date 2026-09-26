@@ -21,7 +21,7 @@ console.log("✓ 語法：瀏覽器腳本＋api/notify-admin.js＋index.html 內
 /* ── 1) 瀏覽器側：store.js 純函數（欄位對齊＋清洗）─────────────── */
 const base = {
   window: {},
-  document: { documentElement: { dataset: {} }, getElementById: () => ({ addEventListener() {}, reset() {}, elements: {}, querySelector: () => null }) },
+  document: { documentElement: { dataset: {} }, getElementById: () => ({ addEventListener() {}, reset() {}, elements: {}, querySelector: () => null }), querySelectorAll: () => [] },
   localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
   console,
   location: { origin: "https://scoutappstore.vercel.app" },
