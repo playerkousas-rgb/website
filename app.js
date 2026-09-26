@@ -169,6 +169,9 @@ function measurePanes() {
   const pnav = pageNavEl;
   const h = (pnav && !pnav.hidden && pnav.offsetHeight) ? pnav.offsetHeight : 0;
   root.style.setProperty("--pnav-h", h + "px");
+  // 支部列（小／幼／童／深／樂）常駐置頂，需計入高度
+  const tr = (typeof tagRowEl !== "undefined" && tagRowEl && !tagRowEl.hidden && tagRowEl.offsetHeight) ? tagRowEl.offsetHeight : 0;
+  root.style.setProperty("--trow-h", tr + "px");
   // chips 列高度（手機版收細咗，section 嘅 scroll-margin 要跟實際值先唔會郁空）
   const ch = (chipsEl && !chipsEl.hidden && chipsEl.offsetHeight) ? chipsEl.offsetHeight : 0;
   if (ch) root.style.setProperty("--chip-h", ch + "px");
