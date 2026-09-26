@@ -688,33 +688,199 @@
     .tile-desc { display: none; } /* 細屏隱藏描述，圖標更大空間 */
   }
 
-  /* 收藏星星（撳咗會落入「我的收藏」） */
-  .fav-star {
-    position: absolute; top: 0; right: 0; z-index: 5;
-    width: 24px; height: 24px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px; color: var(--muted); opacity: 0.35;
-    transition: opacity .15s, color .15s, transform .15s;
+  /* ── Tile 3 按鈕 (心 星 分享) ── */
+  .tile-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 6px;
+    width: 100%;
+  }
+  .tile-btn {
+    position: static;
+    background: transparent;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 8px;
+    color: var(--muted);
+    opacity: 0.7;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s var(--ease), color 0.15s, background 0.15s, opacity 0.15s;
     touch-action: manipulation;
   }
-  .fav-star::after { content: "☆"; }
-  .fav-star:hover { opacity: 0.7; transform: scale(1.15); }
-  .fav-star.on { opacity: 1; color: #f59e0b; }
-  .fav-star.on::after { content: "★"; }
+  .tile-btn:hover {
+    opacity: 1;
+    background: var(--accent-soft);
+    color: var(--text);
+    transform: scale(1.18);
+  }
+  .tile-btn:active {
+    transform: scale(0.92);
+  }
+  .fav-heart.on {
+    opacity: 1;
+    color: #ef4444;
+  }
+  .fav-star.on {
+    opacity: 1;
+    color: #f59e0b;
+  }
+  .btn-share:hover {
+    color: var(--accent-2);
+  }
 
-  /* 讚好心心（喺星星正下方；「❤️ 最受歡迎」排行榜就係計呢個） */
-  .fav-heart {
-    position: absolute; top: 26px; right: 0; z-index: 5;
-    width: 24px; height: 24px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 15px; color: var(--muted); opacity: 0.35;
-    transition: opacity .15s, color .15s, transform .15s;
+  /* Share Option Grid */
+  .share-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 6px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    gap: 4px;
+    transition: transform 0.15s, background 0.15s;
+  }
+  .share-option:hover {
+    background: var(--bg-card-hover);
+    transform: translateY(-2px);
+  }
+  .share-option .share-ico {
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  /* ── 支部 Tabs ── */
+  .branch-tabs {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    border-bottom: 1px solid var(--border);
+    margin: 8px 0 12px;
+    padding: 0 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .branch-tabs::-webkit-scrollbar { display: none; }
+  .branch-tab {
+    position: relative;
+    background: transparent;
+    border: none;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.15s;
+  }
+  .branch-tab:hover {
+    color: var(--text);
+  }
+  .branch-tab.on {
+    color: #6366f1;
+    font-weight: 700;
+  }
+  .branch-tab.on::after {
+    content: "";
+    position: absolute;
+    bottom: -1px;
+    left: 10%;
+    right: 10%;
+    height: 3px;
+    background: #6366f1;
+    border-radius: 3px 3px 0 0;
+  }
+
+  /* ── Bottom Navigation Bar + Sub Line (常駐最下方) ── */
+  body {
+    padding-bottom: 95px;
+  }
+  .bottom-footer-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 80;
+    background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -2px 14px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .bottom-nav {
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 4px;
+  }
+  .bnav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    padding: 3px 0;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 600;
+    gap: 1px;
+    transition: color 0.15s, transform 0.15s;
     touch-action: manipulation;
   }
-  .fav-heart::after { content: "♡"; }
-  .fav-heart:hover { opacity: 0.7; transform: scale(1.15); }
-  .fav-heart.on { opacity: 1; color: #e11d48; }
-  .fav-heart.on::after { content: "♥"; }
+  .bnav-btn .bnav-icon {
+    font-size: 16px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 22px;
+    border-radius: 11px;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .bnav-btn:hover {
+    color: var(--text);
+  }
+  .bnav-btn.on {
+    color: #6366f1;
+    font-weight: 700;
+  }
+  .bnav-btn.on .bnav-icon {
+    background: rgba(99, 102, 241, 0.15);
+  }
+  .bottom-sub-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 3px 10px 4px;
+    border-top: 1px solid var(--border);
+    font-size: 10.5px;
+    color: var(--muted);
+    background: color-mix(in srgb, var(--bg) 60%, transparent);
+  }
+  .bottom-sub-line .foot-copy {
+    opacity: 0.85;
+  }
 
   .gh-badge {
     position: absolute; top: 2px; right: 2px; z-index: 2;
@@ -1315,22 +1481,15 @@
         </div>
       </div>
       <div class="search-row">
-        <div class="search-wrap">
+        <div class="search-wrap" style="width:100%;">
           <span class="search-ico" aria-hidden="true">🔍</span>
           <input class="search" id="search" type="search" enterkeyhint="search" placeholder="搜尋支部／分類／項目…" aria-label="搜尋（支部、分類、項目名）" autocomplete="off" />
           <button class="search-clear" id="search-clear" type="button" aria-label="清除搜尋">×</button>
         </div>
-        <button type="button" class="fav-jump" id="fav-jump" onclick="jumpTo('fav')" aria-pressed="false"
-                title="我的收藏（你喺項目上撳過 ⭐ 嘅都喺晒呢度）"><span class="chip-ico" aria-hidden="true">⭐</span><span class="wide-only">我的收藏</span><span class="narrow-only">收藏</span></button>
       </div>
     </header>
   </div>
 
-  <nav class="market-nav" aria-label="商店導覽">
-    <button class="on" data-market="discover" onclick="setMarketView('discover')">探索分類</button>
-    <button data-market="charts" onclick="setMarketView('charts')">排行榜</button>
-    <span>由社群創作 · 管理員審核上架</span>
-  </nav>
   <nav class="page-nav" id="page-nav" aria-label="分頁" hidden></nav>
   <div class="tag-row" id="tag-row" hidden></div>
   <div class="tag-row sort-row" id="sort-row" hidden></div>
@@ -1391,19 +1550,16 @@
     <p>試下改關鍵字，或者撳「全部」／轉第二個分頁睇下</p>
   </div>
 
-  <!-- 底部統一卡：安裝提示＋最底一行式資訊
-       （IG 推廣、站點統計、版權全部收做 foot-line 一條，唔再各自一整行食位） -->
+  <!-- 底部資訊 -->
   <footer class="foot-card" aria-label="底部資訊">
-    <p class="tip">💡 <b>提示：</b>喺瀏覽器選單選「加入主畫面 / 安裝 App」（Android 可撳右上角「安裝」），呢個「SCOUT APP STORE」就會變成電話桌面嘅一個 App。所有童軍工具、圖卡、簡報同連結都由呢度入。</p>
     <div class="foot-line">
       <span class="ig-emoji" aria-hidden="true">📸</span>
-      <span class="ig-title">追蹤我哋嘅 Instagram</span>
-      <span class="ig-sub" id="ig-handle">童軍工具 · 教學 · 活動花絮</span>
-      <button class="btn-primary" id="ig-follow" type="button">追蹤</button>
+      <a class="ig-title-link" href="https://www.instagram.com/noscout.system/" target="_blank" rel="noopener" style="text-decoration:none; color:inherit;">
+        <span class="ig-title" style="font-weight:750;">追蹤我哋嘅 Instagram@noscout.system</span>
+      </a>
+      <span class="ig-sub" style="color:var(--muted);">童軍工具 · 教學 ·</span>
       <button class="btn-secondary" id="ig-qr-btn" type="button">🔳 QR</button>
-      <span class="foot-meta" id="foot-count">載入中…</span>
-      <span class="foot-copy">© 2026 Scout System · App Store Edition</span>
-      <button class="foot-edit" id="foot-edit" type="button" title="進入後台" aria-label="進入後台">edit</button>
+      <span id="foot-count" hidden></span>
     </div>
   </footer>
 </div>
@@ -1418,6 +1574,77 @@
     <div class="modal-title">掃描追蹤 <span id="ig-handle-modal"></span></div>
     <div class="modal-sub">長按儲存 QR 碼，或撳「開啟 Instagram」</div>
     <button class="btn-primary" id="ig-open" type="button">開啟 Instagram</button>
+  </div>
+</div>
+
+<div class="modal" id="settings-modal" hidden>
+  <div class="modal-backdrop" onclick="closeSettingsModal()"></div>
+  <div class="modal-card settings-card" role="dialog" aria-modal="true" aria-label="設置">
+    <button class="modal-x" type="button" aria-label="關閉" onclick="closeSettingsModal()">×</button>
+    <div class="modal-eyebrow" style="font-size:11px; font-weight:800; color:var(--accent-2); letter-spacing:.08em; text-transform:uppercase;">SETTINGS</div>
+    <div class="modal-title" style="margin-top:4px; font-size:20px;">⚙️ 設置</div>
+    
+    <div class="settings-box" style="margin-top:16px; text-align:left; background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:14px;">
+      <p class="tip" style="font-size:13px; line-height:1.6; color:var(--text); margin:0;">
+        💡 <b>提示：</b>喺瀏覽器選單選「加入主畫面 / 安裝 App」（Android 可撳右上角「安裝」），呢個「SCOUT APP STORE」就會變成電話桌面嘅一個 App。所有童軍工具、圖卡、簡報同連結都由呢度入。
+      </p>
+    </div>
+
+    <div class="settings-actions" style="margin-top:16px; display:flex; flex-direction:column; gap:10px;">
+      <button class="btn-primary" type="button" onclick="const b=document.getElementById('install-btn'); if(b && b.style.display!=='none'){b.click();} else{if(typeof showToast==='function') showToast('請喺瀏覽器選單點選「加入主畫面」');} closeSettingsModal();" style="width:100%;">
+        ⬇️ 安裝 SCOUT APP STORE 至桌面
+      </button>
+      <button class="btn-secondary" type="button" onclick="document.getElementById('theme-btn').click();" style="width:100%;">
+        🌙 切換主題 (深色 / 淺色)
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="share-modal" hidden>
+  <div class="modal-backdrop" onclick="closeShareModal()"></div>
+  <div class="modal-card share-card" role="dialog" aria-modal="true" aria-label="分享">
+    <button class="modal-x" type="button" aria-label="關閉" onclick="closeShareModal()">×</button>
+    <div class="modal-eyebrow" style="font-size:11px; font-weight:800; color:var(--accent-2); letter-spacing:.08em; text-transform:uppercase;">SHARE</div>
+    <div class="modal-title" id="share-modal-title" style="margin-top:4px; font-size:18px;">分享項目</div>
+    <div class="modal-sub" id="share-modal-desc" style="font-size:12px; color:var(--muted); margin-top:4px;"></div>
+    
+    <div class="share-url-row" style="display:flex; gap:8px; margin-top:14px;">
+      <input type="text" id="share-modal-url" readonly style="flex:1; padding:8px 12px; border-radius:10px; border:1px solid var(--border); background:var(--bg-card); color:var(--text); font-size:13px;" />
+      <button type="button" class="btn-primary" onclick="copyShareUrl()" style="padding:8px 14px; font-size:13px; font-weight:700; white-space:nowrap;">複製</button>
+    </div>
+
+    <div class="share-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-top:16px;">
+      <button type="button" class="share-option" onclick="shareTo('whatsapp')">
+        <span class="share-ico">💬</span>
+        <span>WhatsApp</span>
+      </button>
+      <button type="button" class="share-option" onclick="shareTo('facebook')">
+        <span class="share-ico">📘</span>
+        <span>Facebook</span>
+      </button>
+      <button type="button" class="share-option" onclick="shareTo('telegram')">
+        <span class="share-ico">✈️</span>
+        <span>Telegram</span>
+      </button>
+      <button type="button" class="share-option" onclick="shareTo('x')">
+        <span class="share-ico">🐦</span>
+        <span>X (Twitter)</span>
+      </button>
+      <button type="button" class="share-option" onclick="shareTo('line')">
+        <span class="share-ico">🟢</span>
+        <span>LINE</span>
+      </button>
+      <button type="button" class="share-option" onclick="shareTo('system')">
+        <span class="share-ico">📲</span>
+        <span>系統分享</span>
+      </button>
+    </div>
+
+    <div class="share-qr-wrap" style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border); text-align:center;">
+      <div class="share-qr-title" style="font-size:12px; color:var(--muted); margin-bottom:8px;">掃描開啟</div>
+      <img id="share-modal-qr" class="share-qr-img" src="" alt="QR Code" style="width:130px; height:130px; border-radius:12px; background:#fff; padding:6px; border:1px solid var(--border);" />
+    </div>
   </div>
 </div>
 
@@ -1742,12 +1969,12 @@ const igModal = document.getElementById("ig-modal");
   const f = document.getElementById("ig-follow"); if (f) f.textContent = "追蹤 " + IG.handle;
 })();
 const openIG = () => window.open(IG.url, "_blank", "noopener");
-document.getElementById("ig-follow").addEventListener("click", openIG);
+const igFollowBtn = document.getElementById("ig-follow"); if (igFollowBtn) igFollowBtn.addEventListener("click", openIG);
 document.getElementById("ig-open").addEventListener("click", openIG);
 document.getElementById("ig-qr-btn").addEventListener("click", () => { igModal.hidden = false; });
 document.getElementById("ig-x").addEventListener("click", () => { igModal.hidden = true; });
 document.getElementById("ig-close").addEventListener("click", () => { igModal.hidden = true; });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") igModal.hidden = true; });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { igModal.hidden = true; closeSettingsModal(); closeShareModal(); } });
 
 // 後台入口：最底 © 旁邊嘅細小「edit」掣 → #admin（未登入會先彈密碼頁）
 const footEdit = document.getElementById("foot-edit");
@@ -1789,6 +2016,35 @@ function goRoute() {
 goRoute();
 window.addEventListener("hashchange", () => { measureHeader(); goRoute(); });
 </script>
+
+<footer class="bottom-footer-bar" id="bottom-footer-bar">
+  <nav class="bottom-nav" id="bottom-nav" aria-label="底欄導覽">
+    <button type="button" class="bnav-btn on" data-bnav="discover" onclick="handleBnav('discover')">
+      <span class="bnav-icon">📁</span>
+      <span class="bnav-label">分類</span>
+    </button>
+    <button type="button" class="bnav-btn" data-bnav="links" onclick="handleBnav('links')">
+      <span class="bnav-icon">🔗</span>
+      <span class="bnav-label">連結</span>
+    </button>
+    <button type="button" class="bnav-btn" data-bnav="tools" onclick="handleBnav('tools')">
+      <span class="bnav-icon">🧰</span>
+      <span class="bnav-label">教學工具</span>
+    </button>
+    <button type="button" class="bnav-btn" data-bnav="charts" onclick="handleBnav('charts')">
+      <span class="bnav-icon">🏆</span>
+      <span class="bnav-label">排行榜</span>
+    </button>
+    <button type="button" class="bnav-btn" data-bnav="fav" onclick="handleBnav('fav')">
+      <span class="bnav-icon">❤️</span>
+      <span class="bnav-label">收藏</span>
+    </button>
+  </nav>
+  <div class="bottom-sub-line">
+    <span class="foot-copy">© 2026 Scout System · App Store Edition</span>
+    <button class="foot-edit" id="foot-edit" type="button" title="進入後台" aria-label="進入後台">edit</button>
+  </div>
+</footer>
 
 </body>
 </html>

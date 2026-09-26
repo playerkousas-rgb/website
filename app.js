@@ -119,7 +119,7 @@ function chartHTML(apps) {
     const idx = REG.push(a)-1;
     const score = Number(a[metric] || 0);
     const scoreHTML = score >= CHART_SCORE_MIN ? `<div class="chart-score"><b>${score.toLocaleString()}</b><small>${m.unit}</small></div>` : '';
-    return `<a class="chart-item tile" href="${esc(a.url)}" data-idx="${idx}" data-id="${esc(a._id)}"><span class="chart-rank">${String(i+1).padStart(2,'0')}</span>${iconHTML(a)}<div class="chart-copy"><h3>${esc(a.name)}</h3><p>${esc(a.description || '')}</p><div class="tile-tags">${(a.tags || []).map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>${scoreHTML}<span class="chart-open">開啟 ↗</span></a>`;
+    return `<a class="chart-item tile" href="${esc(a.url)}" data-idx="${idx}" data-id="${esc(a._id)}"><span class="chart-rank">${String(i+1).padStart(2,'0')}</span>${iconHTML(a)}<div class="chart-copy"><h3>${esc(a.name)}</h3><p>${esc(a.description || '')}</p></div>${scoreHTML}<span class="chart-open">開啟 ↗</span></a>`;
   }).join('')}</div></section>`;
 }
 // 適用支部篩選：可以**同時揀幾個**（OR —— 揀「小＋幼」= 兩個支部嘅嘢都俾我睇）
@@ -226,19 +226,26 @@ function switchPage(id) {
 function tileHTML(idx, delay) {
   const app = REG[idx];
   const d = Math.min(delay || 0, 12) * 30;
-  const tags = (app.tags || []).filter(Boolean);
   const starred = isFavorite(app._id);
   const hearted = isHearted(app._id);
   return `
-  <a class="tile" href="${esc(app.url)}" title="${esc((app.description || app.name) + (tags.length ? " 標籤：" + tags.join("、") : ""))}"
+  <a class="tile" href="${esc(app.url)}" title="${esc(app.description || app.name)}"
      data-idx="${idx}" data-id="${esc(app._id || "")}" style="animation-delay:${d}ms">
-    <span class="fav-star ${starred ? "on" : ""}" title="⭐ 加入收藏" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); toggleFav(this)"></span>
-    <span class="fav-heart ${hearted ? "on" : ""}" title="❤️ 讚好（最受歡迎排行用）" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); toggleHeartBtn(this)"></span>
     ${app.github ? `<span class="gh-badge" title="GitHub repo" onclick="event.preventDefault(); event.stopPropagation(); window.open('${esc(app.github)}','_blank')">GH</span>` : ""}
     ${iconHTML(app)}
     <div class="tile-name">${esc(app.name)}</div>
-    ${tags.length ? `<div class="tile-tags">${tags.map((t) => `<span title="${esc(t)}">${esc(scoutTagShort(t))}</span>`).join("")}</div>` : ""}
     ${app.description ? `<div class="tile-desc">${esc(app.description)}</div>` : ""}
+    <div class="tile-bar">
+      <button type="button" class="tile-btn btn-heart fav-heart ${starred ? "on" : ""}" title="收藏" aria-label="收藏" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); toggleFav(this)">
+        <svg class="heart-ico" width="16" height="16" viewBox="0 0 24 24" fill="${starred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </button>
+      <button type="button" class="tile-btn btn-star fav-star ${hearted ? "on" : ""}" title="支持" aria-label="支持" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); toggleHeartBtn(this)">
+        <svg class="star-ico" width="16" height="16" viewBox="0 0 24 24" fill="${hearted ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </button>
+      <button type="button" class="tile-btn btn-share" title="分享" aria-label="分享" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); openShareModal('${esc(app._id || "")}')">
+        <svg class="share-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      </button>
+    </div>
   </a>`;
 }
 
@@ -246,14 +253,28 @@ function toggleFav(el) {
   const id = el.dataset.id;
   if (!id) return;
   toggleFavorite(id);
-  el.classList.toggle("on", isFavorite(id));
+  const on = isFavorite(id);
+  document.querySelectorAll(`.fav-heart[data-id="${id}"], .fav-star[data-id="${id}"]`).forEach(btn => {
+    if (btn.classList.contains("fav-heart") || btn.title === "收藏") {
+      btn.classList.toggle("on", on);
+      const svg = btn.querySelector("svg");
+      if (svg) svg.setAttribute("fill", on ? "currentColor" : "none");
+    }
+  });
 }
 
 function toggleHeartBtn(el) {
   const id = el.dataset.id;
   if (!id) return;
   toggleHeart(id);
-  el.classList.toggle("on", isHearted(id));
+  const on = isHearted(id);
+  document.querySelectorAll(`.fav-heart[data-id="${id}"], .fav-star[data-id="${id}"]`).forEach(btn => {
+    if (btn.classList.contains("fav-star") || btn.title === "支持") {
+      btn.classList.toggle("on", on);
+      const svg = btn.querySelector("svg");
+      if (svg) svg.setAttribute("fill", on ? "currentColor" : "none");
+    }
+  });
 }
 
 function sectionHTML(title, icon, apps, id) {
@@ -320,26 +341,18 @@ const tagActive = (t) => tagFilter.includes(t);
 function tagLabel(t) { return scoutTagShort(t) || t; }   // 一個字（小／幼／童／深／樂）
 
 // ── 童軍支部篩選列 ───────────────────────────────────────────
-// 全名（小童軍／深資童軍…）留喺 title／aria-label，肉眼見到就係一個字。
-// 未揀嘅時候一律用「中性」外殼（唔好一睇以為已經撳咗），撳咗先變 accent。
 function renderTagRow() {
   const pg = activePage();
   const hasTag = !!(pg && (pg.categories || []).some((c) => c.apps.some((a) => a.visible !== false && (a.tags || []).length)));
   if (!hasTag || !pg) { tagRowEl.hidden = true; return; }
   tagRowEl.hidden = false;
-  const n = tagFilter.length;
-  tagRowEl.innerHTML =
-    `<span class="tag-row-hint">🔍<span class="wide-only"> 適用支部</span>：</span>` +
-    SCOUT_TAGS.map((t) => {
-      const on = tagActive(t);
-      return `<button type="button" class="tag-chip lv-chip ${on ? "on" : ""}" ` +
-        `onclick="setTag('${esc(t)}')" title="${esc(t)}（撳一下篩選／再撳取消）" ` +
-        `aria-label="${esc(t)}" aria-pressed="${on ? "true" : "false"}">${esc(scoutTagShort(t))}</button>`;
-    }).join("") +
-    (n
-      ? `<span class="tag-row-note"><span class="wide-only">已揀 ${n} 個支部</span><span class="narrow-only">${n} 個</span></span>` +
-        `<button type="button" class="tag-chip tag-clear" onclick="clearTags()" title="清晒支部篩選" aria-label="清晒支部篩選">✕ 清除</button>`
-      : `<span class="tag-row-hint wide-only muted-hint">（可多選）</span>`);
+  tagRowEl.className = "tag-row branch-tabs";
+  tagRowEl.innerHTML = SCOUT_TAGS.map((t) => {
+    const on = tagActive(t);
+    return `<button type="button" class="branch-tab ${on ? "on" : ""}" ` +
+      `onclick="setTag('${esc(t)}')" title="${esc(t)}" ` +
+      `aria-label="${esc(t)}" aria-pressed="${on ? "true" : "false"}">${esc(t)}</button>`;
+  }).join("");
 }
 
 // ── 排行榜指標列 ─────────────────────────────────────────────
@@ -479,6 +492,7 @@ function render() {
   renderSortRow();
   measurePanes();
   watchSections();
+  updateBnavState();
   if (typeof renderSpotlight === "function") renderSpotlight();
 }
 
@@ -518,14 +532,14 @@ async function main() {
     renderPages();
     const pages = enabledPages();
     const total = pages.reduce((n, p) => n + p.categories.reduce((m, c) => m + c.apps.filter((a) => a.visible !== false).length, 0), 0);
-    footCount.textContent = `${sites.name || "SCOUT APP STORE"} · 共 ${total} 個項目 · ${pages.length} 個分頁`;
+    if (footCount) footCount.textContent = `${sites.name || "SCOUT APP STORE"} · 共 ${total} 個項目 · ${pages.length} 個分頁`;
     render();
   } catch (e) {
     sectionsEl.innerHTML = "";
     emptyEl.style.display = "block";
     emptyEl.querySelector("b").textContent = "載入失敗";
     emptyEl.querySelector("p").textContent = e.message || "請稍後再試";
-    footCount.textContent = "載入失敗";
+    if (footCount) footCount.textContent = "載入失敗";
   }
 }
 
@@ -544,3 +558,130 @@ searchClear.addEventListener("click", () => { searchEl.value = ""; searchEl.focu
 
 // 重新渲染（主題切換等）後由 index 調用
 function rerenderPublic() { if (SITES) render(); }
+
+// ── 分享 Modal 與 設置 Modal ──────────────────────────────────
+let _currentShareApp = null;
+function openShareModal(id) {
+  let app = REG.find(a => String(a._id) === String(id));
+  if (!app && typeof SITES !== "undefined" && SITES) {
+    for (const p of SITES.pages || []) {
+      for (const c of p.categories || []) {
+        const found = (c.apps || []).find(a => String(a._id) === String(id));
+        if (found) { app = found; break; }
+      }
+      if (app) break;
+    }
+  }
+  if (!app) return;
+  _currentShareApp = app;
+  const modal = document.getElementById("share-modal");
+  if (!modal) {
+    if (typeof shareApp === "function") shareApp(app);
+    return;
+  }
+  const titleEl = document.getElementById("share-modal-title");
+  if (titleEl) titleEl.textContent = app.name;
+  const descEl = document.getElementById("share-modal-desc");
+  if (descEl) descEl.textContent = app.description || "SCOUT APP STORE 實用工具";
+  const urlEl = document.getElementById("share-modal-url");
+  if (urlEl) urlEl.value = app.url;
+  
+  const qrImg = document.getElementById("share-modal-qr");
+  if (qrImg) {
+    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(app.url)}`;
+  }
+  modal.hidden = false;
+}
+
+function closeShareModal() {
+  const modal = document.getElementById("share-modal");
+  if (modal) modal.hidden = true;
+}
+
+function copyShareUrl() {
+  if (!_currentShareApp) return;
+  navigator.clipboard.writeText(_currentShareApp.url).then(() => {
+    if (typeof showToast === "function") showToast("📋 連結已複製！");
+  }).catch(() => {
+    if (typeof showToast === "function") showToast(_currentShareApp.url);
+  });
+}
+
+function shareTo(platform) {
+  if (!_currentShareApp) return;
+  const url = encodeURIComponent(_currentShareApp.url);
+  const text = encodeURIComponent((_currentShareApp.name || "") + " — " + (_currentShareApp.description || ""));
+  
+  if (platform === "whatsapp") {
+    window.open(`https://api.whatsapp.com/send?text=${text}%20${url}`, "_blank");
+  } else if (platform === "facebook") {
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, "_blank");
+  } else if (platform === "telegram") {
+    window.open(`https://t.me/share/url?url=${url}&text=${text}`, "_blank");
+  } else if (platform === "x") {
+    window.open(`https://twitter.com/intent/tweet?url=${url}&text=${text}`, "_blank");
+  } else if (platform === "line") {
+    window.open(`https://social-plugins.line.me/lineit/share?url=${url}`, "_blank");
+  } else if (platform === "system") {
+    if (typeof shareApp === "function") shareApp(_currentShareApp);
+  }
+}
+
+function openSettingsModal() {
+  const modal = document.getElementById("settings-modal");
+  if (modal) modal.hidden = false;
+}
+
+function closeSettingsModal() {
+  const modal = document.getElementById("settings-modal");
+  if (modal) modal.hidden = true;
+}
+
+function updateBnavState() {
+  let activeNav = "discover";
+  if (typeof marketView !== "undefined" && marketView === "charts") {
+    activeNav = "charts";
+  } else if (typeof activeChip !== "undefined" && activeChip === "fav") {
+    activeNav = "fav";
+  } else if (typeof activePage === "function") {
+    const pg = activePage();
+    if (pg && (pg.id === "links" || (pg.label && pg.label.includes("連結")))) activeNav = "links";
+    else if (pg && (pg.id === "apps" || (pg.label && pg.label.includes("小工具")))) activeNav = "tools";
+  }
+  document.querySelectorAll(".bnav-btn").forEach(btn => {
+    btn.classList.toggle("on", btn.dataset.bnav === activeNav);
+  });
+}
+
+function handleBnav(target) {
+  if (target === "discover") {
+    if (typeof setMarketView === "function") setMarketView("discover");
+    if (typeof activeChip !== "undefined") activeChip = "all";
+    render();
+  } else if (target === "links") {
+    if (typeof setMarketView === "function") setMarketView("discover");
+    const linkPage = (typeof SITES !== "undefined" && SITES?.pages) ? SITES.pages.find(p => p.id === "links" || (p.label && p.label.includes("連結"))) : null;
+    if (linkPage && typeof switchPage === "function") {
+      switchPage(linkPage.id);
+    } else {
+      if (typeof activeChip !== "undefined") activeChip = "all";
+      render();
+    }
+  } else if (target === "tools") {
+    if (typeof setMarketView === "function") setMarketView("discover");
+    const appPage = (typeof SITES !== "undefined" && SITES?.pages) ? SITES.pages.find(p => p.id === "apps" || (p.label && p.label.includes("小工具"))) : null;
+    if (appPage && typeof switchPage === "function") {
+      switchPage(appPage.id);
+    } else {
+      if (typeof activeChip !== "undefined") activeChip = "all";
+      render();
+    }
+  } else if (target === "charts") {
+    if (typeof setMarketView === "function") setMarketView("charts");
+  } else if (target === "fav") {
+    if (typeof jumpTo === "function") jumpTo("fav");
+    else if (typeof publicJumpTo === "function") publicJumpTo("fav");
+  }
+  updateBnavState();
+}
+

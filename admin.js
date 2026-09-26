@@ -431,7 +431,6 @@ function pickIntoInput(inputId) {
 
 /* ── 登入頁 ─────────────────────────────────────────────── */
 function loginHTML() {
-  const preset = SUPABASE_CONFIG.adminEmail;
   return `
   <div class="login-wrap">
   <div class="admin-card">
@@ -439,11 +438,8 @@ function loginHTML() {
       <img class="admin-logo" src="/icons/icon-192.png" alt="" />
       <h2>🔐 管理員登入</h2>
     </div>
-    <p style="font-size:13px;color:var(--muted);margin:4px 0 6px;line-height:1.5">${preset ? "帳號已預填，只需要打密碼。" : "只有已授權用戶可以登入。"}</p>
-    ${preset
-      ? `<div class="admin-lbl">帳號</div><input style="width:100%" value="${esc(preset)}" disabled autocomplete="username" />`
-      : `<div class="admin-lbl">Email</div><input id="l-email" type="email" style="width:100%" placeholder="you@example.com" autocomplete="username" inputmode="email" />`}
-    <div class="admin-lbl">Password</div>
+    <p style="font-size:13px;color:var(--muted);margin:4px 0 12px;line-height:1.5">請輸入管理員密碼以進入後台。</p>
+    <div class="admin-lbl">Password / 密碼</div>
     <input id="l-pass" type="password" style="width:100%" placeholder="••••••••" autocomplete="current-password" />
     <div class="admin-actions" style="margin-top:16px">
       <button class="mini-btn primary full" onclick="ADMIN.login()">登入</button>
