@@ -1820,6 +1820,40 @@
   </form>
 </dialog>
 <script src="market.js"></script>
+
+<footer class="bottom-footer-bar" id="bottom-footer-bar">
+  <nav class="bottom-nav" id="bottom-nav" aria-label="底欄導覽">
+    <button type="button" class="bnav-btn on" data-bnav="discover" onclick="handleBnav('discover')">
+      <span class="bnav-icon">📁</span>
+      <span class="bnav-label">分類</span>
+    </button>
+    <button type="button" class="bnav-btn" data-bnav="links" onclick="handleBnav('links')">
+      <span class="bnav-icon">🔗</span>
+      <span class="bnav-label">連結</span>
+    </button>
+    <button type="button" class="bnav-btn" data-bnav="tools" onclick="handleBnav('tools')">
+      <span class="bnav-icon">🧰</span>
+      <span class="bnav-label">教學工具</span>
+    </button>
+    <button type="button" class="bnav-btn" data-bnav="charts" onclick="handleBnav('charts')">
+      <span class="bnav-icon">🏆</span>
+      <span class="bnav-label">排行榜</span>
+    </button>
+    <button type="button" class="bnav-btn" data-bnav="fav" onclick="handleBnav('fav')">
+      <span class="bnav-icon">❤️</span>
+      <span class="bnav-label">收藏</span>
+    </button>
+  </nav>
+  <div class="bottom-credit-line" aria-label="底部資訊">
+    <span class="ig-emoji" aria-hidden="true">📸</span>
+    <a href="https://www.instagram.com/noscout.system/" target="_blank" rel="noopener"><span class="wide-only">追蹤我哋嘅 Instagram@noscout.system</span><span class="narrow-only">@noscout.system</span></a>
+    <button class="ig-qr-btn" id="ig-qr-btn" type="button">🔳 QR</button>
+    <span class="ig-sub">童軍工具·教學</span>
+    <span class="credit-copy">© 2026 Scout System<span class="wide-only"> · App Store Edition</span></span>
+    <button class="foot-edit" id="foot-edit" type="button" title="進入後台" aria-label="進入後台">edit</button>
+  </div>
+</footer>
+
 <script>
 /* ════════════════════════════════════════════════════════════════
    啟動 boot：主題／安裝 PWA／返回頂部／金手指／路由
@@ -2045,24 +2079,30 @@ function renderSpotlight() {
   setSectionsBlur(!_userRevealed && !_heroCollapsed && hasContent);
 }
 
-document.getElementById("hero-open").addEventListener("click", () => {
+/* 今期主打嗰幾粒掣都同上：null-check 先掛 listener，
+   唔可以再直接 document.getElementById("hero-open").addEventListener(...)
+   （hero 區一改結構，成段 boot 又會無聲死埋）。 */
+const heroOpenBtn = document.getElementById("hero-open");
+if (heroOpenBtn) heroOpenBtn.addEventListener("click", () => {
   const f = (typeof getFeaturedApp === "function" && typeof SITES !== "undefined" && SITES)
     ? getFeaturedApp(SITES) : null;
   if (f && f.app.url) { trackClick(f.app._id); window.open(f.app.url, "_blank", "noopener"); }
   else { revealSections(); sectionsEl.scrollIntoView({ behavior: "smooth", block: "start" }); }
 });
-document.getElementById("hero-all").addEventListener("click", () => {
+const heroAllBtn = document.getElementById("hero-all");
+if (heroAllBtn) heroAllBtn.addEventListener("click", () => {
   revealSections();
   sectionsEl.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 // 收埋／還原今期主打
-document.getElementById("hero-collapse").addEventListener("click", (e) => {
+const heroCollapseBtn = document.getElementById("hero-collapse");
+if (heroCollapseBtn) heroCollapseBtn.addEventListener("click", (e) => {
   e.stopPropagation();
   setHeroCollapsed(!_heroCollapsed);
 });
 // 收埋緊時撳成張細卡 = 還原
-heroEl.addEventListener("click", (e) => {
+if (heroEl) heroEl.addEventListener("click", (e) => {
   if (!heroEl.classList.contains("collapsed")) return;
   if (e.target.closest("button")) return; // 🔗／▾ 掣自己處理
   setHeroCollapsed(false);
@@ -2090,7 +2130,8 @@ async function shareApp(app) {
   try { await navigator.clipboard.writeText(app.url); showToast("🔗 連結已複製"); }
   catch (e) { showToast(app.url); }
 }
-document.getElementById("hero-share").addEventListener("click", () => {
+const heroShareBtn = document.getElementById("hero-share");
+if (heroShareBtn) heroShareBtn.addEventListener("click", () => {
   const f = (typeof getFeaturedApp === "function" && typeof SITES !== "undefined" && SITES) ? getFeaturedApp(SITES) : null;
   if (f) shareApp(f.app);
 });
@@ -2103,11 +2144,15 @@ const igModal = document.getElementById("ig-modal");
   const f = document.getElementById("ig-follow"); if (f) f.textContent = "追蹤 " + IG.handle;
 })();
 const openIG = () => window.open(IG.url, "_blank", "noopener");
+/* ⚠️ 底部導覽列嗰啲掣（QR／edit）住喺 footer，2026-09-26 之前呢段 boot 排喺
+   footer 上面，跑到底部嗰截嗰陣個掣仲未 parse 到 → getElementById 回 null →
+   TypeError 令成段 script 停咗，goRoute()/main() 行唔到，成個公開版一個 APP
+   都顯示唔到。所以全部掣都要 null-check，唔可以再直接 .addEventListener。 */
 const igFollowBtn = document.getElementById("ig-follow"); if (igFollowBtn) igFollowBtn.addEventListener("click", openIG);
-document.getElementById("ig-open").addEventListener("click", openIG);
-document.getElementById("ig-qr-btn").addEventListener("click", () => { igModal.hidden = false; });
-document.getElementById("ig-x").addEventListener("click", () => { igModal.hidden = true; });
-document.getElementById("ig-close").addEventListener("click", () => { igModal.hidden = true; });
+const igOpenBtn = document.getElementById("ig-open"); if (igOpenBtn) igOpenBtn.addEventListener("click", openIG);
+const igQrBtn = document.getElementById("ig-qr-btn"); if (igQrBtn) igQrBtn.addEventListener("click", () => { if (igModal) igModal.hidden = false; });
+const igXBtn = document.getElementById("ig-x"); if (igXBtn) igXBtn.addEventListener("click", () => { if (igModal) igModal.hidden = true; });
+const igCloseBtn = document.getElementById("ig-close"); if (igCloseBtn) igCloseBtn.addEventListener("click", () => { if (igModal) igModal.hidden = true; });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") { igModal.hidden = true; closeSettingsModal(); closeShareModal(); } });
 
 // 後台入口：最底 © 旁邊嘅細小「edit」掣 → #admin（未登入會先彈密碼頁）
@@ -2150,39 +2195,6 @@ function goRoute() {
 goRoute();
 window.addEventListener("hashchange", () => { measureHeader(); goRoute(); });
 </script>
-
-<footer class="bottom-footer-bar" id="bottom-footer-bar">
-  <nav class="bottom-nav" id="bottom-nav" aria-label="底欄導覽">
-    <button type="button" class="bnav-btn on" data-bnav="discover" onclick="handleBnav('discover')">
-      <span class="bnav-icon">📁</span>
-      <span class="bnav-label">分類</span>
-    </button>
-    <button type="button" class="bnav-btn" data-bnav="links" onclick="handleBnav('links')">
-      <span class="bnav-icon">🔗</span>
-      <span class="bnav-label">連結</span>
-    </button>
-    <button type="button" class="bnav-btn" data-bnav="tools" onclick="handleBnav('tools')">
-      <span class="bnav-icon">🧰</span>
-      <span class="bnav-label">教學工具</span>
-    </button>
-    <button type="button" class="bnav-btn" data-bnav="charts" onclick="handleBnav('charts')">
-      <span class="bnav-icon">🏆</span>
-      <span class="bnav-label">排行榜</span>
-    </button>
-    <button type="button" class="bnav-btn" data-bnav="fav" onclick="handleBnav('fav')">
-      <span class="bnav-icon">❤️</span>
-      <span class="bnav-label">收藏</span>
-    </button>
-  </nav>
-  <div class="bottom-credit-line" aria-label="底部資訊">
-    <span class="ig-emoji" aria-hidden="true">📸</span>
-    <a href="https://www.instagram.com/noscout.system/" target="_blank" rel="noopener"><span class="wide-only">追蹤我哋嘅 Instagram@noscout.system</span><span class="narrow-only">@noscout.system</span></a>
-    <button class="ig-qr-btn" id="ig-qr-btn" type="button">🔳 QR</button>
-    <span class="ig-sub">童軍工具·教學</span>
-    <span class="credit-copy">© 2026 Scout System<span class="wide-only"> · App Store Edition</span></span>
-    <button class="foot-edit" id="foot-edit" type="button" title="進入後台" aria-label="進入後台">edit</button>
-  </div>
-</footer>
 
 </body>
 </html>

@@ -14,7 +14,9 @@
 //      v29 = UI重構：APP卡片移除支部標籤、新增心(收藏)星(支持)分享3按鈕、安裝提示收進設置modal、底部Instagram欄改版
 //      v30 = 頂部「回報／意見」改為本站表格，並對接 Scout Admin
 //      v31 = 回報 payload 對齊 Scout Admin 官方 widget.js（獨立姓名／聯絡欄及完整類型）
-const CACHE = 'scout-tools-v31';
+//      v32 = 修復「全部 APP 顯示唔到」：boot script 搬到 </body> 之前（#ig-qr-btn 原本喺
+//            script 之下 → TypeError 殺死 goRoute()/main()），兼全部按鈕加 null-check
+const CACHE = 'scout-tools-v32';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
