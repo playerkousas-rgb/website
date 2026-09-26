@@ -1,4 +1,5 @@
 // 簡單 offline cache：展示櫃本體可以離線打開（app 本身當然要上網）
+// v33：排行榜加入「最新上架」；保留分數達 100 才顯示數字
 // v20：升級 cache 版本 → activate 時自動清走舊 cache（scout-tools-v19 等），
 //      解決「打開先見舊版殘留、之後先跳新版」嘅問題。
 //      以後改咗 core 檔案想令用戶即刻用上新版，就 +1 個數。
@@ -16,7 +17,7 @@
 //      v31 = 回報 payload 對齊 Scout Admin 官方 widget.js（獨立姓名／聯絡欄及完整類型）
 //      v32 = 修復「全部 APP 顯示唔到」：boot script 搬到 </body> 之前（#ig-qr-btn 原本喺
 //            script 之下 → TypeError 殺死 goRoute()/main()），兼全部按鈕加 null-check
-const CACHE = 'scout-tools-v32';
+const CACHE = 'scout-tools-v33';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

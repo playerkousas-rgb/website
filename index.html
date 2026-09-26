@@ -2038,7 +2038,7 @@ function renderSpotlight() {
     iconEl.setAttribute("aria-label", a.name || "");
   }
 
-  // meta：⭐收藏＋❤️讚好（滿 CHART_SCORE_MIN 先顯示，同排行榜一樣——晒個位數／零難睇）＋ 🎖 支部（一個字）。
+  // meta：⭐收藏＋❤️讚好（只顯示較有代表性的數字）＋ 🎖 支部（一個字）。
   // 點擊數刻意唔顯示 —— 主打多數係新推出，嗰陣係 0，晒出嚟難睇。
   const metaEl = document.getElementById("hero-meta");
   if (metaEl) {

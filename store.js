@@ -360,6 +360,8 @@ function rowsToApp(r) {
     clicks: r.clicks || 0,
     stars: r.stars || 0,
     hearts: r.hearts || 0,
+    // 保留上架時間，供排行榜的「最新上架」排序使用。
+    created_at: r.created_at || null,
     featured: r.featured === true,
     sort_order: r.sort_order ?? 0,
     _id: r.id,
@@ -505,6 +507,7 @@ function normalizeApp(a, i, catName, page) {
     clicks: a.clicks || 0,
     stars: a.stars || 0,
     hearts: a.hearts || 0,
+    created_at: a.created_at || null,
     featured: a.featured === true,
     sort_order: a.sort_order ?? i,
     _id: a._id || "demo-" + Date.now() + "-" + i + "-" + Math.random().toString(36).slice(2, 6),

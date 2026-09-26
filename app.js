@@ -94,10 +94,16 @@ let ACTIVE_PAGE = null;
 let activeChip = "all";
 let marketView = "discover";
 const CHART_METRICS = {
-  clicks: { title: "🔥 最多人點擊", unit: "次開啟", note: "開啟次數" },
-  stars:  { title: "⭐ 最多人收藏", unit: "收藏",   note: "收藏人數" },
-  hearts: { title: "❤️ 最受歡迎",   unit: "個心",   note: "讚好心數" }
+  clicks:  { title: "🔥 最多人點擊", unit: "次開啟", value: (a) => Number(a.clicks || 0) },
+  stars:   { title: "⭐ 最多人收藏", unit: "收藏",   value: (a) => Number(a.stars || 0) },
+  hearts:  { title: "❤️ 最受歡迎",   unit: "個心",   value: (a) => Number(a.hearts || 0) },
+  latest:  { title: "🆕 最新上架",   unit: "上架",   value: (a) => {
+    const time = Date.parse(a.created_at || "");
+    return Number.isNaN(time) ? 0 : time;
+  } }
 };
+// 排名照常顯示，但分數數字要達到 100 才顯示。
+const CHART_SCORE_MIN = 100;
 function setMarketView(view) {
   marketView = view;
   if (!SORTS.some((s) => s.id === sortMode)) sortMode = "clicks";
@@ -107,18 +113,19 @@ function setMarketView(view) {
   });
   render();
 }
-// 分數要夠 100 先喺排行榜顯示 —— 太細嘅數字（例如 3 次開啟）擺上嚟唔好睇，
-// 排名照舊顯示，只收埋右邊個分數格
-const CHART_SCORE_MIN = 100;
 function chartHTML(apps) {
   const metric = CHART_METRICS[sortMode] ? sortMode : 'clicks';
   const m = CHART_METRICS[metric];
-  const ranked = [...apps].sort((a,b) => (b[metric] || 0) - (a[metric] || 0) || a.name.localeCompare(b.name, 'zh-HK')).slice(0, 50);
+  const ranked = [...apps].sort((a, b) => m.value(b) - m.value(a) || a.name.localeCompare(b.name, 'zh-HK')).slice(0, 50);
   if (!ranked.length) return '';
-  return `<section class="chart-section"><div class="sec-head"><h2>${m.title}</h2><span class="num">TOP ${ranked.length}</span></div><p class="chart-note">目前分頁及篩選內的累計${m.note}排名 · 同分按名稱排序 · 滿 ${CHART_SCORE_MIN} 先顯示次數</p><div class="chart-list">${ranked.map((a,i) => {
+  return `<section class="chart-section"><div class="sec-head"><h2>${m.title}</h2><span class="num">TOP ${ranked.length}</span></div><div class="chart-list">${ranked.map((a,i) => {
     const idx = REG.push(a)-1;
-    const score = Number(a[metric] || 0);
-    const scoreHTML = score >= CHART_SCORE_MIN ? `<div class="chart-score"><b>${score.toLocaleString()}</b><small>${m.unit}</small></div>` : '';
+    const value = m.value(a);
+    const scoreHTML = metric === 'latest'
+      ? `<div class="chart-score"><b>${a.created_at ? new Date(a.created_at).toLocaleDateString('zh-HK') : '—'}</b><small>${m.unit}</small></div>`
+      : value >= CHART_SCORE_MIN
+        ? `<div class="chart-score"><b>${value.toLocaleString()}</b><small>${m.unit}</small></div>`
+        : '';
     return `<a class="chart-item tile" href="${esc(a.url)}" data-idx="${idx}" data-id="${esc(a._id)}"><span class="chart-rank">${String(i+1).padStart(2,'0')}</span>${iconHTML(a)}<div class="chart-copy"><h3>${esc(a.name)}</h3><p>${esc(a.description || '')}</p></div>${scoreHTML}<span class="chart-open">開啟 ↗</span></a>`;
   }).join('')}</div></section>`;
 }
@@ -148,7 +155,8 @@ const SORT_KEY = "showcase-sort";
 const SORTS = [
   { id: "clicks", ico: "🔥", label: "最多人點擊", hint: "按開啟次數排名" },
   { id: "stars",  ico: "⭐", label: "最多人收藏", hint: "按全站收藏人數排名" },
-  { id: "hearts", ico: "❤️", label: "最受歡迎",   hint: "按全站讚好心數排名" }
+  { id: "hearts", ico: "❤️", label: "最受歡迎",   hint: "按全站讚好心數排名" },
+  { id: "latest", ico: "🆕", label: "最新上架",   hint: "按上架時間排序" }
 ];
 let sortMode = SORTS.some((s) => s.id === localStorage.getItem(SORT_KEY))
   ? localStorage.getItem(SORT_KEY) : "clicks";
@@ -359,9 +367,9 @@ function renderTagRow() {
 }
 
 // ── 排行榜指標列 ─────────────────────────────────────────────
-// 只喺「排行榜」視圖顯示：🔥 最多人點擊｜⭐ 最多人收藏｜❤️ 最受歡迎。
+// 只喺「排行榜」視圖顯示：🔥 最多人點擊｜⭐ 最多人收藏｜❤️ 最受歡迎｜🆕 最新上架。
 // 「探索分類」冇排序列 —— 永遠用後台排好嘅預設順序（排名啲嘢晒咗喺排行榜）。
-// 手機：🔥／⭐／❤️ 三個 emoji；桌面：emoji + 全名
+// 手機：emoji；桌面：emoji + 全名
 function renderSortRow() {
   if (!sortRowEl) return;
   if (marketView !== "charts") { sortRowEl.hidden = true; sortRowEl.innerHTML = ""; return; }
