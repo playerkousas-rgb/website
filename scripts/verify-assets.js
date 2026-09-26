@@ -37,7 +37,7 @@ const DEV_ONLY = [
   "scripts/lint.js", "scripts/verify-assets.js",
   "migrations/20260924-market.sql", "migrations/20260924-hearts.sql", "migrations/20260925-submission-contact.sql",
   "test/market.test.js", "test/notify-admin.test.js", "test/report.test.js",
-  "test/favicon.test.js", "test/labels.test.js"
+  "test/favicon.test.js", "test/labels.test.js", "test/boot-order.test.js"
 ];
 
 const kb = (n) => (n / 1024).toFixed(1) + " KB";
