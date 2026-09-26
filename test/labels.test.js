@@ -92,15 +92,13 @@ const run = (code) => vm.runInContext(code, ctx);
 const names = () => (els.sections.innerHTML.match(/tile-name">([^<]*)/g) || []).map((x) => x.replace('tile-name">', ""));
 run(`SITES = ${JSON.stringify(SITES)}; ACTIVE_PAGE = "apps"; render();`);
 
-// 未揀：三行都齊、得一個字／emoji，同冇「已選」樣式
+// 未揀：支部 Tabs 頁簽、得全名／標籤，同冇「已選」樣式
 const tagRow = els["tag-row"].innerHTML;
-assert.ok(tagRow.includes("適用支部"), "欄位叫「適用支部」，唔係「適用級別」");
+assert.ok(tagRow.includes("小童軍") && tagRow.includes("樂行童軍"), "支部 Tabs 列包含全部童軍支部");
 assert.ok(!tagRow.includes("適用級別") && !appSrc.includes("適用級別"), "「適用級別」要完全咁消失");
-assert.ok(/aria-pressed="false"[^>]*>小</.test(tagRow) && !/class="tag-chip lv-chip on"/.test(tagRow), "未揀就唔可以有 on 狀態");
-assert.ok(tagRow.includes("（可多選）"), "桌面提示可多選");
-assert.ok(!tagRow.includes("✕ 清除"), "冇揀就唔擺清除掣");
+assert.ok(/aria-pressed="false"[^>]*>小童軍</.test(tagRow) && !/class="branch-tab on"/.test(tagRow), "未揀就唔可以有 on 狀態");
 assert.ok(els["sort-row"].hidden === true && els["sort-row"].innerHTML === "", "探索分類唔再有排序列（排名晒喺排行榜）");
-assert.ok(els.sections.innerHTML.includes("fav-heart"), "每個項目星星下方都有心心");
+assert.ok(els.sections.innerHTML.includes("fav-heart"), "每個項目下方都有心心");
 assert.ok(els.sections.innerHTML.includes("fav-star"), "項目保留收藏星星");
 
 // 多選 = OR
@@ -108,8 +106,7 @@ run("setTag('小童軍'); setTag('幼童軍');");
 assert.deepStrictEqual(names(), ["小童軍集會助手", "幼童軍專章追蹤"], "揀「小＋幼」= 兩個支部嘅項目都顯示");
 assert.strictEqual(run("tagFilter.length"), 2, "tagFilter 要係陣式（多選）");
 assert.strictEqual(JSON.parse(mem.get("scout-tag-filter")).tags.length, 2, "篩選記住喺 localStorage");
-assert.ok(/class="tag-chip lv-chip on"/.test(els["tag-row"].innerHTML), "揀咗就有 on");
-assert.ok(els["tag-row"].innerHTML.includes("✕ 清除"), "揀咗就畀返條路 Exit：清除掣");
+assert.ok(/class="branch-tab on"/.test(els["tag-row"].innerHTML), "揀咗就有 on");
 
 // 第三個 -> 再 OR 埋；撳多次同一個 -> 取消
 run("setTag('童軍');");
@@ -139,10 +136,12 @@ assert.ok(els.chips.innerHTML.includes('<span class="wide-only">電子進度紀�
 assert.ok(!els.chips.innerHTML.includes("chip-ico"), "分類標籤純文字，冇圖示阻位");
 assert.ok(!els.chips.innerHTML.includes('data-chip="fav"'), "「我的收藏」唔再係下方標籤");
 assert.ok(!els.chips.innerHTML.includes("收藏"), "下方標籤唔再有收藏入口");
-assert.ok(html.includes('id="fav-jump"') && html.includes('onclick="jumpTo(\'fav\')"'), "搜尋行有「我的收藏」入口");
+assert.ok(!html.includes('id="fav-jump"'), "搜尋欄那行的我的收藏已移走");
+assert.ok(html.includes('id="bottom-nav"') && html.includes('data-bnav="fav"'), "底欄有常駐收藏入口");
 assert.ok(html.includes("我的收藏"), "入口叫「我的收藏」，唔係「我的最愛」");
 assert.ok(html.includes("提交作品") && !html.includes("提交我的作品"), "投稿掣改名做「提交作品」");
-assert.ok(els.sections.innerHTML.includes('<div class="tile-tags"><span title="小童軍">小</span></div>'), "tile 小標籤 = 一個字 + 全名 tooltip");
+assert.ok(!els.sections.innerHTML.includes('<div class="tile-tags">'), "每個 APP 下方唔再標支部");
+assert.ok(els.sections.innerHTML.includes('title="收藏"') && els.sections.innerHTML.includes('title="支持"') && els.sections.innerHTML.includes('title="分享"'), "每個 APP 下方改為 3 個按鈕 心 (收藏) 星 (支持) 分享");
 
 // 心心（讚好）：撳 = +1 並記住，再撳 = 取消
 run("SITES.pages[0].categories[1].apps[0].hearts = 1;");

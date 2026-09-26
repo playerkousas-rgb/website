@@ -11,8 +11,8 @@
 //      v26 = 排行榜三指標（🔥點擊／⭐收藏／❤️讚好）＋項目加心心＋探索分類走排序列
 //            ＋「我的收藏」搬入搜尋行＋分類標籤改純文字＋「提交作品」按鈕改名
 //      v28 = 投稿同時登記去 Scout Admin（Google Sheet＋電郵通知）＋表單加選填聯絡電郵／電話
-//      v27 = 今期主打 ⭐／❤️ 數字跟排行榜一樣滿 100 先顯示（免得晒個位數難睇）
-const CACHE = 'scout-tools-v28';
+//      v29 = UI重構：APP卡片移除支部標籤、新增心(收藏)星(支持)分享3按鈕、安裝提示收進設置modal、底部Instagram欄改版
+const CACHE = 'scout-tools-v29';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
