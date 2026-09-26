@@ -17,7 +17,9 @@
 //      v31 = 回報 payload 對齊 Scout Admin 官方 widget.js（獨立姓名／聯絡欄及完整類型）
 //      v32 = 修復「全部 APP 顯示唔到」：boot script 搬到 </body> 之前（#ig-qr-btn 原本喺
 //            script 之下 → TypeError 殺死 goRoute()/main()），兼全部按鈕加 null-check
-const CACHE = 'scout-tools-v33';
+//      v34 = 修「入站閃屏」（主題搶先套用＋manifest 啟動色對齊深色預設）
+//            ＋底欄「連結／教學工具」未開放就顯示佔位，唔再兜底曬出商店分類
+const CACHE = 'scout-tools-v34';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

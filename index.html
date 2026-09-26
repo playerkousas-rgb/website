@@ -8,16 +8,30 @@
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="icon" type="image/png" href="/icons/icon-192.png" />
 <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-<meta name="theme-color" content="#faf6ec" media="(prefers-color-scheme: light)" />
-<meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)" />
+<!-- 主題色／PWA 啟動畫面跟預設深色主題對齊（boot script 之後會按用戶主題再更新） -->
+<meta name="theme-color" content="#0b0d12" />
+<meta name="apple-mobile-web-app-background-color" content="#0b0d12" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="application-name" content="SCOUT APP STORE" />
 <meta name="apple-mobile-web-app-title" content="SCOUT APP STORE" />
 <meta name="format-detection" content="telephone=no" />
+<script>
+  // ⚡ 主題搶先套用：boot script 住喺 body 尾，行到嗰陣頁面可能已經繪圖；
+  // 如果留到先至設定，預設深色用戶會見到畫面「白一下」再轉深色（閃屏 BUG）。
+  // 呢段要放喺 <style> 之前，令第一帧就已經係正確主題。
+  (function () {
+    var t = "dark";
+    try { t = localStorage.getItem("theme") || "dark"; } catch (e) {}
+    document.documentElement.dataset.theme = t;
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.content = t === "dark" ? "#0b0d12" : "#faf6ec";
+  })();
+</script>
 <style>
   :root {
+    color-scheme: light;
     --bg: #faf6ec;
     --bg-elevated: #ffffff;
     --bg-card: #ffffff;
@@ -57,6 +71,7 @@
       "Helvetica Neue", Arial, sans-serif;
   }
   [data-theme="dark"] {
+    color-scheme: dark;
     --bg: #0b0d12;
     --bg-elevated: #151922;
     --bg-card: #1a1f2e;
