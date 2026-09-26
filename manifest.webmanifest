@@ -6,8 +6,8 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#f2f4f8",
-  "theme_color": "#2563eb",
+  "background_color": "#0b0d12",
+  "theme_color": "#0b0d12",
   "lang": "zh-HK",
   "categories": ["utilities", "education"],
   "icons": [

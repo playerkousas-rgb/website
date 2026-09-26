@@ -168,8 +168,8 @@ function setSort(m) {
   render();
 }
 
-function enabledPages() { return (SITES.pages || []).filter((p) => p.enabled); }
-function pageById(id) { return (SITES.pages || []).find((p) => p.id === id); }
+function enabledPages() { return ((SITES && SITES.pages) || []).filter((p) => p.enabled); }
+function pageById(id) { return ((SITES && SITES.pages) || []).find((p) => p.id === id); }
 function activePage() { return pageById(ACTIVE_PAGE); }
 
 function measurePanes() {
@@ -225,6 +225,7 @@ function switchPage(id) {
   const p = pageById(id);
   if (!p || !p.enabled) return;
   ACTIVE_PAGE = id;
+  bnavSection = sectionOfPage(p);
   localStorage.setItem(ACTIVE_PAGE_KEY, id);
   tagFilter = [];
   persistTagFilter();
@@ -393,6 +394,13 @@ function renderSortRow() {
 
 // ── 主要渲染 ─────────────────────────────────────────────────
 function render() {
+  // 底欄「連結／教學工具」專區：只顯示專區自己嘅內容。
+  // 專區未開放（分頁關閉或未有公開項目）→ 佔位提示，唔兜底顯示其他分頁嘅分類。
+  if (bnavSection === "links" || bnavSection === "tools") {
+    const sp = sectionPageFor(bnavSection);
+    if (!sp) { renderBnavPlaceholder(bnavSection); return; }
+    if (ACTIVE_PAGE !== sp.id) ACTIVE_PAGE = sp.id;
+  }
   if (!SITES) return;
   renderPages();
   restoreTagFilter();
@@ -648,50 +656,141 @@ function closeSettingsModal() {
   if (modal) modal.hidden = true;
 }
 
+// ── 底欄導覽（分類／連結／教學工具／排行榜／收藏）───────────────────
+// 三個「內容分區」各有自己嘅分頁：
+//   分類     → 商店分頁（apps 等，用頂部分頁導覽瀏覽）
+//   連結     → 有用連結（links）
+//   教學工具 → 學習圖卡（cards）／PPT 簡報（ppt）
+// 「連結」「教學工具」只會顯示自己專區嘅內容 —— 專區未開放
+// （分頁關閉／未有公開項目）就顯示佔位提示，絕唔可以兜底展示其他
+// 分頁（例如商店）嘅分類，免得亂曬錯內容。
+// bnavSection：null = 跟目前分頁推斷；"links"/"tools" = 專區佔位中。
+let bnavSection = null;
+
+function pageHasVisible(p) {
+  return !!(p && p.enabled && (p.categories || []).some((c) => c.apps.some((a) => a.visible !== false)));
+}
+function linksPageOf() {
+  return ((typeof SITES !== "undefined" && SITES && SITES.pages) || [])
+    .find((p) => p.id === "links" || (p.label && p.label.includes("連結"))) || null;
+}
+function teachPagesOf() {
+  return ((typeof SITES !== "undefined" && SITES && SITES.pages) || []).filter((p) =>
+    p.id === "cards" || p.id === "ppt" ||
+    (p.label && (p.label.includes("圖卡") || p.label.includes("簡報") || p.label.includes("教學"))));
+}
+function sectionOfPage(p) {
+  if (!p) return "discover";
+  if (p.id === "links" || (p.label && p.label.includes("連結"))) return "links";
+  if (p.id === "cards" || p.id === "ppt" ||
+      (p.label && (p.label.includes("圖卡") || p.label.includes("簡報")))) return "tools";
+  return "discover"; // apps 及其他 → 「分類」
+}
+// 專區第一個「有公開內容」嘅分頁；未開放就 null
+function sectionPageFor(section) {
+  if (section === "links") return pageHasVisible(linksPageOf()) ? linksPageOf() : null;
+  if (section === "tools") return teachPagesOf().find(pageHasVisible) || null;
+  return null;
+}
+function homePage() {
+  const pages = ((typeof SITES !== "undefined" && SITES && SITES.pages) || []).filter((p) => p.enabled);
+  return pages.find((p) => sectionOfPage(p) === "discover") || pages[0] || null;
+}
+// 專區未開放：淨係提示，唔帶出任何分類／其他分頁內容
+function renderBnavPlaceholder(section) {
+  pageNavEl.hidden = true;
+  pageNavEl.innerHTML = "";
+  tagRowEl.hidden = true;
+  if (sortRowEl) { sortRowEl.hidden = true; sortRowEl.innerHTML = ""; }
+  chipsEl.innerHTML = "";
+  sectionsEl.innerHTML = "";
+  REG.length = 0;
+  // 今期主打都係商店推廣內容 —— 專區佔位時一併收埋，唔好亂曬入去
+  const hero = document.getElementById("hero-spotlight");
+  if (hero) hero.hidden = true;
+  const b = emptyEl.querySelector("b");
+  const p = emptyEl.querySelector("p");
+  if (section === "links") {
+    b.textContent = "「有用連結」尚未開放";
+    p.textContent = "管理員仲未上架任何有用連結，敬請期待。";
+  } else {
+    b.textContent = "「教學工具」尚未開放";
+    p.textContent = "學習圖卡、PPT 簡報等教學材料仲未上架，敬請期待。";
+  }
+  emptyEl.style.display = "block";
+  measurePanes();
+  updateBnavState();
+}
+
 function updateBnavState() {
   let activeNav = "discover";
   if (typeof marketView !== "undefined" && marketView === "charts") {
     activeNav = "charts";
   } else if (typeof activeChip !== "undefined" && activeChip === "fav") {
     activeNav = "fav";
+  } else if (bnavSection === "links" || bnavSection === "tools") {
+    activeNav = bnavSection;
   } else if (typeof activePage === "function") {
-    const pg = activePage();
-    if (pg && (pg.id === "links" || (pg.label && pg.label.includes("連結")))) activeNav = "links";
-    else if (pg && (pg.id === "apps" || (pg.label && pg.label.includes("小工具")))) activeNav = "tools";
+    // 由分頁推斷分區：apps/未知 → 分類；links → 連結；cards/ppt → 教學工具
+    // （以前 apps 會映射去「教學工具」，搞到分類內容著錯燈、亂曬入去）
+    activeNav = sectionOfPage(activePage());
   }
   document.querySelectorAll(".bnav-btn").forEach(btn => {
     btn.classList.toggle("on", btn.dataset.bnav === activeNav);
   });
+  return activeNav;
 }
 
 function handleBnav(target) {
-  if (target === "discover") {
-    if (typeof setMarketView === "function") setMarketView("discover");
+  // 轉去「商店」分頁（分類／排行榜／收藏都係以商店為基礎）
+  const goHome = () => {
+    if ((bnavSection === "links" || bnavSection === "tools") && !sectionPageFor(bnavSection)) {
+      bnavSection = "discover"; // 離開未開放專區嘅佔位
+    }
+    const h = homePage();
+    const cur = typeof activePage === "function" ? activePage() : null;
+    if (h && (!cur || !pageHasVisible(cur) || sectionOfPage(cur) !== "discover")) {
+      ACTIVE_PAGE = h.id;
+      localStorage.setItem(ACTIVE_PAGE_KEY, h.id);
+      tagFilter = [];
+      persistTagFilter();
+    }
     if (typeof activeChip !== "undefined") activeChip = "all";
-    render();
+  };
+  // 轉去某個內容專區：只會顯示專區自己嘅分頁；未開放 → render() 顯示佔位
+  const goSection = (section) => {
+    bnavSection = section;
+    const sp = sectionPageFor(section);
+    if (sp) {
+      ACTIVE_PAGE = sp.id;
+      localStorage.setItem(ACTIVE_PAGE_KEY, sp.id);
+      tagFilter = [];
+      persistTagFilter();
+    }
+    if (typeof activeChip !== "undefined") activeChip = "all";
+  };
+
+  if (target === "discover") {
+    bnavSection = "discover";
+    goHome();
+    if (typeof setMarketView === "function") setMarketView("discover");
+    else render();
   } else if (target === "links") {
+    goSection("links");
     if (typeof setMarketView === "function") setMarketView("discover");
-    const linkPage = (typeof SITES !== "undefined" && SITES?.pages) ? SITES.pages.find(p => p.id === "links" || (p.label && p.label.includes("連結"))) : null;
-    if (linkPage && typeof switchPage === "function") {
-      switchPage(linkPage.id);
-    } else {
-      if (typeof activeChip !== "undefined") activeChip = "all";
-      render();
-    }
+    else render();
   } else if (target === "tools") {
+    goSection("tools");
     if (typeof setMarketView === "function") setMarketView("discover");
-    const appPage = (typeof SITES !== "undefined" && SITES?.pages) ? SITES.pages.find(p => p.id === "apps" || (p.label && p.label.includes("小工具"))) : null;
-    if (appPage && typeof switchPage === "function") {
-      switchPage(appPage.id);
-    } else {
-      if (typeof activeChip !== "undefined") activeChip = "all";
-      render();
-    }
+    else render();
   } else if (target === "charts") {
+    goHome();
     if (typeof setMarketView === "function") setMarketView("charts");
   } else if (target === "fav") {
+    goHome();
     if (typeof jumpTo === "function") jumpTo("fav");
     else if (typeof publicJumpTo === "function") publicJumpTo("fav");
+    else render();
   }
   updateBnavState();
 }

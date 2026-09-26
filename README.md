@@ -446,3 +446,9 @@ curl -s -X POST http://127.0.0.1:8080/api/notify-admin -H 'content-type: applica
 
 本機以環境變數啟動 `npm run preview`，同樣走 `/api/admin-login`。`npm run build` 包含登入 API 模擬測試和 JS 語法檢查；真實 RLS／跨裝置審核須在 SQL 升級及遠端設定完成後驗收。
 定完成後驗收。
+
+## 2026-09-26 底欄專區歸位＋入站閃屏修復
+
+- **底欄「連結」／「教學工具」唔再兜底曬出商店分類**：兩個專區各自只顯示自己嘅分頁內容（有用連結 `links`；學習圖卡 `cards`＋PPT `ppt`）。專區未開放（分頁關閉或未有公開項目）就顯示「尚未開放」佔位提示，連今期主打都一併收埋——**唔會**再將「分類」頁嘅分類／項目亂曬入去。之後喺後台開放專區內容，佔位會自動消失。底欄著燈邏輯同步修正：商店（apps）內容依家著「分類」燈，唔會再錯誤著「教學工具」。
+- **修復入站閃屏**：主題（深色預設）改為喺 `<head>` 搶先套用（第一幀就正確，唔會「白一下」再轉深色）；`<meta name="theme-color">`／PWA manifest 嘅啟動色（`background_color`／`theme_color`）全部對齊深色預設 `#0b0d12`；CSS 加 `color-scheme` 令原生控件同步。PWA cache 升 v34，舊用戶會自動吃到新版。
+- 測試：`test/labels.test.js` 新增底欄專區回歸測試（未開放顯示佔位、有內容只顯示專區自己嘅嘢、著燈正確）；`npm run build` 全綠。

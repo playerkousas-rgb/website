@@ -49,7 +49,7 @@ function fakeEl(id) {
     id, hidden: true, innerHTML: "", textContent: "", value: "",
     dataset: {}, style: { setProperty() {} }, offsetHeight: 40, offsetTop: 0,
     classList: { _s: set, toggle(c, f) { const v = f === undefined ? !set.has(c) : !!f; v ? set.add(c) : set.delete(c); return v; }, add(c) { set.add(c); }, remove(c) { set.delete(c); }, contains(c) { return set.has(c); } },
-    querySelector() { return fakeEl("q"); }, querySelectorAll() { return []; },
+    querySelector(sel) { const k = id + "::" + sel; return els[k] || (els[k] = fakeEl(k)); }, querySelectorAll() { return []; },
     addEventListener() {}, setAttribute() {}, getAttribute() { return null; },
     appendChild() {}, focus() {}, scrollIntoView() {}
   };
@@ -196,3 +196,75 @@ assert.deepStrictEqual(chartNames(), ['幼童軍專章追蹤']);
 run('setMarketView("discover");');
 assert.deepStrictEqual(names(), ['幼童軍專章追蹤']);
 console.log('✅ charts: counts, cross-category ranking, visibility, search and navigation passed');
+
+// ── 4) 底欄導覽：「連結」／「教學工具」唔可以兜底曬出商店分類 ─────────
+// (a) 未開放（links/cards/ppt 關閉＋冇內容）→ 專區佔位，唔顯示 apps 分類
+const SITES_SHOP = {
+  name: "SCOUT APP STORE",
+  pages: [
+    { id: "apps", label: "小工具 Apps", icon: "🧰", enabled: true,
+      categories: [{ name: "電子進度紀錄", icon: "🧭", apps: [
+        { _id: "1", name: "小童軍集會助手", url: "https://a", tags: [], clicks: 0, stars: 0, hearts: 0, visible: true }
+      ] }] },
+    { id: "cards", label: "學習圖卡", icon: "🃏", enabled: false, categories: [] },
+    { id: "ppt",   label: "PPT 簡報", icon: "📽️", enabled: false, categories: [] },
+    { id: "links", label: "有用連結", icon: "🔗", enabled: false, categories: [] }
+  ]
+};
+els.search.value = "";
+els["hero-spotlight"] = fakeEl("hero-spotlight");
+els["hero-spotlight"].hidden = false; // 假設商店 hero 正顯示緊
+run(`SITES = ${JSON.stringify(SITES_SHOP)}; ACTIVE_PAGE = "apps"; bnavSection = null; activeChip = "all"; tagFilter = []; marketView = "discover"; render();`);
+assert.ok(names().includes("小童軍集會助手"), "商店分類照常顯示");
+assert.strictEqual(run("updateBnavState()"), "discover", "apps 分頁嘅內容要著「分類」燈（以前錯著「教學工具」）");
+
+run("handleBnav('links');");
+assert.ok(!els.sections.innerHTML.includes("小童軍集會助手") && !els.sections.innerHTML.includes("電子進度紀錄"),
+  "「連結」未開放就唔可以兜底顯示商店分類／項目");
+assert.strictEqual(els.sections.innerHTML, "", "「連結」佔位唔渲染任何分類區");
+assert.strictEqual(els.empty.style.display, "block", "「連結」佔位顯示提示");
+assert.strictEqual(els["empty::b"].textContent, "「有用連結」尚未開放", "「連結」佔位文案");
+assert.strictEqual(els.chips.innerHTML, "", "「連結」佔位唔顯示分類 chips");
+assert.strictEqual(els["page-nav"].hidden, true, "「連結」佔位唔顯示頂部分頁導覽");
+assert.strictEqual(els["hero-spotlight"].hidden, true, "「連結」佔位連今期主打都收埋（都係商店內容）");
+assert.strictEqual(run("updateBnavState()"), "links", "「連結」著燈");
+
+run("handleBnav('tools');");
+assert.ok(!els.sections.innerHTML.includes("小童軍集會助手") && !els.sections.innerHTML.includes("電子進度紀錄"),
+  "「教學工具」未開放就唔可以兜底顯示商店分類／項目");
+assert.strictEqual(els["empty::b"].textContent, "「教學工具」尚未開放", "「教學工具」佔位文案");
+assert.strictEqual(run("updateBnavState()"), "tools", "「教學工具」著燈");
+
+run("handleBnav('discover');");
+assert.ok(names().includes("小童軍集會助手"), "返去「分類」即刻見返商店內容");
+assert.strictEqual(run("updateBnavState()"), "discover");
+
+// (b) 專區有公開內容 → 只顯示專區自己嘅嘢
+const SITES_OPEN = JSON.parse(JSON.stringify(SITES_SHOP));
+SITES_OPEN.pages[1].enabled = true;
+SITES_OPEN.pages[1].categories = [{ name: "徽章圖卡", icon: "🃏", apps: [
+  { _id: "C1", name: "徽章圖卡組", url: "https://c", tags: [], clicks: 0, stars: 0, hearts: 0, visible: true }
+] }];
+SITES_OPEN.pages[3].enabled = true;
+SITES_OPEN.pages[3].categories = [{ name: "官方網站", icon: "🔗", apps: [
+  { _id: "L1", name: "童軍總會", url: "https://b", tags: [], clicks: 0, stars: 0, hearts: 0, visible: true }
+] }];
+run(`SITES = ${JSON.stringify(SITES_OPEN)}; ACTIVE_PAGE = "apps"; bnavSection = null; activeChip = "all"; marketView = "discover"; render();`);
+
+run("handleBnav('links');");
+assert.deepStrictEqual(names(), ["童軍總會"], "「連結」只顯示有用連結專區內容");
+assert.ok(!els.sections.innerHTML.includes("小童軍集會助手"), "「連結」唔會夾雜商店分類內容");
+
+run("handleBnav('tools');");
+assert.deepStrictEqual(names(), ["徽章圖卡組"], "「教學工具」只顯示教學專區（學習圖卡）內容");
+assert.ok(!els.sections.innerHTML.includes("小童軍集會助手"), "「教學工具」唔會夾雜商店分類內容");
+
+run("handleBnav('discover');");
+assert.deepStrictEqual(names(), ["小童軍集會助手"], "「分類」返商店分類內容");
+
+run("handleBnav('charts');");
+assert.ok(els.sections.innerHTML.includes("最多人點擊"), "排行榜照常運作");
+assert.strictEqual(run("updateBnavState()"), "charts", "排行榜著燈");
+run("handleBnav('discover');");
+assert.strictEqual(run("updateBnavState()"), "discover");
+console.log("✅ bnav: 「連結」／「教學工具」未開放顯示佔位，有內容只顯示專區自己嘅嘢");

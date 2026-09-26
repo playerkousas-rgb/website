@@ -66,7 +66,7 @@ assert.match(marketSrc, /SCOUT_ADMIN_CONFIG\.execUrl/);
 assert.match(marketSrc, /mode: 'no-cors'/, 'uses the Apps Script-compatible transport');
 assert.match(marketSrc, /sourceApp: REPORT_SOURCE_APP/);
 assert.match(storeSrc, /execUrl: "https:\/\/script\.google\.com\/macros\/s\//, 'uses the configured Scout Admin receiver');
-assert.match(swSrc, /const CACHE = 'scout-tools-v33'/, 'the revised form must invalidate the previous PWA cache');
+assert.match(swSrc, /const CACHE = 'scout-tools-v34'/, 'the revised form must invalidate the previous PWA cache');
 
 const issue = JSON.parse(JSON.stringify(api.buildIssueReportPayload({
   title: '搜尋結果沒有顯示', problem: '按搜尋後畫面空白', severity: '高',
