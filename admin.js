@@ -21,10 +21,11 @@ const val = (id) => {
 
 const ADMIN = {
   authed: false,
-  tab: "manage", // "manage" | "all"
+  tab: "manage", // "manage" | "all" | "analytics"
   editId: null,
   form: {},
   sites: null,
+  analytics: null,
   _listener: false,
 
   async init() {
@@ -69,7 +70,32 @@ const ADMIN = {
     renderAdmin();
   },
 
-  setTab(t) { this.tab = t; renderAdmin(); },
+  setTab(t) {
+    this.tab = t;
+    renderAdmin();
+  },
+
+  async loadAnalytics() {
+    const panel = document.getElementById("analytics-panel");
+    if (!panel || !this.authed) return;
+    if (!getSB()) {
+      panel.innerHTML = analyticsUnavailableHTML("而家係 Demo 模式，訪客統計只會喺 Supabase 模式記錄。");
+      return;
+    }
+    panel.innerHTML = '<div class="analytics-loading">正在讀取訪客統計…</div>';
+    try {
+      const { data, error } = await getSB().rpc("get_site_analytics");
+      if (error) throw error;
+      const parsed = typeof data === "string" ? JSON.parse(data) : (data || {});
+      this.analytics = parsed;
+      if (panel.isConnected) panel.innerHTML = analyticsHTML(parsed);
+    } catch (error) {
+      if (panel.isConnected) panel.innerHTML = analyticsUnavailableHTML(
+        "未能載入訪客統計。請先執行 migrations/20261004-analytics.sql，再重新整理。",
+        error.message
+      );
+    }
+  },
 
   async login() {
     if (this.loggingIn) return;
@@ -741,6 +767,65 @@ function allViewHTML() {
   </div>`;
 }
 
+/* ── 統計 ───────────────────────────────────────────────── */
+function analyticsUnavailableHTML(message, detail) {
+  return `<div class="analytics-empty"><div class="analytics-empty-ico">📊</div><b>${esc(message)}</b>${detail ? `<small>${esc(detail)}</small>` : ""}</div>`;
+}
+
+function analyticsAppRows() {
+  const rows = [];
+  for (const p of (ADMIN.sites?.pages || [])) for (const c of (p.categories || [])) {
+    for (const a of (c.apps || [])) rows.push({ ...a, pageLabel: p.label, categoryLabel: c.name });
+  }
+  return rows.sort((a, b) => Number(b.clicks || 0) - Number(a.clicks || 0) || String(a.name || "").localeCompare(String(b.name || ""), "zh-HK"));
+}
+
+function analyticsDateLabel(date) {
+  const m = String(date || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${Number(m[2])}/${Number(m[3])}` : String(date || "—");
+}
+
+function analyticsHTML(data) {
+  const d = data || {};
+  const apps = analyticsAppRows();
+  const totalClicks = apps.reduce((n, a) => n + Number(a.clicks || 0), 0);
+  const daily = Array.isArray(d.daily) ? d.daily : [];
+  const maxDaily = Math.max(1, ...daily.map((x) => Number(x.visitors || 0)));
+  const maxClicks = Math.max(0, ...apps.map((a) => Number(a.clicks || 0)));
+  const dailyHTML = daily.length
+    ? `<div class="analytics-bars" aria-label="近 30 日每日獨立訪客">${daily.map((x) => {
+        const visitors = Number(x.visitors || 0);
+        const height = visitors ? Math.max(8, Math.round(visitors / maxDaily * 100)) : 3;
+        return `<div class="analytics-bar-col" title="${esc(analyticsDateLabel(x.date))}：${visitors.toLocaleString()} 人"><span class="analytics-bar-value">${visitors || ""}</span><div class="analytics-bar" style="height:${height}%"></div><small>${esc(analyticsDateLabel(x.date))}</small></div>`;
+      }).join("")}</div>`
+    : '<div class="analytics-no-data">近 30 日暫時未有入站記錄。</div>';
+  const appHTML = apps.length
+    ? `<div class="analytics-app-list">${apps.map((a, i) => {
+        const clicks = Number(a.clicks || 0);
+        const width = maxClicks ? Math.max(clicks ? 4 : 0, Math.round(clicks / maxClicks * 100)) : 0;
+        return `<div class="analytics-app-row">
+          <span class="analytics-app-rank">${String(i + 1).padStart(2, "0")}</span>
+          ${appIconHTML(a, "row")}
+          <div class="analytics-app-copy"><b>${esc(a.name || "未命名項目")}</b><small>${esc(a.pageLabel)} · ${esc(a.categoryLabel)}${a.visible === false ? " · 已隱藏" : ""}</small><span class="analytics-click-track"><i style="width:${width}%"></i></span></div>
+          <strong>${clicks.toLocaleString()}<small> 次</small></strong>
+        </div>`;
+      }).join("")}</div>`
+    : '<div class="analytics-no-data">暫時未有任何 App 項目。</div>';
+
+  return `<div class="analytics-wrap">
+    <div class="analytics-toolbar"><div><h3>📊 訪客與 App 點擊統計</h3><p>公開版每次入站會以隨機匿名識別碼去重；唔會記錄 IP 或個人資料。</p></div><button type="button" class="mini-btn" onclick="ADMIN.loadAnalytics()">↻ 更新</button></div>
+    <div class="analytics-kpis">
+      <div class="analytics-kpi"><span>👥 累計獨立訪客</span><b>${Number(d.totalVisitors || 0).toLocaleString()}</b><small>跨日期去重</small></div>
+      <div class="analytics-kpi"><span>📅 今日訪客</span><b>${Number(d.todayVisitors || 0).toLocaleString()}</b><small>香港時間</small></div>
+      <div class="analytics-kpi"><span>🗓 近 7 日訪客</span><b>${Number(d.last7Visitors || 0).toLocaleString()}</b><small>跨日期去重</small></div>
+      <div class="analytics-kpi"><span>🔥 App 總點擊</span><b>${totalClicks.toLocaleString()}</b><small>${apps.length} 個項目累計</small></div>
+    </div>
+    <section class="analytics-section"><div class="analytics-section-head"><h4>近 30 日入站趨勢</h4><span>每日獨立訪客</span></div>${dailyHTML}</section>
+    <section class="analytics-section"><div class="analytics-section-head"><h4>每個 App 點擊數</h4><span>由高至低 · ${apps.length} 個</span></div>${appHTML}</section>
+    <p class="analytics-note">統計由 ${Number(d.visitorDays || 0).toLocaleString()} 個「訪客日」組成；同一人換裝置／清除瀏覽器資料會被當作新訪客。App 點擊數沿用現有累計數字，唔會因加上統計功能而歸零。</p>
+  </div>`;
+}
+
 /* ── 主渲染 ─────────────────────────────────────────────── */
 function renderAdmin() {
   const el = document.getElementById("admin-content");
@@ -773,8 +858,9 @@ function renderAdmin() {
     <div class="tab-bar">
       <button type="button" class="tab-btn ${ADMIN.tab === "manage" ? "on" : ""}" onclick="ADMIN.setTab('manage')">🛠 管理</button>
       <button type="button" class="tab-btn ${ADMIN.tab === "all" ? "on" : ""}" onclick="ADMIN.setTab('all')">👀 總覽</button>
+      <button type="button" class="tab-btn ${ADMIN.tab === "analytics" ? "on" : ""}" onclick="ADMIN.setTab('analytics')">📊 統計</button>
     </div>
-    ${ADMIN.tab === "manage" ? manageHTML() : allViewHTML()}
+    ${ADMIN.tab === "manage" ? manageHTML() : ADMIN.tab === "all" ? allViewHTML() : '<div class="admin-card" id="analytics-panel"></div>'}
     <div class="admin-actions">
       <button type="button" class="mini-btn" onclick="ADMIN.doExport()">📤 備份</button>
       <button type="button" class="mini-btn" onclick="ADMIN.doRestore()" title="上傳 backup 完整覆蓋">♻️ 還原</button>
@@ -787,6 +873,7 @@ function renderAdmin() {
   </div>`;
 
   if (typeof loadReviews === "function") loadReviews();
+  if (ADMIN.tab === "analytics") ADMIN.loadAnalytics();
 
   // 新增/編輯項目：分頁 → 分類 連動
   const pageSel = document.getElementById("f-page");

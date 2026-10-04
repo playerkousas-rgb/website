@@ -35,7 +35,7 @@ const DEV_ONLY = [
   "README.md", "OPTIMIZATION.md",
   "dev-server.mjs",
   "scripts/lint.js", "scripts/verify-assets.js",
-  "migrations/20260924-market.sql", "migrations/20260924-hearts.sql", "migrations/20260925-submission-contact.sql",
+  "migrations/20260924-market.sql", "migrations/20260924-hearts.sql", "migrations/20260925-submission-contact.sql", "migrations/20261004-analytics.sql",
   "test/market.test.js", "test/notify-admin.test.js", "test/report.test.js",
   "test/favicon.test.js", "test/labels.test.js", "test/boot-order.test.js"
 ];

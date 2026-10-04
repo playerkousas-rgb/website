@@ -204,6 +204,59 @@ function getSB() {
   return _sb;
 }
 
+// ── 匿名入站統計 ─────────────────────────────────────────────
+// visitor_id 由瀏覽器隨機產生，只放 localStorage；伺服器唔收 IP、User-Agent 或個人資料。
+// site_visits 以「visitor_id + 香港日期」去重，所以後台睇到係獨立訪客，而唔係精確真人數。
+const SITE_VISITOR_KEY = "scout-site-visitor-id";
+const SITE_VISIT_SESSION_KEY = "scout-site-visit-sent";
+function createSiteVisitorId() {
+  try {
+    if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function") {
+      return globalThis.crypto.randomUUID();
+    }
+    if (globalThis.crypto && typeof globalThis.crypto.getRandomValues === "function") {
+      const bytes = new Uint8Array(18);
+      globalThis.crypto.getRandomValues(bytes);
+      return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    }
+  } catch {}
+  return "v-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 18);
+}
+function getSiteVisitorId() {
+  try {
+    const existing = localStorage.getItem(SITE_VISITOR_KEY) || "";
+    if (/^[A-Za-z0-9_-]{16,128}$/.test(existing)) return existing;
+    const id = createSiteVisitorId();
+    localStorage.setItem(SITE_VISITOR_KEY, id);
+    return id;
+  } catch {
+    // 私人瀏覽／封鎖 storage 時仍可嘗試送一次匿名 id；無法持久化就不會假裝跨頁辨認同一人。
+    return createSiteVisitorId();
+  }
+}
+function trackSiteVisit() {
+  const sb = getSB();
+  if (!sb) return;
+  let visitorId;
+  try {
+    visitorId = getSiteVisitorId();
+    if (sessionStorage.getItem(SITE_VISIT_SESSION_KEY) === visitorId) return;
+    sessionStorage.setItem(SITE_VISIT_SESSION_KEY, visitorId);
+  } catch {
+    visitorId = getSiteVisitorId();
+  }
+  fetch(SUPABASE_CONFIG.url + "/rest/v1/rpc/record_site_visit", {
+    method: "POST",
+    keepalive: true,
+    headers: {
+      apikey: SUPABASE_CONFIG.anonKey,
+      Authorization: "Bearer " + SUPABASE_CONFIG.anonKey,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ p_visitor_id: visitorId })
+  }).catch(() => {});
+}
+
 /* ════════════════════════════════════════════════════════════════
    Scout Admin 投稿通知 — 欄位對齊＋清洗（全部純函數，單測覆蓋）
    Apps Script「作品投稿」工作表靠 FIELD_MAP 對名：
