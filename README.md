@@ -47,7 +47,7 @@
 | `package.json` | 極簡腳本：`npm run check`／`build`／`preview` —— **刻意零 dependencies** |
 | `vercel.json` | 鎖死部署設定（framework null／build `npm run build`／輸出＝根目錄），唔靠 Vercel 自動偵測 |
 | `.vercelignore` / `.gitignore` | 部署／commit 排除清單 —— 防死重上傳 Vercel（**test/、scripts/ 唔准擋**，build 閘門用得到） |
-| `migrations/` | 手動執行嘅 SQL 升級（唔會上線，`.vercelignore` 已擋）；投稿相關見 `20260925-submission-contact.sql` |
+| `migrations/` | 手動執行嘅 SQL 升級（唔會上線，`.vercelignore` 已擋）；投稿相關見 `20260925-submission-contact.sql`；訪客統計見 `20261004-analytics.sql` |
 | `scripts/` | `lint.js`（防增肥守護）＋ `verify-assets.js`（部署清單核對），零依賴 |
 | `OPTIMIZATION.md` | ⭐ 瘦身紀錄＋防增肥守則 —— **加套件／加圖片之前必讀** |
 
@@ -111,6 +111,19 @@ hero 右上角仲有一粒 **🔗 分享掣**：用 Web Share API 分享該項�
 
 > `clicks`／`stars`／`hearts` 都**唔使**理會 migration 都會安全（未加欄位就自動甩走再存）；
 > 但要「最受歡迎」有真實數據，就要跑 `migrations/20260924-hearts.sql`（`hearts` 欄＋`bump_hearts`）。
+
+### 📊 後台統計（新增）
+
+登入 `#admin` 後撳 **📊 統計**，可以睇：
+
+- **累計獨立訪客／今日訪客／近 7 日訪客**；
+- 近 30 日每日入站趨勢；
+- **每個 App 的累計點擊數**，包括隱藏中的項目，並按由高至低排列。
+
+要啟用入站人數統計，喺 Supabase SQL Editor 執行一次
+`migrations/20261004-analytics.sql`（要先執行 `migrations/20260924-market.sql`）。
+網站公開版只會呼叫受限 RPC，瀏覽器先產生隨機匿名識別碼；資料庫唔會保存 IP、User-Agent、姓名或其他個人資料。
+同一瀏覽器清除資料、換瀏覽器／裝置會被當作新訪客，所以係匿名「獨立訪客」估算，唔係精確真人數。App 點擊數沿用 `apps.clicks` 累計欄位，唔會因升級統計而歸零。
 
 ### 📱 手機版：標籤點收細（同一個掣，細屏短、大螢幕全名）
 

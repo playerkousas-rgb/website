@@ -544,6 +544,8 @@ function watchSections() {
 
 async function main() {
   REG.length = 0;
+  // 只喺公開版記錄入站；管理員頁唔會混入訪客數字。
+  if (typeof trackSiteVisit === "function") trackSiteVisit();
   try {
     const { sites } = await loadSites();
     SITES = sites;

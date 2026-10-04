@@ -19,7 +19,8 @@
 //            script 之下 → TypeError 殺死 goRoute()/main()），兼全部按鈕加 null-check
 //      v34 = 修「入站閃屏」（主題搶先套用＋manifest 啟動色對齊深色預設）
 //            ＋底欄「連結／教學工具」未開放就顯示佔位，唔再兜底曬出商店分類
-const CACHE = 'scout-tools-v34';
+//      v35 = 後台加入訪客／App 點擊統計，公開版送出匿名入站記錄
+const CACHE = 'scout-tools-v35';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
