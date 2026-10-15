@@ -737,11 +737,13 @@
   }
 
   /* ── Tile 3 按鈕 (心 星 分享) ── */
+  /* 3 粒掣加埋要窄過一格 tile（手機 4 欄一格得 ~76px），
+     否則會凸出格仔疊住隔籬、細屏仲會睇唔清 —— 所以 gap／padding 都收窄。 */
   .tile-bar {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 4px;
     margin-top: 6px;
     width: 100%;
   }
@@ -751,7 +753,7 @@
     border: none;
     outline: none;
     cursor: pointer;
-    padding: 4px 6px;
+    padding: 4px 4px;
     border-radius: 8px;
     color: var(--muted);
     opacity: 0.7;
@@ -808,52 +810,14 @@
     line-height: 1;
   }
 
-  /* ── 支部 Tabs ── */
-  .branch-tabs {
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
-    border-bottom: 1px solid var(--border);
-    margin: 8px 0 12px;
-    padding: 0 4px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-  .branch-tabs::-webkit-scrollbar { display: none; }
-  .branch-tab {
-    position: relative;
-    background: transparent;
-    border: none;
-    padding: 8px 12px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--muted);
-    cursor: pointer;
-    white-space: nowrap;
-    transition: color 0.15s;
-  }
-  .branch-tab:hover {
-    color: var(--text);
-  }
-  .branch-tab.on {
-    color: #6366f1;
-    font-weight: 700;
-  }
-  .branch-tab.on::after {
-    content: "";
-    position: absolute;
-    bottom: -1px;
-    left: 10%;
-    right: 10%;
-    height: 3px;
-    background: #6366f1;
-    border-radius: 3px 3px 0 0;
-  }
+  /* 註：舊「支部 Tabs」（.branch-tabs／.branch-tab 灰字＋幼底線）已經刪走 ——
+     支部篩選而家同排行榜指標一樣用 .tag-chip：未揀中性殼、揀咗 accent ＋✓，
+     一眼睇得出揀咗邊個支部（見 app.js renderTagRow）。 */
 
   /* ── Bottom Navigation Bar + IG＋版權 (全部常駐最下方) ── */
   body {
-    padding-bottom: 92px;
+    /* 底欄係 fixed：預留高度要包埋最底一行細字（窄屏可能會轉兩行）＋安全區 */
+    padding-bottom: calc(96px + var(--safe-b));
   }
   /* 原本包在 .wrap 最底嘅 foot-card 而家搬咗落常駐底欄，隱藏舊位避免重複 */
   .wrap > .foot-card { display: none !important; }
@@ -872,22 +836,28 @@
     flex-direction: column;
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-  /* 5 個掣下方嘅單行：IG＋QR＋版權＋edit，盡量一行，手機極窄就淨 QR */
+  /* 5 個掣下方嘅單行：IG＋QR＋版權＋edit，盡量一行，唔夠位就轉行。
+     ⚠️ 以前係 flex-wrap: nowrap + overflow: hidden —— 手機放唔晒就直接切走右邊，
+     結果 QR／「edit」（入後台）兩粒掣喺螢幕外撳唔到。而家：文字（版權）識縮＋刪節號，
+     掣一律 flex: 0 0 auto 保住，真係唔夠位就轉第二行，唔會再無聲消失。 */
   .bottom-credit-line {
     display: flex; align-items: center; justify-content: center;
-    flex-wrap: nowrap; gap: 6px;
+    flex-wrap: wrap; gap: 6px;
     padding: 6px 8px 7px;
     font-size: 11px; color: var(--muted);
     background: color-mix(in srgb, var(--bg) 72%, transparent);
     border-top: 1px solid var(--border);
     line-height: 1.2;
-    white-space: nowrap; overflow: hidden;
+    white-space: nowrap;
   }
   .bottom-credit-line .ig-emoji { font-size: 12px; line-height: 1; flex-shrink: 0; }
   .bottom-credit-line a { color: var(--accent-text); font-weight: 750; text-decoration: none; flex-shrink: 0; }
   .bottom-credit-line a:hover { text-decoration: underline; }
   .bottom-credit-line .ig-sub { color: var(--muted); font-weight: 600; flex-shrink: 0; }
-  .bottom-credit-line .credit-copy { flex-shrink: 0; opacity: .9; }
+  .bottom-credit-line .credit-copy {
+    flex: 0 1 auto; min-width: 0; opacity: .9;
+    overflow: hidden; text-overflow: ellipsis;
+  }
   .bottom-credit-line .ig-qr-btn {
     flex: 0 0 auto; padding: 3px 8px; font-size: 11px; font-weight: 700;
     border-radius: 999px; border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
@@ -1106,13 +1076,17 @@
   @media (min-width: 560px) {
     .admin-app-actions { width: auto; margin-left: auto; }
   }
+  /* 後台分類列：手機放唔晒就轉行 —— 唔可以再令最右邊（🎨 emoji／刪分類）走出螢幕 */
   .admin-cat-head {
-    display: flex; align-items: center; gap: 6px;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
     margin: 16px 0 6px; padding: 8px 10px;
     background: var(--bg); border: 1px solid var(--border);
     border-radius: 12px;
   }
-  .admin-cat-head span:first-child { font-size: 13.5px; font-weight: 750; }
+  .admin-cat-head span:first-child {
+    font-size: 13.5px; font-weight: 750;
+    flex: 1 1 120px; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  }
   .admin-actions {
     margin-top: 18px; display: flex; gap: 8px; flex-wrap: wrap;
   }
@@ -1540,10 +1514,13 @@
      目的：「支部／排行榜／分類」三行一屏睇晒，唔係撳到右／睇到一半先見到尾幾個。 */
   @media (max-width: 559.98px) {
     /* header 收細：等副標題「好工具，讓童軍生活更精彩。」唔使分 3 行 */
-    .head-row { gap: 8px; }
-    .head-actions { gap: 6px; }
+    .head-row { gap: 8px; row-gap: 6px; flex-wrap: wrap; }
+    .head-actions { gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
     .head-logo { width: 40px; height: 40px; border-radius: 12px; }
     .icon-btn { width: 38px; height: 38px; min-width: 38px; font-size: 15px; }
+    /* 標題欄最窄留 150px：唔夠位就將下面嗰排掣（提交作品／回報／安裝／主題）
+       迫落第二行。以前標題欄可以縮到 0，掣就被擠出螢幕右邊，睇唔到又撳唔到。 */
+    .head-titles { flex: 1 1 150px; min-width: 150px; }
 
     /* 搜尋行嘅「我的收藏」跟着收細（搜尋框維持 14px padding，高度自然對齊） */
     .search-row { gap: 6px; }
@@ -1566,10 +1543,16 @@
     .tag-chip.sort-chip { padding: 4px 8px; }
     .tag-chip.tag-clear { padding: 4px 8px; margin-left: auto; }
 
-    /* 分頁導覽 */
-    .page-nav { gap: 5px; padding: 5px 2px 3px; }
+    /* 分頁導覽：識轉行（唔再靠橫捲），‹ › 喺手機多餘 —— 全部分頁都喺螢幕度 */
+    .page-nav { gap: 5px; padding: 5px 2px 3px; flex-wrap: wrap; overflow-x: visible; }
     .page-btn { font-size: 13px; font-weight: 750; padding: 5px 10px; min-height: 30px; }
-    .page-btn[data-page="__prev"], .page-btn[data-page="__next"] { font-size: 15px; padding: 4px 8px; min-height: 30px; }
+    .page-btn[data-page="__prev"], .page-btn[data-page="__next"] { display: none; }
+
+    /* 每個項目下面 3 粒掣（收藏／支持／分享）：4 欄格仔一格得 ~76px，
+       但 3 粒掣本身要 ~100px —— 會凸出 tile 疊住隔籬、又難撳。呢度收窄到放得落。 */
+    .tile-bar { gap: 2px; margin-top: 4px; }
+    .tile-btn { padding: 4px 3px; }
+    .tile-btn svg { width: 15px; height: 15px; }
 
     /* tile 內嘅支部小標籤：一個字，行高收埋 */
     .tile-tags { gap: 2px; margin-top: 2px; }
@@ -1584,6 +1567,10 @@
        展開咗就放回正常大小，因為嗰時有位，而且係主要操作區 */
     .hero.collapsed .hero-card-tools { top: 8px; right: 8px; gap: 4px; }
     .hero.collapsed .hero-share, .hero.collapsed .hero-collapse { width: 30px; height: 30px; font-size: 13px; }
+
+    /* 底欄細字行：手機唔夠位時，先犧牲裝飾文字（童軍工具·教學），
+       唔好再靠 overflow:hidden 切走 QR／edit 兩粒掣 */
+    .bottom-credit-line .ig-sub { display: none !important; }
   }
 </style>
 <link rel="stylesheet" href="market.css" />
@@ -1649,6 +1636,8 @@
         <div class="pv-note">
           <div class="pv-ico" id="pv-ico">🔔</div>
           <div class="pv-tx">
+            <!-- 標題／內文／圖示都由 renderSpotlight() 用今期推廣項目嘅資料填：
+                 內文 = 該項目嘅「介紹」（見 spotlightPreviewMsg）；下面係未載入前嘅預設字 -->
             <b id="pv-title">通告圖書館</b>
             <span id="pv-msg">📢 有新通告：本週活動安排已更新，記得查看！</span>
           </div>
@@ -1947,6 +1936,9 @@ function measureHeader() {
 }
 measureHeader();
 window.addEventListener("resize", measureHeader);
+// header 高度會變（窄屏動作掣轉行／「安裝」掣出現／字體載入）→ 自動重新量度，
+// 咁 sticky 列嘅 top／scroll-margin 永遠跟得上，內容唔會被蓋住
+if (topbar && typeof ResizeObserver === "function") new ResizeObserver(measureHeader).observe(topbar);
 window.addEventListener("scroll", () => {
   const y = window.scrollY || 0;
   topbar.classList.toggle("scrolled", y > 4);
@@ -1959,6 +1951,7 @@ const installBtn = document.getElementById("install-btn");
 let deferredPrompt = null;
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault(); deferredPrompt = e; installBtn.style.display = "flex";
+  measureHeader();   // 「安裝」掣出現會令 header 變高（手機可能多一行）→ sticky 要重新量度
 });
 installBtn.onclick = async () => {
   if (!deferredPrompt) return;
@@ -1966,8 +1959,9 @@ installBtn.onclick = async () => {
   await deferredPrompt.userChoice;
   deferredPrompt = null;
   installBtn.style.display = "none";
+  measureHeader();
 };
-window.addEventListener("appinstalled", () => { installBtn.style.display = "none"; deferredPrompt = null; });
+window.addEventListener("appinstalled", () => { installBtn.style.display = "none"; deferredPrompt = null; measureHeader(); });
 
 // 金手指：登入後連點 Logo 20 次 → 開啟改密碼
 const GOLDENFINGER_TAPS = 20;
@@ -2022,9 +2016,19 @@ const SPOTLIGHT = {
                              // ⚠️ 點擊數（🔥）一樣刻意唔顯示
   preview: {
     enabled: true,                                  // Hero 入面嘅「推送通知」預覽卡
-    msg: "📢 有新通告：本週活動安排已更新，記得查看！"  // 純裝飾文案，想改就改呢度
+    // 通知預覽卡嘅文字：★ 默認跟今期推廣項目自己嘅「介紹」（後台填嘅描述），
+    // 下面呢句淨係「項目冇填介紹」時嘅後備，唔會再所有推廣都出同一句。
+    msg: "📢 有新通告：本週活動安排已更新，記得查看！"
   }
 };
+
+// 通知預覽卡文案：有「介紹」就用介紹，冇先用 SPOTLIGHT.preview.msg 後備。
+// （以前係寫死一句，推廣邊個項目都係同一句「本週活動安排已更新」，睇落好假。）
+function spotlightPreviewMsg(app) {
+  const desc = String((app && app.description) || "").trim();
+  if (desc) return desc;
+  return (SPOTLIGHT.preview && SPOTLIGHT.preview.msg) || "";
+}
 
 const heroEl = document.getElementById("hero-spotlight");
 let _sectionsBlurred = false;
@@ -2122,7 +2126,8 @@ function renderSpotlight() {
     metaEl.hidden = !bits.length;          // 全部冇數據 → 成行隱藏
   }
 
-  // 推送通知預覽：標題／圖示跟住今期推廣項目（純裝飾，令 Hero 貼 IG 更靚）
+  // 推送通知預覽：標題／圖示／內文全部跟住今期推廣項目
+  // （內文 = 該項目嘅「介紹」，冇填先出後備句 —— 見 spotlightPreviewMsg()）
   const pvEl = document.getElementById("hero-preview");
   if (pvEl) {
     if (SPOTLIGHT.preview && SPOTLIGHT.preview.enabled) {
@@ -2130,7 +2135,7 @@ function renderSpotlight() {
       const pvt = document.getElementById("pv-title");
       if (pvt) pvt.textContent = a.name;
       const pvm = document.getElementById("pv-msg");
-      if (pvm) pvm.textContent = SPOTLIGHT.preview.msg;
+      if (pvm) pvm.textContent = spotlightPreviewMsg(a);
       const pvi = document.getElementById("pv-ico");
       if (pvi) pvi.innerHTML = appIconHTML(a, "tile");
     } else {

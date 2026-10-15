@@ -92,11 +92,17 @@ const run = (code) => vm.runInContext(code, ctx);
 const names = () => (els.sections.innerHTML.match(/tile-name">([^<]*)/g) || []).map((x) => x.replace('tile-name">', ""));
 run(`SITES = ${JSON.stringify(SITES)}; ACTIVE_PAGE = "apps"; render();`);
 
-// 未揀：支部 Tabs 頁簽、得全名／標籤，同冇「已選」樣式
+// 未揀：五個支部都係中性外殼、有提示、手機有單字短名，同冇「已選」樣式
 const tagRow = els["tag-row"].innerHTML;
-assert.ok(tagRow.includes("小童軍") && tagRow.includes("樂行童軍"), "支部 Tabs 列包含全部童軍支部");
+assert.ok(tagRow.includes("小童軍") && tagRow.includes("樂行童軍"), "支部列包含全部童軍支部（桌面出全名）");
 assert.ok(!tagRow.includes("適用級別") && !appSrc.includes("適用級別"), "「適用級別」要完全咁消失");
-assert.ok(/aria-pressed="false"[^>]*>小童軍</.test(tagRow) && !/class="branch-tab on"/.test(tagRow), "未揀就唔可以有 on 狀態");
+assert.ok(!/tag-chip lv-chip on/.test(tagRow), "未揀就唔可以有 on 狀態");
+assert.strictEqual((tagRow.match(/aria-pressed="false"/g) || []).length, 5, "五個支部都係 aria-pressed=false");
+assert.ok(tagRow.includes('class="tag-row-hint"') && tagRow.includes("適用支部"), "支部列要有「🔍 適用支部：」提示");
+assert.ok(tagRow.includes('<span class="narrow-only">小</span>'), "手機版支部收做一個字（小）");
+assert.ok(tagRow.includes("可多選"), "未揀時要有「可多選」提示");
+assert.ok(!tagRow.includes("tag-clear"), "未揀支部時唔應該有清除掣");
+assert.ok(!appSrc.includes("branch-tab"), "舊 .branch-tab 灰字 tabs 已經唔再用");
 assert.ok(els["sort-row"].hidden === true && els["sort-row"].innerHTML === "", "探索分類唔再有排序列（排名晒喺排行榜）");
 assert.ok(els.sections.innerHTML.includes("fav-heart"), "每個項目下方都有心心");
 assert.ok(els.sections.innerHTML.includes("fav-star"), "項目保留收藏星星");
@@ -106,7 +112,12 @@ run("setTag('小童軍'); setTag('幼童軍');");
 assert.deepStrictEqual(names(), ["小童軍集會助手", "幼童軍專章追蹤"], "揀「小＋幼」= 兩個支部嘅項目都顯示");
 assert.strictEqual(run("tagFilter.length"), 2, "tagFilter 要係陣式（多選）");
 assert.strictEqual(JSON.parse(mem.get("scout-tag-filter")).tags.length, 2, "篩選記住喺 localStorage");
-assert.ok(/class="branch-tab on"/.test(els["tag-row"].innerHTML), "揀咗就有 on");
+// 揀咗要有明顯樣式：accent 底（.on）＋ ✓，同埋行尾「已揀 N 個 · ✕ 清除」
+assert.ok(/class="tag-chip lv-chip on"/.test(els["tag-row"].innerHTML), "揀咗就有 on（accent 漸層）");
+assert.ok((els["tag-row"].innerHTML.match(/✓/g) || []).length === 2, "揀咗嘅支部各有一個 ✓");
+assert.ok(els["tag-row"].innerHTML.includes("已揀 2 個"), "要顯示「已揀 N 個」");
+assert.ok(/class="tag-chip tag-clear"/.test(els["tag-row"].innerHTML) && appSrc.includes('onclick="clearTags()"'),
+  "要有「✕ 清除」掣，而且駁住 clearTags()");
 
 // 第三個 -> 再 OR 埋；撳多次同一個 -> 取消
 run("setTag('童軍');");
@@ -172,6 +183,31 @@ assert.ok(/showStars:\s*true/.test(html), "SPOTLIGHT 保留收藏數");
 assert.ok(!/bits\.push\("🔥/.test(html), "hero 唔再顯示點擊數（新项目多數 0 次）");
 assert.ok(!html.includes("SPOTLIGHT.showStats"), "showStats 已換成 showStars");
 assert.ok(/\(a\.stars \|\| 0\) >= minShow/.test(html) && /\(a\.hearts \|\| 0\) >= minShow/.test(html), "今期主打 ⭐／❤️ 滿 100 先顯示（同排行榜一樣）");
+
+// ── 3b) 手機版唔可以有「掣被擠走／切走／疊住」──────────────────
+// 三種以前真係會發生嘅情況：header 掣擠出螢幕、底欄細字行 overflow:hidden 切走 QR／edit、
+// 一格 tile 放唔落 3 粒掣（凸出去疊住隔籬）。以下係回歸鎖。
+const mobile = style.slice(style.indexOf("@media (max-width: 559.98px)"));
+// 註解都會含有樣式字眼，檢查「有冇用 nowrap 呢個寫法」之前要剝走註解
+const styleCode = style.replace(/\/\*[\s\S]*?\*\//g, "");
+assert.ok(mobile.length > 400, "搵到手機版 CSS 區塊");
+assert.ok(/\.head-row \{[^}]*flex-wrap: wrap/.test(mobile), "手機 header 識轉行（唔會將掣擠出螢幕外）");
+assert.ok(/\.head-titles \{[^}]*min-width: 150px/.test(mobile), "標題欄有最小闊度（唔會縮到 0 逼走啲掣）");
+assert.ok(/\.head-actions \{[^}]*flex-wrap: wrap/.test(mobile), "header 動作掣自己都識轉行");
+assert.ok(/\.page-nav \{[^}]*flex-wrap: wrap/.test(mobile), "手機分頁導覽識轉行（尾幾個分頁唔會隱形）");
+assert.ok(!/flex-wrap:\s*nowrap\s*;/.test(styleCode), "唔准再用 nowrap 令啲掣滑出螢幕");
+assert.ok(/\.bottom-credit-line \.credit-copy \{[^}]*text-overflow: ellipsis/.test(style), "版權文字識刪節（唔會推走 QR／edit 掣）");
+assert.ok(!/\.bottom-credit-line \{[^}]*overflow: hidden/.test(style), "底欄細字行唔可以 overflow:hidden 切走啲掣");
+assert.ok(mobile.includes(".bottom-credit-line .ig-sub"), "手機先收走裝飾文字（童軍工具·教學），留住啲掣");
+assert.ok(/\.tile-bar \{[^}]*gap: 4px/.test(style) && /\.tile-btn \{[^}]*padding: 4px 4px/.test(style),
+  "tile 3 粒掣（收藏／支持／分享）要收窄到放得落一格");
+assert.ok(/\.tile-btn svg \{ width: 15px/.test(mobile), "手機 tile 掣圖示再細一格");
+assert.ok(/\.admin-cat-head \{[^}]*flex-wrap: wrap/.test(styleCode), "後台分類列識轉行（🎨 emoji／刪分類唔會走出螢幕）");
+
+// ── 3c) 今期主打嘅通知預覽：內文跟項目嘅「介紹」──────────────────
+assert.ok(/function spotlightPreviewMsg[\s\S]{0,240}app\.description/.test(html), "通知預覽內文讀項目嘅介紹");
+assert.ok(/if \(pvm\) pvm\.textContent = spotlightPreviewMsg\(a\)/.test(html), "推送預覽用 spotlightPreviewMsg(a)");
+assert.ok(!/pvm\.textContent = SPOTLIGHT\.preview\.msg/.test(html), "唔可以再寫死一句「本週活動安排已更新」");
 
 console.log("✅ labels.test.js 全部通過");
 
