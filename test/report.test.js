@@ -66,7 +66,12 @@ assert.match(marketSrc, /SCOUT_ADMIN_CONFIG\.execUrl/);
 assert.match(marketSrc, /mode: 'no-cors'/, 'uses the Apps Script-compatible transport');
 assert.match(marketSrc, /sourceApp: REPORT_SOURCE_APP/);
 assert.match(storeSrc, /execUrl: "https:\/\/script\.google\.com\/macros\/s\//, 'uses the configured Scout Admin receiver');
-assert.match(swSrc, /const CACHE = 'scout-tools-v35'/, 'the revised analytics dashboard must invalidate the previous PWA cache');
+// 改咗 core 檔案（index.html／app.js／store.js…）→ sw.js cache 版本一定要 +1，
+// 否則用戶會繼續食舊 cache（見 OPTIMIZATION.md「鐵律 6」）。
+// 呢度只鎖「格式」同「唔可以低過 analytics 版（v35）」，唔會每次改版都要改測試。
+const swCacheV = Number((swSrc.match(/const CACHE = 'scout-tools-v(\d+)'/) || [])[1]);
+assert.ok(Number.isFinite(swCacheV) && swCacheV > 35,
+  `sw.js cache 版本要 bump 過 v35（而家係 ${swSrc.match(/const CACHE = '[^']+'/)})`);
 
 const issue = JSON.parse(JSON.stringify(api.buildIssueReportPayload({
   title: '搜尋結果沒有顯示', problem: '按搜尋後畫面空白', severity: '高',

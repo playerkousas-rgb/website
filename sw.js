@@ -20,7 +20,11 @@
 //      v34 = 修「入站閃屏」（主題搶先套用＋manifest 啟動色對齊深色預設）
 //            ＋底欄「連結／教學工具」未開放就顯示佔位，唔再兜底曬出商店分類
 //      v35 = 後台加入訪客／App 點擊統計，公開版送出匿名入站記錄
-const CACHE = 'scout-tools-v35';
+//      v36 = 手機版修「有啲掣睇唔到」：header 動作掣識轉行、分頁導覽識轉行、
+//            底欄細字行唔再 overflow:hidden 切走 QR／edit、tile 3 粒掣收窄到放得落；
+//            支部篩選改成 chip（未揀中性／揀咗 accent＋✓／已揀 N 個＋✕ 清除）；
+//            今期主打通知預覽內文改用該項目嘅「介紹」
+const CACHE = 'scout-tools-v36';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

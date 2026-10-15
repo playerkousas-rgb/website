@@ -352,19 +352,33 @@ function clearTags() {
 const tagActive = (t) => tagFilter.includes(t);
 function tagLabel(t) { return scoutTagShort(t) || t; }   // 一個字（小／幼／童／深／樂）
 
-// ── 童軍支部篩選列 ───────────────────────────────────────────
+// ── 童軍支部篩選列（可多選）─────────────────────────────────
+// 未揀 = 中性外殼（睇落係「可以撳」）；揀咗 = accent 漸層＋✓ ——
+// 以前得一句灰字加條好幼嘅底線，手機上根本睇唔出揀咗邊個支部。
+// 標籤用 chipTxt：桌面出全名（小童軍），手機收做一個字（小）；
+// 標籤列 flex-wrap 識轉行，所以窄屏都唔會有標籤被推出螢幕外。
 function renderTagRow() {
   const pg = activePage();
   const hasTag = !!(pg && (pg.categories || []).some((c) => c.apps.some((a) => a.visible !== false && (a.tags || []).length)));
   if (!hasTag || !pg) { tagRowEl.hidden = true; return; }
   tagRowEl.hidden = false;
-  tagRowEl.className = "tag-row branch-tabs";
-  tagRowEl.innerHTML = SCOUT_TAGS.map((t) => {
-    const on = tagActive(t);
-    return `<button type="button" class="branch-tab ${on ? "on" : ""}" ` +
-      `onclick="setTag('${esc(t)}')" title="${esc(t)}" ` +
-      `aria-label="${esc(t)}" aria-pressed="${on ? "true" : "false"}">${esc(t)}</button>`;
-  }).join("");
+  tagRowEl.className = "tag-row";
+  const picked = tagFilter.length;
+  tagRowEl.innerHTML =
+    `<span class="tag-row-hint">🔍<span class="wide-only"> 適用支部</span><span class="narrow-only">支部</span>：</span>` +
+    SCOUT_TAGS.map((t) => {
+      const on = tagActive(t);
+      return `<button type="button" class="tag-chip lv-chip${on ? " on" : ""}" ` +
+        `onclick="setTag('${esc(t)}')" title="${esc(t)}" ` +
+        `aria-label="${esc(t)}" aria-pressed="${on ? "true" : "false"}">` +
+        `${on ? '<span class="chip-ico" aria-hidden="true">✓</span>' : ""}` +
+        `${chipTxt(t, scoutTagShort(t))}</button>`;
+    }).join("") +
+    (picked
+      ? `<span class="tag-row-note">已揀 ${picked} 個</span>` +
+        `<button type="button" class="tag-chip tag-clear" onclick="clearTags()" ` +
+        `title="清除支部篩選" aria-label="清除支部篩選">✕ 清除</button>`
+      : `<span class="tag-row-note muted-hint">可多選</span>`);
 }
 
 // ── 排行榜指標列 ─────────────────────────────────────────────
