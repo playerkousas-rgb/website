@@ -30,7 +30,9 @@
 //            單一 accent（底欄原本寫死靛藍 #6366f1、提交作品頁藍色 → 徽章金）、
 //            App 圖標卡回復漸變底（之前被 background:transparent !important 壓死）、
 //            hero 光暈收斂、modal 入場動畫、數字用 tabular-nums
-const CACHE = 'scout-tools-v38';
+//      v39 = 全站視覺重做：底欄改浮動 dock、hero 改地圖點陣 feature card（移除光束／星塵）、
+//            分頁導覽改 segmented control、排行榜卡改卡片式、toast／空狀態／圖標高光重做
+const CACHE = 'scout-tools-v39';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

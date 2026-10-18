@@ -206,7 +206,7 @@ assert.ok(!/\.bottom-credit-line \{[^}]*overflow: hidden/.test(style), "底欄�
 assert.ok(mobile.includes(".bottom-credit-line .ig-sub"), "手機先收走裝飾文字（童軍工具·教學），留住啲掣");
 assert.ok(/\.tile-bar \{[^}]*gap: 4px/.test(style) && /\.tile-btn \{[^}]*padding: 4px 4px/.test(style),
   "tile 3 粒掣（收藏／支持／分享）要收窄到放得落一格");
-assert.ok(/\.tile-btn svg \{ width: 15px/.test(mobile), "手機 tile 掣圖示再細一格");
+assert.ok(/\.tile-btn svg \{ width: 14px/.test(mobile), "手機 tile 掣圖示再細一格（14px：3 粒掣喺 320px 闊都放得落）");
 assert.ok(/\.admin-cat-head \{[^}]*flex-wrap: wrap/.test(styleCode), "後台分類列識轉行（🎨 emoji／刪分類唔會走出螢幕）");
 
 // ── 3c) 今期主打嘅通知預覽：內文跟項目嘅「介紹」──────────────────

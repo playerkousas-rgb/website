@@ -74,8 +74,13 @@ assert.ok(!/title="讚好"[\s\S]{0,220}?star-ico/.test(appJs), "讚好掣唔可�
 // ── 7) 動效級數 + 減少動效支援 ────────────────────────────────
 assert.ok(/@media \(prefers-reduced-motion: reduce\)/.test(html), "要有 prefers-reduced-motion 支援");
 
+// ── 7b) 唔准再放返「聚光燈光束／星塵」呢類花巧嘢 ────────────
+assert.ok(!/hero-beam/.test(html) && !/class="spark"/.test(html),
+  "唔准再放返聚光燈光束／星塵（太花，同品牌唔夾）—— 見 DESIGN.md hero 規格");
+assert.ok(/\.hero::before \{[^}]*radial-gradient/.test(css), "hero 要有地圖點陣 texture（::before）");
+
 // ── 8) 改咗 index.html → sw.js cache 版本要 +1 ────────────────
 const v = Number((sw.match(/const CACHE = 'scout-tools-v(\d+)'/) || [])[1]);
-assert.ok(Number.isFinite(v) && v > 37, `sw.js cache 版本要 bump 過 v37（而家 v${v}）`);
+assert.ok(Number.isFinite(v) && v > 38, `sw.js cache 版本要 bump 過 v38（而家 v${v}）`);
 
 console.log("✅ design.test.js 全部通過");
