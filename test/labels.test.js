@@ -104,7 +104,7 @@ assert.ok(tagRow.includes("可多選"), "未揀時要有「可多選」提示");
 assert.ok(!tagRow.includes("tag-clear"), "未揀支部時唔應該有清除掣");
 assert.ok(!appSrc.includes("branch-tab"), "舊 .branch-tab 灰字 tabs 已經唔再用");
 assert.ok(els["sort-row"].hidden === true && els["sort-row"].innerHTML === "", "探索分類唔再有排序列（排名晒喺排行榜）");
-assert.ok(els.sections.innerHTML.includes("fav-heart"), "每個項目下方都有心心");
+assert.ok(els.sections.innerHTML.includes("like-heart"), "每個項目下方都有心心（讚好）");
 assert.ok(els.sections.innerHTML.includes("fav-star"), "項目保留收藏星星");
 
 // 多選 = OR
@@ -152,7 +152,12 @@ assert.ok(html.includes('id="bottom-nav"') && html.includes('data-bnav="fav"'), 
 assert.ok(html.includes("我的收藏"), "入口叫「我的收藏」，唔係「我的最愛」");
 assert.ok(html.includes("提交作品") && !html.includes("提交我的作品"), "投稿掣改名做「提交作品」");
 assert.ok(!els.sections.innerHTML.includes('<div class="tile-tags">'), "每個 APP 下方唔再標支部");
-assert.ok(els.sections.innerHTML.includes('title="收藏"') && els.sections.innerHTML.includes('title="支持"') && els.sections.innerHTML.includes('title="分享"'), "每個 APP 下方改為 3 個按鈕 心 (收藏) 星 (支持) 分享");
+assert.ok(els.sections.innerHTML.includes('title="收藏"') && els.sections.innerHTML.includes('title="讚好"') && els.sections.innerHTML.includes('title="分享"'), "每個 APP 下方改為 3 個按鈕 星 (收藏) 心 (讚好) 分享");
+// 圖示要全站一致：⭐ = 收藏、❤️ = 讚好（底欄「收藏」都係星星，唔可以一邊心一邊星）
+assert.ok(/btn-star fav-star[^>]*title="收藏"/.test(els.sections.innerHTML), "收藏掣用星星 ⭐");
+assert.ok(/btn-heart like-heart[^>]*title="讚好"/.test(els.sections.innerHTML), "讚好掣用心心 ❤️");
+assert.ok(/data-bnav="fav"[\s\S]{0,120}?bnav-icon">⭐/.test(html), "底欄「收藏」用星星 ⭐，唔係心心");
+assert.ok(!/bnav-icon">❤️/.test(html), "心心淨係留俾讚好，唔好再當收藏用");
 
 // 心心（讚好）：撳 = +1 並記住，再撳 = 取消
 run("SITES.pages[0].categories[1].apps[0].hearts = 1;");

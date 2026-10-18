@@ -24,7 +24,9 @@
 //            底欄細字行唔再 overflow:hidden 切走 QR／edit、tile 3 粒掣收窄到放得落；
 //            支部篩選改成 chip（未揀中性／揀咗 accent＋✓／已揀 N 個＋✕ 清除）；
 //            今期主打通知預覽內文改用該項目嘅「介紹」
-const CACHE = 'scout-tools-v36';
+//      v37 = 圖示統一：⭐ 收藏／❤️ 讚好（底欄「收藏」由 ❤️ 改 ⭐，APP 卡片收藏掣改星星）
+//            ＋後台「📊 統計」加 ⭐ 收藏數／❤️ 讚好數（Demo 模式都睇到）
+const CACHE = 'scout-tools-v37';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

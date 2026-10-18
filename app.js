@@ -248,11 +248,11 @@ function tileHTML(idx, delay) {
     <div class="tile-name">${esc(app.name)}</div>
     ${app.description ? `<div class="tile-desc">${esc(app.description)}</div>` : ""}
     <div class="tile-bar">
-      <button type="button" class="tile-btn btn-heart fav-heart ${starred ? "on" : ""}" title="收藏" aria-label="收藏" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); toggleFav(this)">
-        <svg class="heart-ico" width="16" height="16" viewBox="0 0 24 24" fill="${starred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      <button type="button" class="tile-btn btn-star fav-star ${starred ? "on" : ""}" title="收藏" aria-label="收藏" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); toggleFav(this)">
+        <svg class="star-ico" width="16" height="16" viewBox="0 0 24 24" fill="${starred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
       </button>
-      <button type="button" class="tile-btn btn-star fav-star ${hearted ? "on" : ""}" title="支持" aria-label="支持" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); toggleHeartBtn(this)">
-        <svg class="star-ico" width="16" height="16" viewBox="0 0 24 24" fill="${hearted ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <button type="button" class="tile-btn btn-heart like-heart ${hearted ? "on" : ""}" title="讚好" aria-label="讚好" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); toggleHeartBtn(this)">
+        <svg class="heart-ico" width="16" height="16" viewBox="0 0 24 24" fill="${hearted ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
       </button>
       <button type="button" class="tile-btn btn-share" title="分享" aria-label="分享" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); openShareModal('${esc(app._id || "")}')">
         <svg class="share-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -266,12 +266,11 @@ function toggleFav(el) {
   if (!id) return;
   toggleFavorite(id);
   const on = isFavorite(id);
-  document.querySelectorAll(`.fav-heart[data-id="${id}"], .fav-star[data-id="${id}"]`).forEach(btn => {
-    if (btn.classList.contains("fav-heart") || btn.title === "收藏") {
-      btn.classList.toggle("on", on);
-      const svg = btn.querySelector("svg");
-      if (svg) svg.setAttribute("fill", on ? "currentColor" : "none");
-    }
+  // 收藏 = 星星（⭐）：底欄「收藏」、「最多人收藏」排行榜都係星星，圖示要一致
+  document.querySelectorAll(`.fav-star[data-id="${id}"]`).forEach(btn => {
+    btn.classList.toggle("on", on);
+    const svg = btn.querySelector("svg");
+    if (svg) svg.setAttribute("fill", on ? "currentColor" : "none");
   });
 }
 
@@ -280,12 +279,11 @@ function toggleHeartBtn(el) {
   if (!id) return;
   toggleHeart(id);
   const on = isHearted(id);
-  document.querySelectorAll(`.fav-heart[data-id="${id}"], .fav-star[data-id="${id}"]`).forEach(btn => {
-    if (btn.classList.contains("fav-star") || btn.title === "支持") {
-      btn.classList.toggle("on", on);
-      const svg = btn.querySelector("svg");
-      if (svg) svg.setAttribute("fill", on ? "currentColor" : "none");
-    }
+  // 讚好 = 心心（❤️）：「最受歡迎」排行榜、「N 人讚好」都係心心
+  document.querySelectorAll(`.like-heart[data-id="${id}"]`).forEach(btn => {
+    btn.classList.toggle("on", on);
+    const svg = btn.querySelector("svg");
+    if (svg) svg.setAttribute("fill", on ? "currentColor" : "none");
   });
 }
 
@@ -485,7 +483,7 @@ function render() {
     const p = emptyEl.querySelector("p");
     if (activeChip === "fav") {
       b.textContent = "暫時未有收藏嘅項目";
-      p.textContent = "喺項目右上角撳 ☆ 就可以加入我的收藏！";
+      p.textContent = "喺項目下面撳 ☆ 就可以加入我的收藏！";
     } else if (activeChip !== "all") {
       b.textContent = "呢個分類暫時冇項目";
       p.textContent = tagFilter.length

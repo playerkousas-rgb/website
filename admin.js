@@ -79,7 +79,8 @@ const ADMIN = {
     const panel = document.getElementById("analytics-panel");
     if (!panel || !this.authed) return;
     if (!getSB()) {
-      panel.innerHTML = analyticsUnavailableHTML("而家係 Demo 模式，訪客統計只會喺 Supabase 模式記錄。");
+      // Demo 模式：冇訪客統計，但 🔥 點擊／⭐ 收藏／❤️ 讚好照樣有數，唔好淨係話「讀唔到」
+      panel.innerHTML = analyticsHTML(null, { demo: true });
       return;
     }
     panel.innerHTML = '<div class="analytics-loading">正在讀取訪客統計…</div>';
@@ -718,7 +719,7 @@ function manageHTML() {
     <div class="banner" style="background:var(--accent-soft);color:var(--accent-text);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)">
       每頁可獨立「開放 / 關閉」（✓開放先至會喺公開版出現）。關閉咗嘅分頁內容仍然保留，隨時可以開返。<br/>
       分類只屬某一個分頁 —— 改/刪分類、加項目都要先揀啱分頁。項目可揀童軍支部標籤（小／幼／童／深／樂），公開版畀用戶多選篩選。<br/>
-      🔥 點擊數／⭐ 收藏數／❤️ 心數都係全站累計（公開版每次打開／收藏／讚好會更新），「排行榜」可按呢三項排名（「探索分類」永遠用下面 ▲▼ 排好嘅預設順序）。
+      🔥 點擊數／⭐ 收藏數／❤️ 讚好數都係全站累計（公開版每次打開／收藏／讚好會更新），「排行榜」可按呢三項排名（「探索分類」永遠用下面 ▲▼ 排好嘅預設順序）。
     </div>
     ${ADMIN.sites.pages.map(pageGroupHTML).join("")}
   </div>`;
@@ -785,10 +786,13 @@ function analyticsDateLabel(date) {
   return m ? `${Number(m[2])}/${Number(m[3])}` : String(date || "—");
 }
 
-function analyticsHTML(data) {
+function analyticsHTML(data, opts) {
   const d = data || {};
+  const demo = !!(opts && opts.demo);   // Demo 模式冇訪客統計，但 ⭐／❤️／🔥 照計
   const apps = analyticsAppRows();
   const totalClicks = apps.reduce((n, a) => n + Number(a.clicks || 0), 0);
+  const totalStars = apps.reduce((n, a) => n + Number(a.stars || 0), 0);
+  const totalHearts = apps.reduce((n, a) => n + Number(a.hearts || 0), 0);
   const daily = Array.isArray(d.daily) ? d.daily : [];
   const maxDaily = Math.max(1, ...daily.map((x) => Number(x.visitors || 0)));
   const maxClicks = Math.max(0, ...apps.map((a) => Number(a.clicks || 0)));
@@ -811,18 +815,44 @@ function analyticsHTML(data) {
         </div>`;
       }).join("")}</div>`
     : '<div class="analytics-no-data">暫時未有任何 App 項目。</div>';
+  // ⭐ 收藏 ＋ ❤️ 讚好：逐個 App 排（收藏多行先，收藏一樣就比讚好）
+  const favRows = [...apps].sort((a, b) =>
+    Number(b.stars || 0) - Number(a.stars || 0) ||
+    Number(b.hearts || 0) - Number(a.hearts || 0) ||
+    String(a.name || "").localeCompare(String(b.name || ""), "zh-HK"));
+  const maxStars = Math.max(0, ...favRows.map((a) => Number(a.stars || 0)));
+  const maxHearts = Math.max(0, ...favRows.map((a) => Number(a.hearts || 0)));
+  const favHTML = favRows.length
+    ? `<div class="analytics-app-list">${favRows.map((a, i) => {
+        const st = Number(a.stars || 0);
+        const ht = Number(a.hearts || 0);
+        const wStar = maxStars ? Math.max(st ? 4 : 0, Math.round(st / maxStars * 100)) : 0;
+        const wHeart = maxHearts ? Math.max(ht ? 4 : 0, Math.round(ht / maxHearts * 100)) : 0;
+        return `<div class="analytics-app-row">
+          <span class="analytics-app-rank">${String(i + 1).padStart(2, "0")}</span>
+          ${appIconHTML(a, "row")}
+          <div class="analytics-app-copy"><b>${esc(a.name || "未命名項目")}</b><small>${esc(a.pageLabel)} · ${esc(a.categoryLabel)}${a.visible === false ? " · 已隱藏" : ""}</small><span class="analytics-fav-track"><i class="trk-star" style="width:${wStar}%"></i><i class="trk-heart" style="width:${wHeart}%"></i></span></div>
+          <div class="analytics-fav-nums"><span class="num-star">⭐ ${st.toLocaleString()}</span><span class="num-heart">❤️ ${ht.toLocaleString()}</span></div>
+        </div>`;
+      }).join("")}</div>`
+    : '<div class="analytics-no-data">暫時未有任何 App 項目。</div>';
 
   return `<div class="analytics-wrap">
-    <div class="analytics-toolbar"><div><h3>📊 訪客與 App 點擊統計</h3><p>公開版每次入站會以隨機匿名識別碼去重；唔會記錄 IP 或個人資料。</p></div><button type="button" class="mini-btn" onclick="ADMIN.loadAnalytics()">↻ 更新</button></div>
+    <div class="analytics-toolbar"><div><h3>📊 訪客、點擊、收藏同讚好統計</h3><p>公開版每次入站會以隨機匿名識別碼去重；唔會記錄 IP 或個人資料。</p></div><button type="button" class="mini-btn" onclick="ADMIN.loadAnalytics()">↻ 更新</button></div>
+    ${demo ? '<div class="banner warn">⚠️ Demo 模式：訪客統計只會喺 Supabase 模式記錄；下面嘅 🔥 點擊／⭐ 收藏／❤️ 讚好係本機累積數。</div>' : ""}
     <div class="analytics-kpis">
+      ${demo ? "" : `
       <div class="analytics-kpi"><span>👥 累計獨立訪客</span><b>${Number(d.totalVisitors || 0).toLocaleString()}</b><small>跨日期去重</small></div>
       <div class="analytics-kpi"><span>📅 今日訪客</span><b>${Number(d.todayVisitors || 0).toLocaleString()}</b><small>香港時間</small></div>
-      <div class="analytics-kpi"><span>🗓 近 7 日訪客</span><b>${Number(d.last7Visitors || 0).toLocaleString()}</b><small>跨日期去重</small></div>
+      <div class="analytics-kpi"><span>🗓 近 7 日訪客</span><b>${Number(d.last7Visitors || 0).toLocaleString()}</b><small>跨日期去重</small></div>`}
       <div class="analytics-kpi"><span>🔥 App 總點擊</span><b>${totalClicks.toLocaleString()}</b><small>${apps.length} 個項目累計</small></div>
+      <div class="analytics-kpi"><span>⭐ 全站收藏</span><b>${totalStars.toLocaleString()}</b><small>全站累計收藏</small></div>
+      <div class="analytics-kpi"><span>❤️ 全站讚好</span><b>${totalHearts.toLocaleString()}</b><small>全站累計讚好</small></div>
     </div>
-    <section class="analytics-section"><div class="analytics-section-head"><h4>近 30 日入站趨勢</h4><span>每日獨立訪客</span></div>${dailyHTML}</section>
+    ${demo ? "" : `<section class="analytics-section"><div class="analytics-section-head"><h4>近 30 日入站趨勢</h4><span>每日獨立訪客</span></div>${dailyHTML}</section>`}
     <section class="analytics-section"><div class="analytics-section-head"><h4>每個 App 點擊數</h4><span>由高至低 · ${apps.length} 個</span></div>${appHTML}</section>
-    <p class="analytics-note">統計由 ${Number(d.visitorDays || 0).toLocaleString()} 個「訪客日」組成；同一人換裝置／清除瀏覽器資料會被當作新訪客。App 點擊數沿用現有累計數字，唔會因加上統計功能而歸零。</p>
+    <section class="analytics-section"><div class="analytics-section-head"><h4>⭐ 收藏 ＋ ❤️ 讚好</h4><span>每個 App · 收藏排先</span></div>${favHTML}</section>
+    <p class="analytics-note">${demo ? "" : `統計由 ${Number(d.visitorDays || 0).toLocaleString()} 個「訪客日」組成；同一人換裝置／清除瀏覽器資料會被當作新訪客。`}App 點擊數、⭐ 收藏數、❤️ 讚好數都係全站累計（公開版每次打開／收藏／讚好就 ±1），沿用現有數字，唔會因加上統計功能而歸零。</p>
   </div>`;
 }
 
