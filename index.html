@@ -391,8 +391,8 @@
     padding: 5px 10px; border-radius: 999px;
   }
   .hero-actions { display: flex; gap: 10px; margin-top: 16px; }
-  /* 查看全部已移除，只剩一個主按鈕時滿闊度更精神 */
-  .hero-actions:has(#hero-all[hidden]) #hero-open { flex: 1 1 100%; }
+  /* 查看全部已移除：只剩一個主按鈕，桌面版收窄至精準按鈕闊度 */
+  .hero-actions #hero-open { flex: 0 1 340px; }
   .btn-primary, .btn-secondary {
     flex: 1; min-width: 0;
     border-radius: 14px; padding: 13px 18px;
@@ -422,6 +422,11 @@
     box-shadow: var(--shadow-sm);
     touch-action: manipulation; transition: transform .12s, background .15s, border-color .15s;
   }
+  .hero-collapse svg {
+    width: 17px; height: 17px; display: block;
+    fill: none; stroke: currentColor; stroke-width: 2.4;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
   .hero-share:hover, .hero-collapse:hover { background: var(--accent-soft); transform: scale(1.06); }
   .hero-share:active, .hero-collapse:active { transform: scale(.94); }
   .btn-primary:hover {
@@ -440,6 +445,7 @@
     .hero { padding: 16px 12px 14px; border-radius: 18px; }
     .hero-title { font-size: 19px; }
     .hero-actions { flex-direction: column; }
+    .hero-actions #hero-open { flex: 1 1 100%; }
   }
 
   /* Hero 內「App 推送通知」預覽（純 CSS mock：截圖清晰唔會模糊，字隨時改） */
@@ -472,7 +478,7 @@
   }
 
   /* 收埋狀態：淨係剩一條「今期主打 · App 名」細條，撳一下就還原 */
-  .hero.collapsed { margin: 14px 0 16px; padding: 10px 12px; }
+  .hero.collapsed { margin: 14px 0 16px; padding: 10px 12px; background: var(--bg-card); }
   .hero.collapsed .hero-glow,
   .hero.collapsed::before,
   .hero.collapsed .hero-meta,
@@ -795,7 +801,8 @@
     align-items: center;
     justify-content: center;
     gap: 4px;
-    margin-top: 6px;
+    margin-top: auto;      /* 推到底，同一行嘅 tile 掣位對齊 */
+    padding-top: 6px;
     width: 100%;
   }
   .tile-btn {
@@ -947,6 +954,9 @@
     -webkit-backdrop-filter: blur(20px) saturate(1.6);
     border: 1px solid var(--border);
     box-shadow: var(--shadow);
+  }
+  @media (min-width: 560px) {
+    .bottom-nav { max-width: 540px; margin-left: auto; margin-right: auto; }
   }
   .bnav-btn {
     flex: 1;
@@ -1327,6 +1337,7 @@
     top: var(--header-h, 0px);
     z-index: 35;
     display: flex; gap: 4px; overflow-x: auto;
+    width: fit-content; max-width: 100%;
     padding: 5px; margin: 10px 0 2px;
     scrollbar-width: none; -webkit-overflow-scrolling: touch;
     background: var(--bg-elevated);
@@ -1672,7 +1683,7 @@
     /* 每個項目下面 3 粒掣（收藏／讚好／分享）：4 欄格仔一格得 ~76px，
        但 3 粒掣本身要 ~100px —— 會凸出 tile 疊住隔籬、又難撳。呢度收到最窄，
        連 320px 闊嘅手機都放得落（3 × 18 + 2 × 2 = 58px ≤ 59px）。 */
-    .tile-bar { gap: 2px; margin-top: 4px; }
+    .tile-bar { gap: 2px; margin-top: auto; padding-top: 4px; }
     .tile-btn { padding: 4px 2px; }
     .tile-btn svg { width: 14px; height: 14px; }
 
@@ -1690,6 +1701,7 @@
        展開咗就放回正常大小，因為嗰時有位，而且係主要操作區 */
     .hero.collapsed .hero-card-tools { top: 8px; right: 8px; gap: 4px; }
     .hero.collapsed .hero-share, .hero.collapsed .hero-collapse { width: 30px; height: 30px; font-size: 13px; }
+    .hero.collapsed .hero-collapse svg { width: 14px; height: 14px; }
     /* 手機：主打圖標細一格，標題唔會被逼到第三行 */
     .hero-icon { width: 58px; height: 58px; border-radius: 16px; font-size: 30px; }
     .hero-icon-row { gap: 12px; }
@@ -1751,7 +1763,7 @@
     <div class="hero-card">
       <div class="hero-card-tools">
         <button class="hero-share" id="hero-share" type="button" aria-label="分享此項目" title="分享">🔗</button>
-        <button class="hero-collapse" id="hero-collapse" type="button" aria-label="收埋今期主打" title="收埋">▴</button>
+        <button class="hero-collapse" id="hero-collapse" type="button" aria-label="收埋今期主打" title="收埋"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6"/></svg></button>
       </div>
       <div class="hero-badge" id="hero-badge">今期主打</div>
       <div class="hero-icon-row">
@@ -2177,7 +2189,9 @@ try {
 function syncHeroCollapseBtn() {
   const btn = document.getElementById("hero-collapse");
   if (!btn) return;
-  btn.textContent = _heroCollapsed ? "▾" : "▴";
+  btn.innerHTML = _heroCollapsed
+    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10l6 6 6-6"/></svg>'
+    : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6"/></svg>';
   btn.title = _heroCollapsed ? "睇詳情" : "收埋";
   btn.setAttribute("aria-label", _heroCollapsed ? "展開今期主打" : "收埋今期主打");
   btn.setAttribute("aria-expanded", _heroCollapsed ? "false" : "true");

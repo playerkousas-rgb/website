@@ -140,6 +140,7 @@ easing: cubic-bezier(.22, 1, .36, 1)
 
 ### page-nav（分頁導覽）
 - 桌面 = **segmented control**：一條圓角（999px）surface 容器 ＋ 內部 pill 掣；選中 = accent 實心。
+- 容器**貼內容**（`width: fit-content; max-width: 100%`）—— 唔好拉成全闊，否則似工具欄多過 segmented control。
 - 手機（<560px）分頁名會轉行（要睇晒全部分頁），容器跟住改成圓角 18px 嘅卡。
 
 ### tile（App 卡）
@@ -147,6 +148,7 @@ easing: cubic-bezier(.22, 1, .36, 1)
 - 名 = title 級；描述 = body-sm 級 muted。
 - Hover：底色變 surface-hover ＋ inset hairline（唔會位移）。
 - 底下三粒掣：⭐ 收藏／❤️ 讚好／分享 —— **圖示約定見下**。
+- 三粒掣嗰行用 `margin-top: auto` 推到底 → app 名長短唔一，掣位仍然一行對齊。
 - 手機 3 粒掣要收到 `svg 14px / padding 4px 2px`（3 × 18 + 2 × 2 = 58px ≤ 320px 闊一格 59px）。
 
 ### 圖示約定（全站唯一，唔准各自為政）
@@ -157,17 +159,23 @@ easing: cubic-bezier(.22, 1, .36, 1)
 ### bnav（底部導覽）＝ 浮動 dock
 - 固定底、**浮起喺頁面上面**：`margin: 8px 10px 6px`、圓角 22px、glass（blur 20px + saturate 1.6）、
   hairline 邊、level 2 陰影；`pointer-events` 喺 bar 度收埋，只俾兩個仔掣食到。
+- 桌面（≥560px）**收窄到 540px 置中** —— 拉成 1280px 全闊會似工具欄，唔似 dock；手機維持貼邊。
 - 選中態 = accent 文字 ＋ accent-soft 底 ＋ 底部 2px accent 指示線。
 - **唔准**再寫死第二種品牌色（之前嘅 `#6366f1` 已改）。
 - 下面嘅 credit line 淨係一行細字（半透明 ＋ blur），唔好再搶視線。
 
 ### hero（今期主打）＝ feature card
 - 收埋態 = 一條細條（唔食手機版面）；展開態 = 大卡 ＋ 徽章 ＋ 圖標 ＋ 標題 ＋ CTA。
+- 收埋態背景要 **flat（`background: var(--bg-card)`）**：留住角落 radial gradient 會喺細條右邊
+  剩低一撻怪金燈，唔似一條 bar。
 - 背景：**童軍地圖點陣**（1px 點、20px 間距、向下淡出）＋ 右上角柔光，淨係「氣氛」唔係主角。
 - ⚠️ 唔准再加「聚光燈光束」同「星塵 twinkle」—— 太花，同品牌唔夾。
 - 圖標 72px 圓角 20px、金色漸變 ＋ 玻璃高光 ＋ 柔光陰影。
 - 徽章用 accent 底 ＋ on-primary 字（唔好斜住，斜住似「貼紙」）。
 - 主 CTA = accent 實心 ＋ 14px 圓角；次 CTA = flat surface。
+  桌面版主 CTA 收窄到 **340px**（唔好拉成 960px banner 鈕），手機版先滿闊。
+- 收起掣用 **inline SVG 箭嘴**（`stroke: currentColor`）—— 唔好用 `▴`／`▾` 字型，
+  部分系統冇呢兩個 glyph，會出豆腐格。
 
 ### toast / 空狀態
 - Toast 用中性 surface（唔再用金色框），圓角 14px ＋ blur ＋ level 3 陰影。
