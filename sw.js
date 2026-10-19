@@ -26,15 +26,7 @@
 //            今期主打通知預覽內文改用該項目嘅「介紹」
 //      v37 = 圖示統一：⭐ 收藏／❤️ 讚好（底欄「收藏」由 ❤️ 改 ⭐，APP 卡片收藏掣改星星）
 //            ＋後台「📊 統計」加 ⭐ 收藏數／❤️ 讚好數（Demo 模式都睇到）
-//      v38 = 設計系統 v2（見 DESIGN.md）：新 token 級數（間距／動效／圓角）、
-//            單一 accent（底欄原本寫死靛藍 #6366f1、提交作品頁藍色 → 徽章金）、
-//            App 圖標卡回復漸變底（之前被 background:transparent !important 壓死）、
-//            hero 光暈收斂、modal 入場動畫、數字用 tabular-nums
-//      v39 = 全站視覺重做：底欄改浮動 dock、hero 改地圖點陣 feature card（移除光束／星塵）、
-//            分頁導覽改 segmented control、排行榜卡改卡片式、toast／空狀態／圖標高光重做
-//      v40 = 視覺 QA 執漏：桌面浮動 dock 收窄置中、分頁導覽貼內容、收起 hero 變 flat bar、
-//            App 卡三粒掣對齊、主 CTA 收窄、收起掣改 SVG 箭嘴（▴／▾ 會出豆腐格）
-const CACHE = 'scout-tools-v40';
+const CACHE = 'scout-tools-v37';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
