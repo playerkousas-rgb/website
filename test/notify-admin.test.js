@@ -33,9 +33,9 @@ base.globalThis = base;
 vm.createContext(base);
 vm.runInContext(read("store.js"), base);
 vm.runInContext(read("market.js"), base);
-vm.runInContext(`this.__api = { scoutAdminSubmissionPayload, scoutAdminText, scoutAdminEmail, scoutAdminPhone,
+  vm.runInContext(`this.__api = { scoutAdminSubmissionPayload, scoutAdminText, scoutAdminEmail, scoutAdminPhone,
   scoutAdminRecordLines, scoutAdminForwardMailto, scoutAdminReplyMailto, notifyScoutAdmin, scoutAdminNotifyNote,
-  reviewCardHTML, SCOUT_ADMIN_CONFIG };`, base);
+  reviewCardHTML, reviewKindBadge, submissionOpen, submissionSetKind, submissionPagesFor, submissionToggleBranch, SUBMIT_MODES, SCOUT_ADMIN_CONFIG };`, base);
 const api = base.__api;
 
 const record = {
@@ -271,6 +271,25 @@ console.log("✓ market.js：審核卡顯示聯絡方式＋一撳轉寄／回覆
     assert.match(sql, /grant execute on function public\.submit_work\(jsonb\) to anon, authenticated/);
     console.log("✓ migration：contact/phone 欄＋校驗＋submit_work 重寫（冚辦掂）");
   }
+
+  /* ── 8) 網站分享 & 教材分享：獨立按鈕＋預設分類＋低門檻欄位 ── */
+  assert.ok(html.includes(`onclick="submissionOpen('app')"`), "頂部保留「＋ 提交作品」掣");
+  assert.ok(html.includes(`onclick="submissionOpen('link')"`) && html.includes("🌐 網站分享"), "頂部有「🌐 網站分享」獨立掣");
+  assert.ok(html.includes(`onclick="submissionOpen('material')"`) && html.includes("📚 教材分享"), "頂部有「📚 教材分享」獨立掣");
+  const linkPages = api.submissionPagesFor("link");
+  assert.strictEqual(linkPages[0].id, "links", "網站分享對應 links 分頁");
+  assert.ok(linkPages[0].categories.includes("童軍技能及知識") && linkPages[0].categories.includes("露營及行山資訊"), "網站分享內置預設分類");
+  const matPages = api.submissionPagesFor("material");
+  assert.deepStrictEqual(Array.from(matPages.map(p => p.id)), ["cards", "ppt"], "教材分享支援學習圖卡同 PPT 簡報");
+  assert.ok(matPages[0].categories.includes("技能及專章圖卡") && matPages[1].categories.includes("集會教學簡報"), "教材分享內置預設分類");
+  assert.strictEqual(api.SUBMIT_MODES.link.authorRequired, false, "網站分享唔強制填作者（降低門檻）");
+  assert.strictEqual(api.SUBMIT_MODES.material.authorRequired, false, "教材分享唔強制填作者（降低門檻）");
+  assert.ok(api.SUBMIT_MODES.material.tip.includes("Google Drive") && api.SUBMIT_MODES.material.tip.includes("Canva"), "教材分享提示支援雲端連結");
+  assert.strictEqual(api.reviewKindBadge({ page: "links" }), "🌐 網站分享");
+  assert.strictEqual(api.reviewKindBadge({ page: "cards" }), "📚 教材分享");
+  assert.strictEqual(api.reviewKindBadge({ page: "ppt" }), "📚 教材分享");
+  assert.strictEqual(api.reviewKindBadge({ page: "apps" }), "🧰 作品提交");
+  console.log("✓ 網站分享 & 教材分享：獨立入口、雲端連結提示、匿名分享、分類映射與審核標籤全部通過");
 
   console.log("\n✅ Scout Admin 通知：欄位對齊、清洗、API 行為、限流與前後端一致性全部通過");
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => { global.fetch = originalFetch; });

@@ -475,6 +475,8 @@ function render() {
     html = chartHTML(chartApps);
   }
   sectionsEl.innerHTML = html;
+  const emptyAct = document.getElementById("empty-action");
+  if (emptyAct) { emptyAct.hidden = true; emptyAct.innerHTML = ""; }
   if (html) {
     emptyEl.style.display = "none";
   } else {
@@ -724,12 +726,21 @@ function renderBnavPlaceholder(section) {
   if (hero) hero.hidden = true;
   const b = emptyEl.querySelector("b");
   const p = emptyEl.querySelector("p");
+  const act = document.getElementById("empty-action");
   if (section === "links") {
     b.textContent = "「有用連結」尚未開放";
-    p.textContent = "管理員仲未上架任何有用連結，敬請期待。";
+    p.textContent = "管理員仲未上架任何有用連結，歡迎率先分享好用網站！";
+    if (act) {
+      act.hidden = false;
+      act.innerHTML = `<button type="button" class="market-submit share-link-btn" onclick="submissionOpen('link')">🌐 立即分享網站連結</button>`;
+    }
   } else {
     b.textContent = "「教學工具」尚未開放";
-    p.textContent = "學習圖卡、PPT 簡報等教學材料仲未上架，敬請期待。";
+    p.textContent = "學習圖卡、PPT 簡報等教學材料仲未上架，歡迎率先分享雲端教材！";
+    if (act) {
+      act.hidden = false;
+      act.innerHTML = `<button type="button" class="market-submit share-material-btn" onclick="submissionOpen('material')">📚 立即分享教材連結</button>`;
+    }
   }
   emptyEl.style.display = "block";
   measurePanes();

@@ -26,7 +26,8 @@
 //            今期主打通知預覽內文改用該項目嘅「介紹」
 //      v37 = 圖示統一：⭐ 收藏／❤️ 讚好（底欄「收藏」由 ❤️ 改 ⭐，APP 卡片收藏掣改星星）
 //            ＋後台「📊 統計」加 ⭐ 收藏數／❤️ 讚好數（Demo 模式都睇到）
-const CACHE = 'scout-tools-v37';
+//      v38 = 新增「🌐 網站分享」及「📚 教材分享」獨立入口與表單（支援雲端連結、匿名分享、支部快選）
+const CACHE = 'scout-tools-v38';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
