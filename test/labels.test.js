@@ -265,6 +265,7 @@ assert.ok(!els.sections.innerHTML.includes("小童軍集會助手") && !els.sect
 assert.strictEqual(els.sections.innerHTML, "", "「連結」佔位唔渲染任何分類區");
 assert.strictEqual(els.empty.style.display, "block", "「連結」佔位顯示提示");
 assert.strictEqual(els["empty::b"].textContent, "「有用連結」尚未開放", "「連結」佔位文案");
+assert.ok(els["empty-action"].innerHTML.includes("submissionOpen('link')"), "「連結」佔位有直接分享網站掣");
 assert.strictEqual(els.chips.innerHTML, "", "「連結」佔位唔顯示分類 chips");
 assert.strictEqual(els["page-nav"].hidden, true, "「連結」佔位唔顯示頂部分頁導覽");
 assert.strictEqual(els["hero-spotlight"].hidden, true, "「連結」佔位連今期主打都收埋（都係商店內容）");
@@ -274,6 +275,7 @@ run("handleBnav('tools');");
 assert.ok(!els.sections.innerHTML.includes("小童軍集會助手") && !els.sections.innerHTML.includes("電子進度紀錄"),
   "「教學工具」未開放就唔可以兜底顯示商店分類／項目");
 assert.strictEqual(els["empty::b"].textContent, "「教學工具」尚未開放", "「教學工具」佔位文案");
+assert.ok(els["empty-action"].innerHTML.includes("submissionOpen('material')"), "「教學工具」佔位有直接分享教材掣");
 assert.strictEqual(run("updateBnavState()"), "tools", "「教學工具」著燈");
 
 run("handleBnav('discover');");
