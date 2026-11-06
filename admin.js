@@ -284,12 +284,12 @@ const ADMIN = {
       "2) 建立「預設模板」：\n" +
       "   · 小工具 Apps 分頁（開放）＋ 三分類：電子進度紀錄 / 小工具 / 小遊戲\n" +
       "   · 學習圖卡、PPT 簡報、有用連結 三分頁（暫關閉，之後逐個開）\n\n" +
-      "⚠️ 不可逆，會完整覆蓋而家所有資料。確定要繼續？";
+      "不可逆，會完整覆蓋而家所有資料。確定要繼續？";
     if (!confirm(msg)) return;
     if (!confirm("再確認一次：真係要清空全部資料並重設？")) return;
     try {
       const r = await resetToDefault();
-      alert(`重設完成 ✅\n${r.pages} 個分頁 · ${r.categories} 個分類（已清空，可以開始加內容）`);
+      alert(`重設完成\n${r.pages} 個分頁 · ${r.categories} 個分類（已清空，可以開始加內容）`);
       this.editId = null; this.form = {};
       await this.refresh();
     } catch (e) { alert("重設失敗：" + e.message + "\n（可能需要先去 Supabase 執行 README 嘅 migration SQL）"); }
@@ -316,19 +316,19 @@ const ADMIN = {
     if (!file) return;
     let backup;
     try { backup = JSON.parse(await file.text()); }
-    catch { alert("讀唔到呢個檔案 — 請揀「📤 備份」下載嘅 .json 檔"); return; }
+    catch { alert("讀唔到呢個檔案 — 請揀「備份」下載嘅 .json 檔"); return; }
     if (!backup || !(Array.isArray(backup.pages) || Array.isArray(backup.categories))) {
-      alert("備份檔格式唔啱 — 需要 pages/categories 陣列（同「📤 備份」下載嘅格式）");
+      alert("備份檔格式唔啱 — 需要 pages/categories 陣列（同「備份」下載嘅格式）");
       return;
     }
     let cN = 0, iN = 0;
     const pages = backup.pages || [{ categories: backup.categories }];
     pages.forEach((p) => (p.categories || []).forEach((c) => { cN++; iN += (c.apps || []).length; }));
-    if (!confirm(`確定用「${file.name}」還原？\n會有 ${pages.length} 個分頁、${cN} 個分類、${iN} 個項目。\n⚠️ 現有資料會被完整覆蓋（唔係合併），不可逆。`)) return;
+    if (!confirm(`確定用「${file.name}」還原？\n會有 ${pages.length} 個分頁、${cN} 個分類、${iN} 個項目。\n注意：現有資料會被完整覆蓋（唔係合併），不可逆。`)) return;
     if (!confirm("再確認一次：真係要覆蓋而家全部資料？")) return;
     try {
       const r = await restoreFromBackup(backup);
-      alert(`還原完成 ✅\n${r.pages} 個分頁 · ${r.categories} 個分類 · ${r.items} 個項目`);
+      alert(`還原完成\n${r.pages} 個分頁 · ${r.categories} 個分類 · ${r.items} 個項目`);
       this.editId = null; this.form = {};
       await this.refresh();
     } catch (e) { alert("還原失敗：" + e.message); }
@@ -369,13 +369,23 @@ let _emojiCtx = null;   // { recent, tab, query } 開picker 嗰下嘅狀態
 function buildEmojiGrid(emojiArr) {
   return emojiArr.map((x) => `<button type="button" class="emoji-cell" data-emoji="${esc(x)}">${x}</button>`).join("");
 }
+/* 線稿圖標格：值寫成 "i:compass"（公開版 svgIcon() 認得）。
+   同 emoji 用同一個 panel，唔使開兩個 picker。 */
+function buildIconGrid(keys) {
+  return keys.map((k) => `<button type="button" class="emoji-cell icon-cell" data-icon-key="${esc(k)}" title="${esc((typeof ICON_LABELS !== "undefined" && ICON_LABELS[k]) || k)}">${svgIcon(k)}</button>`).join("");
+}
 function refreshEmojiPanel() {
   const grid = document.querySelector("#emoji-panel .emoji-grid");
   if (!grid) return;
   const ctx = _emojiCtx || { tab: "recent", query: "" };
   const q = (ctx.query || "").trim().toLowerCase();
   let html = "";
-  if (q) {
+  if (ctx.tab === "icons") {
+    const q2 = q;
+    const keys = (typeof ICON_CHOICES !== "undefined" ? ICON_CHOICES : [])
+      .filter((k) => !q2 || k.includes(q2) || String((typeof ICON_LABELS !== "undefined" && ICON_LABELS[k]) || "").includes(q2));
+    html = buildIconGrid(keys) || `<div class="emoji-none-hint">搵唔到「${esc(q2)}」相關圖標</div>`;
+  } else if (q) {
     const res = emojiSearch(q);
     const hits = res.hits.slice(0, 40);
     if (hits.length) {
@@ -398,26 +408,23 @@ function refreshEmojiPanel() {
 function openEmojiPicker(cb) {
   EMOJI_CB = cb;
   // 上一格揀咗／而家開嗰刻：記住最近用過同個 tab
-  _emojiCtx = { recent: emojiRecentGet(), tab: _emojiCtx && _emojiCtx.tab !== "recent" ? _emojiCtx.tab : "recent", query: "" };
+  // 默認開「線稿圖標」：公開版而家全部用線稿，emoji 只係舊資料嘅後備
+  _emojiCtx = { recent: emojiRecentGet(), tab: (_emojiCtx && _emojiCtx.tab) || "icons", query: "" };
   let panel = document.getElementById("emoji-panel");
   if (!panel) {
     panel = document.createElement("div");
     panel.id = "emoji-panel";
     panel.className = "emoji-panel";
-    const tabs = EMOJI_GROUPS.map((g) =>
-      `<button type="button" class="emoji-tab" data-emoji-tab="${g.key}" title="${esc(g.label.replace(/^.{1,2}\s/, ""))}">${esc(g.label)}</button>`).join("");
     panel.innerHTML = `
       <div class="emoji-panel-inner">
-        <div class="emoji-panel-head">揀個 emoji <span class="spacer"></span><button type="button" class="mini-btn iconish" data-emoji-close="1">×</button></div>
-        <input id="emoji-search" class="emoji-search" type="search" placeholder="🔍 搜尋 emoji（例如：露營、地圖、獎…）" autocomplete="off" enterkeyhint="done" />
+        <div class="emoji-panel-head">揀圖標 <span class="spacer"></span><button type="button" class="mini-btn iconish" data-emoji-close="1">${svgIcon("close")}</button></div>
+        <input id="emoji-search" class="emoji-search" type="search" placeholder="搜尋圖標／emoji（例如：露營、地圖、獎…）" autocomplete="off" enterkeyhint="done" />
         <div class="emoji-tabs">
-          <button type="button" class="emoji-tab on" data-emoji-tab="recent">🕘 最近</button>
-          <button type="button" class="emoji-tab" data-emoji-tab="all">☰ 全部</button>
-          ${tabs}
+          <button type="button" class="emoji-tab on" data-emoji-tab="icons">線稿圖標（24px）</button>
         </div>
         <div class="emoji-grid"></div>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-          <button type="button" class="mini-btn" data-emoji-none="1">🚫 不用 emoji（預設用我哋 Logo）</button>
+          <button type="button" class="mini-btn" data-emoji-none="1">${svgIcon("close")} 唔用圖標（預設用我哋 Logo）</button>
           <span class="emoji-total">共 ${EMOJI_ALL.length} 個</span>
         </div>
       </div>`;
@@ -429,11 +436,13 @@ function openEmojiPicker(cb) {
     };
     const setTab = (k) => { if (_emojiCtx) { _emojiCtx.tab = k; _emojiCtx.query = ""; const s = document.getElementById("emoji-search"); if (s) s.value = ""; } refreshEmojiPanel(); syncTabs(); };
     panel.addEventListener("click", (e) => {
+      const iconCell = e.target.closest("[data-icon-key]");
       const cell = e.target.closest("[data-emoji]");
       const tab = e.target.closest("[data-emoji-tab]");
       const none = e.target.closest("[data-emoji-none]");
       const close = e.target.closest("[data-emoji-close]");
-      if (cell && EMOJI_CB) { const cb = EMOJI_CB; EMOJI_CB = null; emojiRecentPush(cell.dataset.emoji); panel.hidden = true; cb(cell.dataset.emoji); }
+      if (iconCell && EMOJI_CB) { const cb = EMOJI_CB; EMOJI_CB = null; panel.hidden = true; cb("i:" + iconCell.dataset.iconKey); }
+      else if (cell && EMOJI_CB) { const cb = EMOJI_CB; EMOJI_CB = null; emojiRecentPush(cell.dataset.emoji); panel.hidden = true; cb(cell.dataset.emoji); }
       else if (tab) setTab(tab.dataset.emojiTab);
       else if (none && EMOJI_CB) { const cb = EMOJI_CB; EMOJI_CB = null; panel.hidden = true; cb(""); }
       else if (close) { EMOJI_CB = null; panel.hidden = true; }
@@ -473,7 +482,7 @@ function loginHTML() {
   <div class="admin-card">
     <div class="admin-head">
       <img class="admin-logo" src="/icons/icon-192.png" alt="" />
-      <h2>🔐 管理員登入</h2>
+      <h2>${svgIcon("lock")} 管理員登入</h2>
     </div>
     <p style="font-size:13px;color:var(--muted);margin:4px 0 12px;line-height:1.5">請輸入管理員密碼以進入後台。</p>
     <div class="admin-lbl">Password / 密碼</div>
@@ -508,14 +517,14 @@ function formHTML() {
   const catInList = cats.some((c) => c.name === f.category);
   return `
   <div class="admin-card">
-    <div class="admin-lbl">${edit ? "✏️ 編輯項目" : "＋ 新增項目"}</div>
+    <div class="admin-lbl">${edit ? svgIcon("pencil") + " 編輯項目" : svgIcon("plus") + " 新增項目"}</div>
     <div class="admin-row">
       <input id="f-name" placeholder="名稱 *" value="${esc(f.name || "")}" autocomplete="off" />
       <input id="f-url" placeholder="連結 URL *（https://…）" value="${esc(f.url || "")}" inputmode="url" autocomplete="off" />
     </div>
     <div class="admin-row">
       <select id="f-page">
-        ${pages.map((p) => `<option value="${esc(p.id)}" ${p.id === selPage ? "selected" : ""}>${esc((p.icon ? p.icon + " " : "") + p.label)}${p.enabled ? "" : "（關閉中）"}</option>`).join("")}
+        ${pages.map((p) => `<option value="${esc(p.id)}" ${p.id === selPage ? "selected" : ""}>${esc(p.label)}${p.enabled ? "" : "（關閉中）"}</option>`).join("")}
       </select>
       <select id="f-cat">
         ${cats.map((c) => `<option value="${esc(c.name)}" ${(!edit && f.category === c.name) || (edit && c.name === f.category) ? "selected" : ""}>${esc(c.name)}</option>`).join("")}
@@ -527,7 +536,7 @@ function formHTML() {
     ${tagCheckHTML(f.tags)}
     <label class="admin-lbl" for="f-custom-tags">自訂標籤（逗號分隔）</label>
     <input id="f-custom-tags" value="${esc((f.tags || []).filter(t => !SCOUT_TAGS.includes(t)).join('、'))}" placeholder="露營、實用工具" />
-    <div class="admin-hint">💡 公開版一個字就夠：<b>小／幼／童／深／樂</b>（領隊一眼就識），用家可以<b>同時揀幾個支部</b>。
+    <div class="admin-hint">${svgIcon("info")} 公開版一個字就夠：<b>小／幼／童／深／樂</b>（領隊一眼就識），用家可以<b>同時揀幾個支部</b>。
       冇「領袖」呢個選項係刻意嘅 —— 呢度所有工具本身就係畀領隊用，所以「小童軍集會助手」剔<b>小童軍</b>就得；
       剔埋「領袖」只會搞亂篩選（樂行領隊篩「領袖」竟然見到小童軍嘢）。想有領隊專用區，直接把分類改名做「領袖用」。</div>
     <div class="admin-lbl">介紹（公開版面顯示，可選）</div>
@@ -537,13 +546,13 @@ function formHTML() {
     <div id="f-icon-wrap">
       <div class="admin-row" id="f-emoji-row" style="${iconSourceOf(f) === "emoji" ? "" : "display:none"}">
         <input id="f-icon" placeholder="emoji" value="${esc(f.icon || "")}" style="flex:2" />
-        <button class="mini-btn" onclick="pickIntoInput('f-icon')">🎨 揀 emoji</button>
+        <button class="mini-btn" onclick="pickIntoInput('f-icon')">${svgIcon("art")} 揀圖標</button>
       </div>
       <div class="admin-row" id="f-upload-row" style="${iconSourceOf(f) === "upload" ? "" : "display:none"}">
         <input id="f-icon-url" placeholder="圖片網址 https://… 或上傳後自動填入" value="${esc(f.icon || "")}" style="flex:2" inputmode="url" />
-        <label class="mini-btn" style="cursor:pointer;margin:0">📤 上傳圖片<input type="file" accept="image/*" hidden onchange="onIconFilePick(this)" /></label>
+        <label class="mini-btn" style="cursor:pointer;margin:0">${svgIcon("upload")} 上傳圖片<input type="file" accept="image/*" hidden onchange="onIconFilePick(this)" /></label>
       </div>
-      <div class="admin-hint" id="f-upload-hint" style="${iconSourceOf(f) === "upload" ? "" : "display:none"}">貼 https 圖片連結，或者撳「📤 上傳圖片」由本機揀一張（自動縮到 192px 內、轉做 data URL，唔使開 storage bucket）。</div>
+      <div class="admin-hint" id="f-upload-hint" style="${iconSourceOf(f) === "upload" ? "" : "display:none"}">貼 https 圖片連結，或者撳「上傳圖片」由本機揀一張（自動縮到 192px 內、轉做 data URL，唔使開 storage bucket）。</div>
     </div>
     <div class="admin-row">
       <input id="f-gh" placeholder="GitHub repo（可選）" value="${esc(f.github || "")}" inputmode="url" />
@@ -556,7 +565,7 @@ function formHTML() {
       <span style="font-size:12px;color:var(--muted);font-weight:600">（關 = 收埋呢個項目）</span>
     </label>
     <div class="admin-actions" style="margin-top:12px">
-      <button class="mini-btn primary" onclick="ADMIN.submit()">💾 ${edit ? "儲存" : "加入"}</button>
+      <button class="mini-btn primary" onclick="ADMIN.submit()">${svgIcon("save")} ${edit ? "儲存" : "加入"}</button>
       ${edit ? '<button class="mini-btn" onclick="ADMIN.cancelEdit()">取消</button>' : ""}
     </div>
   </div>`;
@@ -582,10 +591,10 @@ function iconSourceHTML(f) {
       <span class="iso-hint">${hint}</span>
     </label>`;
   return `<div class="icon-src-row">
-    ${opt("favicon", "🌐 App 自帶 Logo", "有 GitHub repo 用 repo 頭像，否則用該網站 favicon")}
-    ${opt("emoji", "😀 Emoji", "由你揀一個字符")}
-    ${opt("upload", "🖼 上傳圖片／網址", "本機上傳一張圖，或者貼 https 圖片 URL")}
-    ${opt("none", "🚫 不用", "直接用我哋全站 Logo")}
+    ${opt("favicon", "App 自帶 Logo", "有 GitHub repo 用 repo 頭像，否則用該網站 favicon")}
+    ${opt("emoji", "線稿圖標", "由我哋一套 24px 線稿圖標揀（舊 emoji 會自動對應）")}
+    ${opt("upload", "上傳圖片／網址", "本機上傳一張圖，或者貼 https 圖片 URL")}
+    ${opt("none", "唔用圖標", "直接用我哋全站 Logo")}
   </div>`;
 }
 function onIconSourceChange(v) {
@@ -655,12 +664,12 @@ function itemRowHTML(a) {
   <div class="admin-app-row${a.featured ? " featured" : ""}">
     <span style="font-size:18px;line-height:1">${icon}</span>
     <b>${esc(a.name)}</b>
-    ${a.featured ? '<span class="feat-tag">📣 今期推廣中</span>' : ""}
-    ${a.visible === false ? '<span class="lock-tag">🔒 隱藏</span>' : ""}
+    ${a.featured ? `<span class="feat-tag">${svgIcon("sparkle")} 今期推廣中</span>` : ""}
+    ${a.visible === false ? `<span class="lock-tag">${svgIcon("lock")} 隱藏</span>` : ""}
     ${tags ? `<span class="mini-tag-row">${tags}</span>` : ""}
-    <span class="u" title="${esc(a.note || "")}">${esc(a.url)}${a.note ? " · 📌" : ""}${a.clicks ? ` · 🔥 ${a.clicks} 次` : ""}${a.stars ? ` · ⭐ ${a.stars}` : ""}${a.hearts ? ` · ❤️ ${a.hearts}` : ""}</span>
+    <span class="u" title="${esc(a.note || "")}">${esc(a.url)}${a.note ? " · " + svgIcon("pin") : ""}${a.clicks ? ` · ${svgIcon("flame")} ${a.clicks} 次` : ""}${a.stars ? ` · ${svgIcon("star")} ${a.stars}` : ""}${a.hearts ? ` · ${svgIcon("heart")} ${a.hearts}` : ""}</span>
     <div class="admin-app-actions">
-      <button class="mini-btn${a.featured ? " primary" : ""}" data-act="item-feature" data-id="${a._id}" data-dir="${a.featured ? 0 : 1}" title="${a.featured ? "取消今期推廣" : "設為今期推廣（會喺公開版頂部做大圖推薦）"}">${a.featured ? "✅ 推廣中" : "📣 今期推廣"}</button>
+      <button class="mini-btn${a.featured ? " primary" : ""}" data-act="item-feature" data-id="${a._id}" data-dir="${a.featured ? 0 : 1}" title="${a.featured ? "取消今期推廣" : "設為今期推廣（會喺公開版頂部做大圖推薦）"}">${a.featured ? svgIcon("check") + " 推廣中" : svgIcon("sparkle") + " 今期推廣"}</button>
       <button class="mini-btn iconish" data-act="item-move" data-id="${a._id}" data-dir="-1" title="上移">▲</button>
       <button class="mini-btn iconish" data-act="item-move" data-id="${a._id}" data-dir="1" title="下移">▼</button>
       <button class="mini-btn" data-act="item-edit" data-id="${a._id}">編輯</button>
@@ -676,13 +685,13 @@ function pageGroupHTML(p) {
   const hidden = cats.reduce((n, c) => n + c.apps.filter((a) => a.visible === false).length, 0);
   const catHTML = cats.map((c) => `
     <div class="admin-cat-head">
-      <span>${c.icon ? c.icon + " " : `<img class="row-ico" src="${SITE_LOGO}" alt="" style="vertical-align:-4px;margin-right:2px" /> `}${esc(c.name)}</span>
+      <span><span class="cat-ico" style="margin-right:5px">${svgIcon(c.icon)}</span>${esc(c.name)}</span>
       <span class="num-badge">${c.apps.length}</span>
       <span style="flex:1"></span>
       <button class="mini-btn iconish" data-act="cat-move" data-page="${esc(p.id)}" data-name="${esc(c.name)}" data-dir="-1" title="分類上移">▲</button>
       <button class="mini-btn iconish" data-act="cat-move" data-page="${esc(p.id)}" data-name="${esc(c.name)}" data-dir="1" title="分類下移">▼</button>
       <button class="mini-btn" data-act="cat-rename" data-page="${esc(p.id)}" data-name="${esc(c.name)}">改名</button>
-      <button class="mini-btn" data-act="cat-icon" data-page="${esc(p.id)}" data-name="${esc(c.name)}">🎨 emoji</button>
+      <button class="mini-btn" data-act="cat-icon" data-page="${esc(p.id)}" data-name="${esc(c.name)}">${svgIcon("art")} 圖標</button>
       <button class="mini-btn danger" data-act="cat-del" data-page="${esc(p.id)}" data-name="${esc(c.name)}">刪分類</button>
     </div>
     ${c.apps.map(itemRowHTML).join("") || '<div style="color:var(--muted);font-size:12.5px;padding:6px 12px">（呢個分類仲未有任何項目）</div>'}
@@ -691,9 +700,9 @@ function pageGroupHTML(p) {
   return `
   <div class="page-block">
     <div class="page-block-head">
-      <span class="page-ico">${p.icon || `<img class="row-ico" src="${SITE_LOGO}" alt="" />`}</span>
+      <span class="page-ico">${svgIcon(p.icon)}</span>
       <div class="page-meta">
-        <div class="page-title">${esc(p.label)} <span class="num-badge">${cats.length} 分類 · ${itemCount} 項${hidden ? " · 🔒" + hidden : ""}</span></div>
+        <div class="page-title">${esc(p.label)} <span class="num-badge">${cats.length} 分類 · ${itemCount} 項${hidden ? ` · ${svgIcon("lock")}${hidden}` : ""}</span></div>
         <div style="font-size:11.5px;color:var(--muted)">id: ${esc(p.id)}</div>
       </div>
       <span style="flex:1"></span>
@@ -721,15 +730,15 @@ function manageHTML() {
     <div class="admin-lbl">分頁 ＋ 分類 ＋ 項目 管理</div>
     <div class="banner feat-banner">
       ${feat
-        ? `📣 <b>今期推廣：</b>${esc(feat.app.name)}（${esc(feat.page.label)} › ${esc(feat.cat.name)}）` +
-          `—— 會喺公開版頂部做大圖推薦位。${feat.app.visible === false ? "<b>⚠️ 但呢個項目而家係「隱藏」，公開版唔會顯示推薦位。</b>" : ""}` +
-          `<br/>想換另一個：撳下面該項目嘅「📣 今期推廣」（全站只有一個，會自動搶走）。`
-        : `📣 <b>今期推廣：</b>未設定 —— 公開版頂部暫時唔會顯示推薦位。撳下面任何項目嘅「📣 今期推廣」即可。`}
+        ? `${svgIcon("sparkle")} <b>今期推廣：</b>${esc(feat.app.name)}（${esc(feat.page.label)} › ${esc(feat.cat.name)}）` +
+          `—— 會喺公開版頂部做大圖推薦位。${feat.app.visible === false ? "<b>但呢個項目而家係「隱藏」，公開版唔會顯示推薦位。</b>" : ""}` +
+          `<br/>想換另一個：撳下面該項目嘅「今期推廣」（全站只有一個，會自動搶走）。`
+        : `${svgIcon("sparkle")} <b>今期推廣：</b>未設定 —— 公開版頂部暫時唔會顯示推薦位。撳下面任何項目嘅「今期推廣」即可。`}
     </div>
     <div class="banner" style="background:var(--accent-soft);color:var(--accent-text);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)">
-      每頁可獨立「開放 / 關閉」（✓開放先至會喺公開版出現）。關閉咗嘅分頁內容仍然保留，隨時可以開返。<br/>
+      每頁可獨立「開放 / 關閉」（開放先至會喺公開版出現）。關閉咗嘅分頁內容仍然保留，隨時可以開返。<br/>
       分類只屬某一個分頁 —— 改/刪分類、加項目都要先揀啱分頁。項目可揀童軍支部標籤（小／幼／童／深／樂），公開版畀用戶多選篩選。<br/>
-      🔥 點擊數／⭐ 收藏數／❤️ 讚好數都係全站累計（公開版每次打開／收藏／讚好會更新），「排行榜」可按呢三項排名（「探索分類」永遠用下面 ▲▼ 排好嘅預設順序）。
+      ${svgIcon("flame")} 點擊數／${svgIcon("star")} 收藏數／${svgIcon("heart")} 讚好數都係全站累計（公開版每次打開／收藏／讚好會更新），「排行榜」可按呢三項排名（「探索分類」永遠用下面 ▲▼ 排好嘅預設順序）。
     </div>
     ${ADMIN.sites.pages.map(pageGroupHTML).join("")}
   </div>`;
@@ -741,7 +750,7 @@ function tilesForCat(cat) {
     const inner = appIconHTML(a, "tile");
     return `
     <a class="tile" href="${esc(a.url)}" title="${esc((a.description || "") + (a.visible === false ? "（隱藏中）" : ""))}" target="_blank" rel="noopener">
-      ${a.visible === false ? '<span class="lock-tag" style="position:absolute;top:2px;right:2px;z-index:2">🔒</span>' : ""}
+      ${a.visible === false ? `<span class="lock-tag" style="position:absolute;top:2px;right:2px;z-index:2">${svgIcon("lock")}</span>` : ""}
       <div class="tile-icon">${inner}</div>
       <div class="tile-name">${esc(a.name)}</div>
       ${(a.tags && a.tags.length) ? `<div class="tile-tags">${a.tags.map((t) => `<span title="${esc(t)}">${esc(scoutTagShort(t))}</span>`).join("")}</div>` : ""}
@@ -759,19 +768,19 @@ function allViewHTML() {
       total += shown.length; hidden += c.apps.length - shown.length; pub += shown.length;
       return shown.length ? `
       <div class="sec-head" style="margin-top:14px">
-        ${c.icon ? `<span class="sec-ico">${c.icon}</span>` : ""}
+        <span class="cat-ico">${svgIcon(c.icon)}</span>
         <h2>${esc(c.name)}</h2><span class="num">${shown.length}</span>
       </div>
       <div class="grid">${tilesForCat({ ...c, apps: shown })}</div>` : "";
     }).join("");
     return catsHtml
-      ? `<div class="page-sublabel">${esc((p.icon ? p.icon + " " : "") + p.label)}</div>${catsHtml}`
-      : `<div class="page-sublabel">${esc((p.icon ? p.icon + " " : "") + p.label)} <span style="color:var(--muted)">（未有內容）</span></div>`;
+      ? `<div class="page-sublabel">${esc(p.label)}</div>${catsHtml}`
+      : `<div class="page-sublabel">${esc(p.label)} <span style="color:var(--muted)">（未有內容）</span></div>`;
   }).join("");
 
   return `
   <div class="admin-card">
-    <div class="banner ok">公眾版面預覽：${pub} 公開 · ${hidden} 隱藏（🔒）· ${ADMIN.sites.pages.filter((p) => p.enabled).length} 個開放分頁。</div>
+    <div class="banner ok">公眾版面預覽：${pub} 公開 · ${hidden} 隱藏（${svgIcon("lock")}）· ${ADMIN.sites.pages.filter((p) => p.enabled).length} 個開放分頁。</div>
     <div style="font-size:12.5px;color:var(--muted);margin-bottom:4px">關閉咗嘅分頁唔會顯示喺下面。</div>
     ${html || '<p style="color:var(--muted);font-size:13px;padding:12px 0">所有分頁都未開放／未有內容</p>'}
   </div>`;
@@ -779,7 +788,7 @@ function allViewHTML() {
 
 /* ── 統計 ───────────────────────────────────────────────── */
 function analyticsUnavailableHTML(message, detail) {
-  return `<div class="analytics-empty"><div class="analytics-empty-ico">📊</div><b>${esc(message)}</b>${detail ? `<small>${esc(detail)}</small>` : ""}</div>`;
+  return `<div class="analytics-empty"><div class="analytics-empty-ico">${svgIcon("chart")}</div><b>${esc(message)}</b>${detail ? `<small>${esc(detail)}</small>` : ""}</div>`;
 }
 
 function analyticsAppRows() {
@@ -841,27 +850,27 @@ function analyticsHTML(data, opts) {
           <span class="analytics-app-rank">${String(i + 1).padStart(2, "0")}</span>
           ${appIconHTML(a, "row")}
           <div class="analytics-app-copy"><b>${esc(a.name || "未命名項目")}</b><small>${esc(a.pageLabel)} · ${esc(a.categoryLabel)}${a.visible === false ? " · 已隱藏" : ""}</small><span class="analytics-fav-track"><i class="trk-star" style="width:${wStar}%"></i><i class="trk-heart" style="width:${wHeart}%"></i></span></div>
-          <div class="analytics-fav-nums"><span class="num-star">⭐ ${st.toLocaleString()}</span><span class="num-heart">❤️ ${ht.toLocaleString()}</span></div>
+          <div class="analytics-fav-nums"><span class="num-star">${svgIcon("star")} ${st.toLocaleString()}</span><span class="num-heart">${svgIcon("heart")} ${ht.toLocaleString()}</span></div>
         </div>`;
       }).join("")}</div>`
     : '<div class="analytics-no-data">暫時未有任何 App 項目。</div>';
 
   return `<div class="analytics-wrap">
-    <div class="analytics-toolbar"><div><h3>📊 訪客、點擊、收藏同讚好統計</h3><p>公開版每次入站會以隨機匿名識別碼去重；唔會記錄 IP 或個人資料。</p></div><button type="button" class="mini-btn" onclick="ADMIN.loadAnalytics()">↻ 更新</button></div>
-    ${demo ? '<div class="banner warn">⚠️ Demo 模式：訪客統計只會喺 Supabase 模式記錄；下面嘅 🔥 點擊／⭐ 收藏／❤️ 讚好係本機累積數。</div>' : ""}
+    <div class="analytics-toolbar"><div><h3>${svgIcon("chart")} 訪客、點擊、收藏同讚好統計</h3><p>公開版每次入站會以隨機匿名識別碼去重；唔會記錄 IP 或個人資料。</p></div><button type="button" class="mini-btn" onclick="ADMIN.loadAnalytics()">${svgIcon("refresh")} 更新</button></div>
+    ${demo ? `<div class="banner warn">${svgIcon("warning")} Demo 模式：訪客統計只會喺 Supabase 模式記錄；下面嘅點擊／收藏／讚好係本機累積數。</div>` : ""}
     <div class="analytics-kpis">
       ${demo ? "" : `
-      <div class="analytics-kpi"><span>👥 累計獨立訪客</span><b>${Number(d.totalVisitors || 0).toLocaleString()}</b><small>跨日期去重</small></div>
-      <div class="analytics-kpi"><span>📅 今日訪客</span><b>${Number(d.todayVisitors || 0).toLocaleString()}</b><small>香港時間</small></div>
-      <div class="analytics-kpi"><span>🗓 近 7 日訪客</span><b>${Number(d.last7Visitors || 0).toLocaleString()}</b><small>跨日期去重</small></div>`}
-      <div class="analytics-kpi"><span>🔥 App 總點擊</span><b>${totalClicks.toLocaleString()}</b><small>${apps.length} 個項目累計</small></div>
-      <div class="analytics-kpi"><span>⭐ 全站收藏</span><b>${totalStars.toLocaleString()}</b><small>全站累計收藏</small></div>
-      <div class="analytics-kpi"><span>❤️ 全站讚好</span><b>${totalHearts.toLocaleString()}</b><small>全站累計讚好</small></div>
+      <div class="analytics-kpi"><span>${svgIcon("users")} 累計獨立訪客</span><b>${Number(d.totalVisitors || 0).toLocaleString()}</b><small>跨日期去重</small></div>
+      <div class="analytics-kpi"><span>${svgIcon("calendar")} 今日訪客</span><b>${Number(d.todayVisitors || 0).toLocaleString()}</b><small>香港時間</small></div>
+      <div class="analytics-kpi"><span>${svgIcon("calendar")} 近 7 日訪客</span><b>${Number(d.last7Visitors || 0).toLocaleString()}</b><small>跨日期去重</small></div>`}
+      <div class="analytics-kpi"><span>${svgIcon("flame")} App 總點擊</span><b>${totalClicks.toLocaleString()}</b><small>${apps.length} 個項目累計</small></div>
+      <div class="analytics-kpi"><span>${svgIcon("star")} 全站收藏</span><b>${totalStars.toLocaleString()}</b><small>全站累計收藏</small></div>
+      <div class="analytics-kpi"><span>${svgIcon("heart")} 全站讚好</span><b>${totalHearts.toLocaleString()}</b><small>全站累計讚好</small></div>
     </div>
     ${demo ? "" : `<section class="analytics-section"><div class="analytics-section-head"><h4>近 30 日入站趨勢</h4><span>每日獨立訪客</span></div>${dailyHTML}</section>`}
     <section class="analytics-section"><div class="analytics-section-head"><h4>每個 App 點擊數</h4><span>由高至低 · ${apps.length} 個</span></div>${appHTML}</section>
-    <section class="analytics-section"><div class="analytics-section-head"><h4>⭐ 收藏 ＋ ❤️ 讚好</h4><span>每個 App · 收藏排先</span></div>${favHTML}</section>
-    <p class="analytics-note">${demo ? "" : `統計由 ${Number(d.visitorDays || 0).toLocaleString()} 個「訪客日」組成；同一人換裝置／清除瀏覽器資料會被當作新訪客。`}App 點擊數、⭐ 收藏數、❤️ 讚好數都係全站累計（公開版每次打開／收藏／讚好就 ±1），沿用現有數字，唔會因加上統計功能而歸零。</p>
+    <section class="analytics-section"><div class="analytics-section-head"><h4>${svgIcon("star")} 收藏 ＋ ${svgIcon("heart")} 讚好</h4><span>每個 App · 收藏排先</span></div>${favHTML}</section>
+    <p class="analytics-note">${demo ? "" : `統計由 ${Number(d.visitorDays || 0).toLocaleString()} 個「訪客日」組成；同一人換裝置／清除瀏覽器資料會被當作新訪客。`}App 點擊數、收藏數、讚好數都係全站累計（公開版每次打開／收藏／讚好就 ±1），沿用現有數字，唔會因加上統計功能而歸零。</p>
   </div>`;
 }
 
@@ -886,28 +895,28 @@ function renderAdmin() {
     <div class="admin-head">
       <img class="admin-logo" src="/icons/icon-192.png" alt="" onclick="goldfingerClick()" />
       <div>
-        <h2>⚙️ 管理面板</h2>
+        <h2>${svgIcon("gear")} 管理面板</h2>
         <div style="font-size:12px;color:var(--muted);margin-top:-2px">分頁／分類／項目管理 · SCOUT APP STORE</div>
       </div>
     </div>
     ${sb
       ? '<div class="banner ok">已連接 Supabase — 改動即時生效，所有人都見到</div>'
-      : '<div class="banner warn">⚠️ Demo 模式：改動只存喺呢部裝置。配置方法見 README.md</div>'}
+      : `<div class="banner warn">${svgIcon("warning")} Demo 模式：改動只存喺呢部裝置。配置方法見 README.md</div>`}
     <div id="review-panel"></div>
     <div class="tab-bar">
-      <button type="button" class="tab-btn ${ADMIN.tab === "manage" ? "on" : ""}" onclick="ADMIN.setTab('manage')">🛠 管理</button>
-      <button type="button" class="tab-btn ${ADMIN.tab === "all" ? "on" : ""}" onclick="ADMIN.setTab('all')">👀 總覽</button>
-      <button type="button" class="tab-btn ${ADMIN.tab === "analytics" ? "on" : ""}" onclick="ADMIN.setTab('analytics')">📊 統計</button>
+      <button type="button" class="tab-btn ${ADMIN.tab === "manage" ? "on" : ""}" onclick="ADMIN.setTab('manage')">${svgIcon("tools")} 管理</button>
+      <button type="button" class="tab-btn ${ADMIN.tab === "all" ? "on" : ""}" onclick="ADMIN.setTab('all')">${svgIcon("eye")} 總覽</button>
+      <button type="button" class="tab-btn ${ADMIN.tab === "analytics" ? "on" : ""}" onclick="ADMIN.setTab('analytics')">${svgIcon("chart")} 統計</button>
     </div>
     ${ADMIN.tab === "manage" ? manageHTML() : ADMIN.tab === "all" ? allViewHTML() : '<div class="admin-card" id="analytics-panel"></div>'}
     <div class="admin-actions">
-      <button type="button" class="mini-btn" onclick="ADMIN.doExport()">📤 備份</button>
-      <button type="button" class="mini-btn" onclick="ADMIN.doRestore()" title="上傳 backup 完整覆蓋">♻️ 還原</button>
-      <button type="button" class="mini-btn" onclick="ADMIN.doQR()">🔳 QR</button>
-      <button type="button" class="mini-btn" onclick="ADMIN.refreshIcons()" title="外部 app 換咗 logo 但商店仲顯示舊圖？撳呢個即刻重新抓（會繞過 CDN／Google／瀏覽器快取）">🔄 重新抓取圖標</button>
-      <button type="button" class="mini-btn danger" onclick="ADMIN.resetAll()" title="清空所有並建立預設模板">⚠️ 一鍵重設</button>
+      <button type="button" class="mini-btn" onclick="ADMIN.doExport()">${svgIcon("upload")} 備份</button>
+      <button type="button" class="mini-btn" onclick="ADMIN.doRestore()" title="上傳 backup 完整覆蓋">${svgIcon("refresh")} 還原</button>
+      <button type="button" class="mini-btn" onclick="ADMIN.doQR()">${svgIcon("qr")} QR</button>
+      <button type="button" class="mini-btn" onclick="ADMIN.refreshIcons()" title="外部 app 換咗 logo 但商店仲顯示舊圖？撳呢個即刻重新抓（會繞過 CDN／Google／瀏覽器快取）">${svgIcon("refresh")} 重新抓取圖標</button>
+      <button type="button" class="mini-btn danger" onclick="ADMIN.resetAll()" title="清空所有並建立預設模板">${svgIcon("warning")} 一鍵重設</button>
       <span class="spacer"></span>
-      <button type="button" class="mini-btn primary full" onclick="ADMIN.close()">✅ 完成</button>
+      <button type="button" class="mini-btn primary full" onclick="ADMIN.close()">${svgIcon("check")} 完成</button>
       ${sb && ADMIN.authed ? '<button type="button" class="mini-btn danger" onclick="ADMIN.logout()">登出</button>' : ""}
     </div>
   </div>`;

@@ -1,13 +1,13 @@
 /* Community publishing: never silently falls back to browser-only storage.
    支援三種分享模式（降低上傳 Link 門檻）：
-   - app:      🧰 提交作品（自製網頁 App／小工具／小遊戲）
-   - link:     🌐 網站分享（推薦任何對童軍有用嘅網站，唔使係網站作者）
-   - material: 📚 教材分享（貼 Google Drive／Canva／OneDrive／簡報／圖卡等雲端連結，唔使自己起網站） */
+   - app:      提交作品（自製網頁 App／小工具／小遊戲）
+   - link:     網站分享（推薦任何對童軍有用嘅網站，唔使係網站作者）
+   - material: 教材分享（貼 Google Drive／Canva／OneDrive／簡報／圖卡等雲端連結，唔使自己起網站） */
 const SUBMIT_MODES = {
   app: {
     title: '分享你的作品',
     intro: '填上作品連結及標籤。提交後會寫入商店資料庫，並同時登記到管理員嘅投稿表＋電郵通知管理員；批核後才會公開上架。',
-    tip: '🧰 適合分享你開發或製作嘅童軍網頁小工具、電子進度紀錄、計分器或小遊戲。想分享一般網站或雲端教材？可切換上方「🌐 網站分享」或「📚 教材分享」。',
+    tip: '適合分享你開發或製作嘅童軍網頁小工具、電子進度紀錄、計分器或小遊戲。想分享一般網站或雲端教材？可切換上方「網站分享」或「教材分享」。',
     examples: '',
     nameLabel: '作品名稱',
     namePlaceholder: '例如：露營裝備清單',
@@ -29,10 +29,10 @@ const SUBMIT_MODES = {
     ]
   },
   link: {
-    title: '🌐 網站分享',
+    title: '網站分享',
     intro: '發現對童軍活動、集會、露營或訓練有用嘅網站？唔使自己寫 App，貼條連結就可以推薦畀大家！批核後會公開上架。',
-    tip: '💡 門檻極低：唔使係網站擁有者！只要覺得個網站對童軍有用，貼條 Link 加句簡單介紹就分享得。',
-    examples: '常見分享：🌐 童軍／總會網站 · ⛺ 營地／行山天氣資訊 · 🪢 繩結／步操／急救教學網 · 🎮 集會互動遊戲網',
+    tip: '門檻極低：唔使係網站擁有者！只要覺得個網站對童軍有用，貼條 Link 加句簡單介紹就分享得。',
+    examples: '常見分享：童軍／總會網站 · 營地／行山天氣資訊 · 繩結／步操／急救教學網 · 集會互動遊戲網',
     nameLabel: '網站名稱',
     namePlaceholder: '例如：香港天文台九天天氣預報／繩結動畫教學網',
     urlLabel: '網站連結',
@@ -53,10 +53,10 @@ const SUBMIT_MODES = {
     ]
   },
   material: {
-    title: '📚 教材分享',
+    title: '教材分享',
     intro: '唔使自己整網站！將你整好或常用嘅 Google Drive 教材、Canva 簡報、PDF 學習圖卡、工作紙或教學影片連結貼上嚟，同全港童軍領袖共享資源。',
-    tip: '☁️ 支援各類雲端及網頁連結：Google Drive（請設為「知道連結的任何人可檢視」）、Canva、Google Slides / PPT、OneDrive、Dropbox、YouTube、Notion 等。',
-    examples: '支援連結：📁 Google Drive · 🎨 Canva · 📊 Google Slides / PPT · ☁️ OneDrive / Dropbox · ▶️ YouTube · 📝 Notion',
+    tip: '支援各類雲端及網頁連結：Google Drive（請設為「知道連結的任何人可檢視」）、Canva、Google Slides / PPT、OneDrive、Dropbox、YouTube、Notion 等。',
+    examples: '支援連結：Google Drive · Canva · Google Slides / PPT · OneDrive / Dropbox · YouTube · Notion',
     nameLabel: '教材名稱',
     namePlaceholder: '例如：幼童軍繩結學習圖卡／指北針教學 Canva 簡報',
     urlLabel: '教材連結（雲端／網頁連結）',
@@ -440,31 +440,31 @@ async function notifyScoutAdminDirect(payload) {
 }
 // 結果文案：老實講邊度成功邊度未成功（投稿本身永遠以 Supabase 為準）
 function scoutAdminNotifyNote(notify) {
-  if (notify && notify.deduped) return '\n📮 呢單 5 分鐘內已送過 Scout Admin，唔會重送（管理員已經收到）。';
-  if (notify && notify.verified && notify.sent) return '\n✅ 已登記喺 Scout Admin（Google Sheet＋電郵通知管理員，登記後會轉寄負責人）。';
-  if (notify && notify.sent) return '\n📮 已送交 Scout Admin 登記（呢個環境讀唔到送達回執，管理員會核對）。';
+  if (notify && notify.deduped) return '\n呢單 5 分鐘內已送過 Scout Admin，唔會重送（管理員已經收到）。';
+  if (notify && notify.verified && notify.sent) return '\n已登記喺 Scout Admin（Google Sheet＋電郵通知管理員，登記後會轉寄負責人）。';
+  if (notify && notify.sent) return '\n已送交 Scout Admin 登記（呢個環境讀唔到送達回執，管理員會核對）。';
   const reason = notify && notify.error ? `（${notify.error}）` : '';
-  return `\n⚠️ Scout Admin 電郵通知未送達${reason}：你嘅投稿已喺資料庫，管理員仍可喺後台審核，唔使人手重交。`;
+  return `\n注意：Scout Admin 電郵通知未送達${reason}。你嘅投稿已喺資料庫，管理員仍可喺後台審核，唔使人手重交。`;
 }
 
 let reviewFilter = 'pending';
-// 審核卡：除咗批准／拒絕，仲有「📧 轉寄」（預填好嘅 email，畀 ADMIN 登記後轉交負責人）
-// 同「✉️ 回覆作者」（只有用家留咗聯絡電郵先見到）。
+// 審核卡：除咗批准／拒絕，仲有「轉寄」（預填好嘅 email，畀 ADMIN 登記後轉交負責人）
+// 同「回覆作者」（只有用家留咗聯絡電郵先見到）。
 function reviewKindBadge(s) {
   const desc = String((s && s.description) || '');
-  if (desc.startsWith('[網站分享｜') || (s && s.page === 'links')) return '🌐 網站分享';
-  if (desc.startsWith('[教材分享｜') || (s && (s.page === 'cards' || s.page === 'ppt'))) return '📚 教材分享';
-  return '🧰 作品提交';
+  if (desc.startsWith('[網站分享｜') || (s && s.page === 'links')) return '網站分享';
+  if (desc.startsWith('[教材分享｜') || (s && (s.page === 'cards' || s.page === 'ppt'))) return '教材分享';
+  return '作品提交';
 }
 function reviewCardHTML(s) {
   const contactBits = [
     s.contact ? `<a href="mailto:${esc(s.contact)}">${esc(s.contact)}</a>` : '',
-    s.phone ? `📞 ${esc(s.phone)}` : ''
+    s.phone ? `${svgIcon("phone")} ${esc(s.phone)}` : ''
   ].filter(Boolean);
   const forward = scoutAdminForwardMailto(s);
   const reply = scoutAdminReplyMailto(s);
   const badge = reviewKindBadge(s);
-  return `<article class="review-item"><h4><span class="market-tag">${esc(badge)}</span> ${esc(s.name)}</h4><p>${esc(s.description)}</p><p class="admin-hint">${esc(s.author)} · ${esc(s.category)} · ${new Date(s.created_at).toLocaleDateString('zh-HK')}</p>${contactBits.length ? `<p class="admin-hint">📧 聯絡：${contactBits.join(' · ')}</p>` : ''}<p>${(s.tags || []).map(t => `<span class="market-tag">${esc(t)}</span>`).join('')}</p><a href="${esc(/^https?:\/\//i.test(s.url) ? s.url : '#')}" target="_blank" rel="noopener noreferrer">查看作品 ↗</a><div class="admin-actions">${reviewFilter==='pending'?`<button class="mini-btn primary" data-review="${s.id}" data-approve="true">批准上架</button><button class="mini-btn danger" data-review="${s.id}" data-approve="false">拒絕</button>`:''}${forward?`<a class="mini-btn" href="${esc(forward)}" title="將呢個投稿嘅資料用電郵轉交負責人">📧 轉寄負責人</a>`:''}${reviewFilter==='pending'?`<button class="mini-btn" data-resend="${s.id}" title="如果用家話收唔到／電郵通知Fail咗，撳呢度補送一份去 Scout Admin">📤 補送通知</button>`:''}${reply?`<a class="mini-btn" href="${esc(reply)}">✉️ 回覆作者</a>`:''}</div></article>`;
+  return `<article class="review-item"><h4><span class="market-tag">${esc(badge)}</span> ${esc(s.name)}</h4><p>${esc(s.description)}</p><p class="admin-hint">${esc(s.author)} · ${esc(s.category)} · ${new Date(s.created_at).toLocaleDateString('zh-HK')}</p>${contactBits.length ? `<p class="admin-hint">${svgIcon("mail")} 聯絡：${contactBits.join(' · ')}</p>` : ''}<p>${(s.tags || []).map(t => `<span class="market-tag">${esc(t)}</span>`).join('')}</p><a href="${esc(/^https?:\/\//i.test(s.url) ? s.url : '#')}" target="_blank" rel="noopener noreferrer">查看作品 ${svgIcon("external")}</a><div class="admin-actions">${reviewFilter==='pending'?`<button class="mini-btn primary" data-review="${s.id}" data-approve="true">批准上架</button><button class="mini-btn danger" data-review="${s.id}" data-approve="false">拒絕</button>`:''}${forward?`<a class="mini-btn" href="${esc(forward)}" title="將呢個投稿嘅資料用電郵轉交負責人">${svgIcon("mail")} 轉寄負責人</a>`:''}${reviewFilter==='pending'?`<button class="mini-btn" data-resend="${s.id}" title="如果用家話收唔到／電郵通知Fail咗，撳呢度補送一份去 Scout Admin">${svgIcon("upload")} 補送通知</button>`:''}${reply?`<a class="mini-btn" href="${esc(reply)}">${svgIcon("mail")} 回覆作者</a>`:''}</div></article>`;
 }
 
 async function loadReviews() {

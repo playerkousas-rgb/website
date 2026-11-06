@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png?v=20261106" />
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=20261106" />
 <!-- 主題色／PWA 啟動畫面跟預設深色主題對齊（boot script 之後會按用戶主題再更新） -->
-<meta name="theme-color" content="#0b0d12" />
+<meta name="theme-color" content="#1f2430" />
 <!-- 分享預覽（WhatsApp／Signal／FB）：og:image 必須絕對網址，用相對路徑 = 冇圖 -->
 <meta property="og:type" content="website" />
 <meta property="og:title" content="SCOUT APP STORE" />
@@ -26,7 +26,7 @@
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="SCOUT APP STORE — 好工具，讓童軍生活更精彩。" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="apple-mobile-web-app-background-color" content="#0b0d12" />
+<meta name="apple-mobile-web-app-background-color" content="#1f2430" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -39,10 +39,13 @@
   // 呢段要放喺 <style> 之前，令第一帧就已經係正確主題。
   (function () {
     var t = "dark";
-    try { t = localStorage.getItem("theme") || "dark"; } catch (e) {}
+    try {
+      t = localStorage.getItem("theme") ||
+        ((window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) ? "light" : "dark");
+    } catch (e) {}
     document.documentElement.dataset.theme = t;
     var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.content = t === "dark" ? "#0b0d12" : "#faf6ec";
+    if (m) m.content = t === "dark" ? "#1f2430" : "#faf6ec";
   })();
 </script>
 <style>
@@ -61,6 +64,21 @@
     --accent-soft: rgba(179, 130, 26, .12);
     --accent-text: #8a5a05;
     --on-accent: #1a1200;
+    /* ── 分類色板（6 色）：每條貨架／每個分類一隻色 ────────────
+       對象係青少年：太多灰同黑會「陰沉」，但亂加色又會變雜牌。
+       所以定死 6 隻（青綠／天藍／珊瑚／紫／草綠／琥珀），
+       只出現喺「分類」身上（貨架圖標、卡片細邊、chip 選中）。
+       金仍然係品牌色（主要動作、今期主打）。見 DESIGN.md §2。 */
+    --c1: #10897a;   /* 青綠 */
+    --c2: #2f6fd0;   /* 天藍 */
+    --c3: #d4553c;   /* 珊瑚 */
+    --c4: #7a55c9;   /* 紫羅蘭 */
+    --c5: #3d8b3f;   /* 草綠 */
+    --c6: #b8860b;   /* 琥珀 */
+    --rank-1: #b8860b;
+    --rank-2: #7c8ba1;
+    --rank-3: #b06a3b;
+    --on-cat: #ffffff;   /* 彩色底上面嘅字（淺色主題用白字） */
     --danger: #dc2626;
     --danger-soft: rgba(220, 38, 38, .1);
     --ok: #059669;
@@ -100,28 +118,39 @@
   }
   [data-theme="dark"] {
     color-scheme: dark;
-    --bg: #0b0d12;
-    --bg-elevated: #151922;
-    --bg-card: #1a1f2e;
-    --bg-card-hover: #22293e;
+    --bg: #1f2430;
+    --bg-elevated: #272d3b;
+    --bg-card: #2b3141;
+    --bg-card-hover: #363d50;
     --text: #f1f5f9;
-    --muted: #94a3b8;
-    --border: rgba(255, 255, 255, .08);
-    --border-strong: rgba(255, 255, 255, .14);
+    --muted: #aab6c8;
+    --border: rgba(255, 255, 255, .11);
+    --border-strong: rgba(255, 255, 255, .18);
     --accent: #e8c87a;
     --accent-2: #e8c87a;
     --accent-soft: rgba(232, 200, 122, .14);
     --accent-text: #f0d59b;
     --on-accent: #12100c;
+    /* 深色版：同一 6 隻色提亮（放喺深底上面先夠 contrast） */
+    --c1: #4fd6c2;
+    --c2: #7fb3f7;
+    --c3: #ff9d7c;
+    --c4: #bda2f5;
+    --c5: #94dc8f;
+    --c6: #f0cf8a;
+    --rank-1: #f0cf8a;
+    --rank-2: #a9b7c9;
+    --rank-3: #d99a6c;
+    --on-cat: #10121a;   /* 深色主題嘅分類色係淺色 → 上面用深字 */
     --danger: #f87171;
     --danger-soft: rgba(248, 113, 113, .14);
     --ok: #34d399;
     --ok-soft: rgba(52, 211, 153, .12);
     --warn: #fbbf24;
     --warn-soft: rgba(251, 191, 36, .14);
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .35);
-    --shadow: 0 2px 8px rgba(0, 0, 0, .35), 0 10px 28px rgba(0, 0, 0, .35);
-    --shadow-hover: 0 10px 32px rgba(0, 0, 0, .5);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .30);
+    --shadow: 0 2px 8px rgba(0, 0, 0, .30), 0 10px 28px rgba(0, 0, 0, .30);
+    --shadow-hover: 0 10px 32px rgba(0, 0, 0, .42);
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -141,6 +170,18 @@
   a { color: inherit; text-decoration: none; }
   button, input, select { font: inherit; color: inherit; }
   img { display: block; max-width: 100%; }
+
+  /* ── 線稿圖標（全站 UI icon；由 store.js svgIcon() 出）──────────
+     尺寸跟 font-size（1em），所以撳掣字級一改，icon 自動跟。
+     填色版（已收藏 ★／已讚好 ♥）加 .is-fill。 */
+  .ic {
+    width: 1em; height: 1em; flex-shrink: 0;
+    display: inline-block; vertical-align: -.14em;
+    overflow: visible; pointer-events: none;
+  }
+  .ic.is-fill { fill: currentColor; }
+  /* 靜態 icon 位（HTML 寫 data-icon="search"，boot 後由 hydrateIcons() 填 svg）*/
+  [data-icon] { display: inline-flex; align-items: center; justify-content: center; }
   :focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
@@ -245,27 +286,9 @@
     .head-actions .market-submit { padding: 9px 10px; font-size: 12px; }
   }
 
-  /* Search（嗰行右邊分咗個位放「⭐ 我的收藏」，所以外層包多個 flex row） */
+  /* Search（外層 flex row：方便日後加篩選／收藏掣，而家只有搜尋框一支獨秀） */
   .search-row { display: flex; align-items: stretch; gap: 8px; margin-top: 12px; padding-bottom: 4px; }
   .search-wrap { position: relative; flex: 1; min-width: 0; }
-  .fav-jump {
-    flex-shrink: 0; white-space: nowrap; cursor: pointer;
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 14.5px; font-weight: 750; color: var(--muted);
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: 16px; padding: 12px 16px; min-height: 44px;
-    box-shadow: var(--shadow-sm);
-    transition: all .18s var(--ease);
-    touch-action: manipulation; user-select: none; -webkit-user-select: none;
-  }
-  .fav-jump:hover { color: var(--text); border-color: var(--border-strong); }
-  .fav-jump:active { transform: scale(.96); }
-  .fav-jump.on {
-    color: var(--on-accent);
-    background: var(--accent);
-    border-color: transparent;
-  }
-  [data-theme="dark"] .fav-jump.on { color: #0b0d12; }
   .search {
     width: 100%;
     padding: 14px 44px 14px 44px;
@@ -301,10 +324,10 @@
   /* ── ★ 今期主打 Spotlight（外框即本體，不再框中有框） ── */
   .hero {
     position: relative;
-    margin: 16px 0 20px;
-    padding: 18px 16px 18px;
+    margin: 18px 0 10px;
+    padding: 20px 18px;
     overflow: hidden;
-    border-radius: 16px;
+    border-radius: 20px;
     background: var(--bg-card);
     border: 1px solid var(--border);
     animation: heroIn .35s var(--ease) both;
@@ -327,23 +350,22 @@
   }
   .hero-badge {
     display: inline-block;
-    background: var(--accent); color: var(--on-accent);
-    font-weight: 900; font-size: 12px;
-    padding: 6px 14px; border-radius: 999px;
-    margin-bottom: 14px;
-    transform: rotate(-2deg);
+    background: var(--accent-soft); color: var(--accent-text);
+    font-weight: 750; font-size: 11.5px; letter-spacing: .04em;
+    padding: 4px 10px; border-radius: 999px;
+    margin-bottom: 10px;
   }
   .hero-icon-row { display: flex; gap: 16px; align-items: center; }
   .hero-icon {
-    width: 64px; height: 64px; flex-shrink: 0;
-    border-radius: 18px; font-size: 34px;
+    width: 88px; height: 88px; flex-shrink: 0;
+    border-radius: 20px; font-size: 42px;
     display: flex; align-items: center; justify-content: center;
     background: var(--accent);
     overflow: hidden;
   }
   .hero-icon img { width: 100%; height: 100%; object-fit: contain; }
   .hero-body { min-width: 0; }
-  .hero-title { font-size: clamp(24px, 5.5vw, 32px); font-weight: 850; line-height: 1.15; letter-spacing: -.02em; word-break: break-word; }
+  .hero-title { font-size: clamp(23px, 5.2vw, 30px); font-weight: 850; line-height: 1.15; letter-spacing: -.02em; word-break: break-word; }
   .hero-sub { font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
   .hero-meta { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
   .hero-meta span {
@@ -398,41 +420,16 @@
   @media (max-width: 420px) {
     .hero { padding: 16px 12px 14px; border-radius: 18px; }
     .hero-title { font-size: 19px; }
-    .hero-actions { flex-direction: column; }
+    .hero-actions { gap: 8px; }
+    .hero .btn-primary, .hero .btn-secondary { padding: 10px 18px; font-size: 14px; }
   }
 
-  /* Hero 內「App 推送通知」預覽（純 CSS mock：截圖清晰唔會模糊，字隨時改） */
-  /* 已按需求移除：查看全部按鈕＋支部小字標籤 */
+  /* 已按需求移除：查看全部按鈕＋支部小字標籤（ROUND 2 亦刪埋假「推送通知」預覽） */
   #hero-all { display: none !important; }
   .hero-meta { display: none !important; }
-  .hero-preview { margin-top: 14px; }
-  .hero-preview[hidden] { display: none; }
-  .pv-note {
-    display: flex; align-items: center; gap: 12px; text-align: left;
-    padding: 12px 14px; border-radius: 16px;
-    background: color-mix(in srgb, var(--bg) 45%, var(--bg-elevated));
-    border: 1px solid var(--border-strong);
-    box-shadow: var(--shadow-sm);
-  }
-  .pv-ico {
-    width: 42px; height: 42px; flex-shrink: 0; border-radius: 11px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px; overflow: hidden;
-    background: var(--accent);
-  }
-  .pv-ico img { width: 32px; height: 32px; object-fit: contain; }
-  .pv-tx { min-width: 0; flex: 1; }
-  .pv-tx b { font-size: 13px; font-weight: 800; display: block; margin-bottom: 1px; }
-  .pv-tx span {
-    font-size: 12.5px; color: var(--muted); line-height: 1.45;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
   /* 收埋狀態：淨係剩一條「今期主打 · App 名」細條，撳一下就還原 */
   .hero.collapsed { margin: 14px 0 16px; padding: 10px 12px; }
   .hero.collapsed .hero-meta,
-  .hero.collapsed .hero-preview,
   .hero.collapsed .hero-actions { display: none !important; }
   .hero.collapsed .hero-card-tools {
     top: 50%; right: 8px; transform: translateY(-50%);
@@ -691,54 +688,6 @@
     .tile-desc { display: none; } /* 細屏隱藏描述，圖標更大空間 */
   }
 
-  /* ── Tile 3 按鈕 (心 星 分享) ── */
-  /* 3 粒掣加埋要窄過一格 tile（手機 4 欄一格得 ~76px），
-     否則會凸出格仔疊住隔籬、細屏仲會睇唔清 —— 所以 gap／padding 都收窄。 */
-  .tile-bar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    margin-top: 6px;
-    width: 100%;
-  }
-  .tile-btn {
-    position: static;
-    background: transparent;
-    border: none;
-    outline: none;
-    cursor: pointer;
-    padding: 4px 4px;
-    border-radius: 8px;
-    color: var(--muted);
-    opacity: 0.7;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.15s var(--ease), color 0.15s, background 0.15s, opacity 0.15s;
-    touch-action: manipulation;
-  }
-  .tile-btn:hover {
-    opacity: 1;
-    background: var(--accent-soft);
-    color: var(--text);
-    transform: scale(1.18);
-  }
-  .tile-btn:active {
-    transform: scale(0.92);
-  }
-  .like-heart.on {
-    opacity: 1;
-    color: #ef4444;
-  }
-  .fav-star.on {
-    opacity: 1;
-    color: var(--accent);
-  }
-  .btn-share:hover {
-    color: var(--accent-2);
-  }
-
   /* Share Option Grid */
   .share-option {
     display: flex;
@@ -759,10 +708,6 @@
   .share-option:hover {
     background: var(--bg-card-hover);
     transform: translateY(-2px);
-  }
-  .share-option .share-ico {
-    font-size: 20px;
-    line-height: 1;
   }
 
   /* 註：舊「支部 Tabs」（.branch-tabs／.branch-tab 灰字＋幼底線）已經刪走 ——
@@ -862,7 +807,7 @@
     touch-action: manipulation;
   }
   .bnav-btn .bnav-icon {
-    font-size: 16px;
+    font-size: 18px;
     line-height: 1;
     display: inline-flex;
     align-items: center;
@@ -876,11 +821,11 @@
     color: var(--text);
   }
   .bnav-btn.on {
-    color: #6366f1;
+    color: var(--cat, var(--accent-text));
     font-weight: 700;
   }
   .bnav-btn.on .bnav-icon {
-    background: rgba(99, 102, 241, 0.15);
+    background: color-mix(in srgb, var(--cat, var(--accent)) 16%, transparent);
   }
   /* 舊嘅 bottom-sub-line 已合併為 bottom-credit-line，保留兼容但隱藏 */
   .bottom-sub-line { display: none; }
@@ -905,29 +850,41 @@
   }
   .empty-ico {
     width: 72px; height: 72px; margin: 0 auto 14px; border-radius: 22px;
-    background: var(--bg-card); border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--c2) 12%, var(--bg-card));
+    border: 1px solid color-mix(in srgb, var(--c2) 26%, var(--border));
+    color: var(--c2);
     display: flex; align-items: center; justify-content: center;
     font-size: 30px; box-shadow: var(--shadow-sm);
   }
   .empty b { display: block; color: var(--text); font-size: 15px; margin-bottom: 4px; }
   .empty p { font-size: 13.5px; }
 
+  /* 貨架載入中：霸位形狀要同真卡一樣，載完唔會跳位 */
   .skeleton {
-    display: grid; gap: 14px 8px;
-    grid-template-columns: repeat(4, 1fr);
-    margin-top: 22px;
+    display: grid; grid-auto-flow: column;
+    grid-auto-columns: minmax(238px, 82%);
+    gap: 12px; margin-top: 8px;
+    overflow: hidden;
   }
-  @media (min-width: 560px) { .skeleton { grid-template-columns: repeat(6, 1fr); } }
-  .sk-tile {
-    display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 6px;
+  @media (min-width: 700px) {
+    .skeleton { grid-auto-flow: row; grid-template-columns: repeat(2, 1fr); }
   }
-  .sk-icon, .sk-line {
+  @media (min-width: 1000px) {
+    .skeleton { grid-template-columns: repeat(3, 1fr); }
+  }
+  .sk-card {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px; border-radius: var(--radius);
+    background: var(--bg-card); border: 1px solid var(--border);
+  }
+  .sk-sq, .sk-line {
     background: color-mix(in srgb, var(--muted) 16%, transparent);
-    animation: shimmer 1.2s ease-in-out infinite;
-    border-radius: 16px;
+    animation: shimmer 1.4s ease-in-out infinite;
   }
-  .sk-icon { width: 60px; height: 60px; }
-  .sk-line { height: 10px; width: 70%; border-radius: 6px; }
+  .sk-sq { width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0; }
+  .sk-lines { display: flex; flex-direction: column; gap: 7px; flex: 1; }
+  .sk-line { height: 10px; border-radius: 5px; width: 78%; }
+  .sk-line.short { width: 46%; }
   @keyframes shimmer {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
@@ -1126,11 +1083,11 @@
   .analytics-fav-track { display: grid; gap: 3px; margin-top: 6px; }
   .analytics-fav-track i { display: block; height: 4px; border-radius: 99px; background: var(--border); }
   .analytics-fav-track .trk-star { background: var(--accent); }
-  .analytics-fav-track .trk-heart { background: #ef4444; }
+  .analytics-fav-track .trk-heart { background: var(--c3); }
   .analytics-fav-nums { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; min-width: 76px; }
   .analytics-fav-nums span { font-size: 12px; font-weight: 800; white-space: nowrap; }
   .analytics-fav-nums .num-star { color: var(--accent); }
-  .analytics-fav-nums .num-heart { color: #ef4444; }
+  .analytics-fav-nums .num-heart { color: var(--c3); }
   .analytics-app-row > strong { min-width: 64px; text-align: right; color: var(--accent-text); font-size: 15px; }
   .analytics-app-row > strong small { color: var(--muted); font-size: 10px; font-weight: 600; }
   .analytics-note { margin: 13px 2px 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
@@ -1327,10 +1284,6 @@
     width: 20px; height: 20px; border-radius: 6px; object-fit: contain;
     vertical-align: -5px;
   }
-  /* 公開版分類標題：冇 emoji 就用 Logo */
-  .sec-ico-logo {
-    width: 18px; height: 18px; border-radius: 5px; object-fit: contain;
-  }
 
   /* 管理：支部標籤（藥丸＋勾選框，選中一眼分明） */
   .tag-check-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1361,7 +1314,13 @@
     background: rgba(255, 255, 255, .3);
     border-color: rgba(255, 255, 255, .95); color: #fff;
   }
-  .tag-check.on .tc-box::after { content: "✓"; }
+  /* 剔號用 CSS 畫（唔用 ✓ 字元）：粗幼同圓角同其他線稿圖標一致 */
+  .tag-check.on .tc-box::after {
+    content: "";
+    width: 5px; height: 9px; margin-top: -2px;
+    border: solid currentColor; border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
   [data-theme="dark"] .tag-check.on { color: #0b0d12; }
   [data-theme="dark"] .tag-check.on .tc-box {
     background: rgba(0, 0, 0, .22); border-color: #0b0d12; color: #0b0d12;
@@ -1405,7 +1364,7 @@
     background: #fff; box-shadow: 0 2px 5px rgba(15, 23, 42, .3);
     transition: transform .18s var(--ease);
   }
-  [data-theme="dark"] .switch { background: #3a4150; }
+  [data-theme="dark"] .switch { background: #454e60; }
   input:checked + .switch { background: var(--ok); }
   input:checked + .switch::after { transform: translateX(18px); }
   input:focus-visible + .switch { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -1460,6 +1419,13 @@
     transition: transform .12s, background .15s, border-color .15s;
   }
   .emoji-cell:hover { transform: scale(1.1); border-color: var(--accent); background: var(--accent-soft); }
+  /* 線稿圖標格：24px 圖標＋細中文名，睇得明過一堆 emoji */
+  .emoji-cell.icon-cell { flex-direction: column; gap: 3px; font-size: 22px; color: var(--text); }
+  .emoji-cell.icon-cell .ic { width: 24px; height: 24px; }
+  .emoji-cell.icon-cell::after {
+    content: attr(title); font-size: 9.5px; color: var(--muted);
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   .emoji-total { font-size: 12px; color: var(--muted); align-self: center; margin-left: auto; }
   .emoji-none-hint {
     grid-column: 1 / -1; text-align: left;
@@ -1480,10 +1446,7 @@
        迫落第二行。以前標題欄可以縮到 0，掣就被擠出螢幕右邊，睇唔到又撳唔到。 */
     .head-titles { flex: 1 1 150px; min-width: 150px; }
 
-    /* 搜尋行嘅「我的收藏」跟着收細（搜尋框維持 14px padding，高度自然對齊） */
     .search-row { gap: 6px; }
-    .fav-jump { padding: 8px 10px; font-size: 12.5px; font-weight: 750; border-radius: 14px; }
-    .fav-jump .chip-ico { margin-right: 3px; }
 
     /* 分類 chips：放唔低就**轉行**（base 已開 flex-wrap）；
        得返一行橫捲嘅時候，「小工具」之後幾個永遠睇唔到。 */
@@ -1506,12 +1469,6 @@
     .page-btn { font-size: 13px; font-weight: 750; padding: 5px 10px; min-height: 30px; }
     .page-btn[data-page="__prev"], .page-btn[data-page="__next"] { display: none; }
 
-    /* 每個項目下面 3 粒掣（收藏／支持／分享）：4 欄格仔一格得 ~76px，
-       但 3 粒掣本身要 ~100px —— 會凸出 tile 疊住隔籬、又難撳。呢度收窄到放得落。 */
-    .tile-bar { gap: 2px; margin-top: 4px; }
-    .tile-btn { padding: 4px 3px; }
-    .tile-btn svg { width: 15px; height: 15px; }
-
     /* tile 內嘅支部小標籤：一個字，行高收埋 */
     .tile-tags { gap: 2px; margin-top: 2px; }
     .tile-tags span { font-size: 10px; padding: 1px 5px; }
@@ -1530,11 +1487,194 @@
        唔好再靠 overflow:hidden 切走 QR／edit 兩粒掣 */
     .bottom-credit-line .ig-sub { display: none !important; }
   }
+
+  /* ══════════════════════════════════════════════════════════════
+     ROUND 2 · App Store 版面（貨架 + 大卡 + 詳情 sheet）
+     規則：實色、單一金 accent、icon 做主角、冇漸層／光暈（見 DESIGN.md）
+     ══════════════════════════════════════════════════════════════ */
+
+  /* 分類色：section／chip／底欄掣都靠 data-catn 揀色（0–5 循環） */
+  [data-catn="0"] { --cat: var(--c1); }
+  [data-catn="1"] { --cat: var(--c2); }
+  [data-catn="2"] { --cat: var(--c3); }
+  [data-catn="3"] { --cat: var(--c4); }
+  [data-catn="4"] { --cat: var(--c5); }
+  [data-catn="5"] { --cat: var(--c6); }
+
+  /* 頂部彩色條：一眼就知「呢個係青春版」 */
+  .head-strip {
+    display: flex; gap: 0; height: 3px; border-radius: 99px;
+    overflow: hidden; margin: 0 0 10px;
+  }
+  .head-strip i { flex: 1; background: var(--c1); }
+  .head-strip i:nth-child(2) { background: var(--c2); }
+  .head-strip i:nth-child(3) { background: var(--c3); }
+  .head-strip i:nth-child(4) { background: var(--c4); }
+  .head-strip i:nth-child(5) { background: var(--c5); }
+  .head-strip i:nth-child(6) { background: var(--c6); }
+
+  /* 頂欄：標題大一級，動作掣收做安靜嘅 ghost（只有「提交作品」用 accent） */
+  .head-titles h1 { font-size: clamp(19px, 4.6vw, 23px); letter-spacing: -.03em; }
+  .head-sub { font-size: 12.5px; letter-spacing: 0; }
+  .market-submit.head-submit {
+    background: transparent; color: var(--accent-text);
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 8px 13px; font-size: 12.5px; font-weight: 700;
+  }
+  .market-submit.head-submit:hover { border-color: var(--border-strong); background: var(--accent-soft); }
+  .market-submit.head-submit[onclick*="'app'"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+
+  /* 貨架 ------------------------------------------------------- */
+  .shelf-sec { margin-top: 26px; --cat: var(--accent); }
+  .shelf-sec .sec-head { margin-bottom: 10px; padding: 0; gap: 9px; }
+  .sec-head h2 { font-size: var(--fs-3); font-weight: 800; letter-spacing: -.02em; }
+  /* 貨架／排行榜標題前嘅圖標跟分類色，文字保持 --text */
+  .sec-head h2 .ic { color: var(--cat, var(--accent)); }
+  .sec-head .num {
+    font-size: 11.5px; font-weight: 700; color: color-mix(in srgb, var(--cat, var(--accent)) 55%, var(--muted));
+    background: transparent; border: 0; padding: 0; margin-left: 0;
+  }
+  .cat-ico { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; color: var(--cat, var(--accent)); flex-shrink: 0; }
+  .cat-ico .ic { width: 20px; height: 20px; }
+  .sec-more {
+    margin-left: auto; border: 0; background: none;
+    color: var(--cat, var(--accent-text)); font-size: 13px; font-weight: 750;
+    padding: 6px 2px; cursor: pointer; white-space: nowrap;
+  }
+  .sec-more:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  .shelf {
+    display: grid; grid-auto-flow: column;
+    grid-auto-columns: minmax(238px, 82%);
+    gap: 10px; overflow-x: auto; overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity; padding: 2px 1px 6px;
+    scrollbar-width: none; -ms-overflow-style: none;
+  }
+  .shelf::-webkit-scrollbar { display: none; }
+  @media (min-width: 700px) {
+    .shelf { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; padding-bottom: 0; }
+  }
+  @media (min-width: 1000px) {
+    .shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+
+  .card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px; min-width: 0;
+    background: var(--bg-card);
+    border: 1px solid color-mix(in srgb, var(--cat, var(--accent)) 22%, var(--border));
+    border-radius: var(--radius);
+    scroll-snap-align: start;
+    transition: border-color .15s, background .15s, transform .15s var(--ease);
+  }
+  .card:hover {
+    border-color: color-mix(in srgb, var(--cat, var(--accent)) 55%, var(--border));
+    background: color-mix(in srgb, var(--cat, var(--accent)) 7%, var(--bg-card-hover));
+    transform: translateY(-1px);
+  }
+  .card:active { transform: scale(.985); }
+  .card-icon {
+    width: 62px; height: 62px; flex-shrink: 0; border-radius: 17px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; line-height: 1;
+    /* 彩色底盤：app logo 放喺自己分類色上面，成條貨架即刻有生命 */
+    background: color-mix(in srgb, var(--cat, var(--accent)) 14%, var(--bg-card));
+    padding: 4px;
+  }
+  .card-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 13px; }
+  .card-copy { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  .card .tile-name {
+    font-size: 14.5px; font-weight: 750; line-height: 1.28; text-align: left;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card-desc {
+    font-size: 12.5px; color: var(--muted); line-height: 1.4; text-align: left;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card-go { color: var(--muted); font-size: 18px; line-height: 1; flex-shrink: 0; }
+
+  /* 分類 chip：未揀＝安靜文字（唔再一排白邊藥丸），揀中＝實金。 */
+  .chips .chip {
+    background: transparent; border-color: transparent; box-shadow: none;
+    color: var(--muted); font-weight: 700; padding: 9px 12px;
+  }
+  .chips .chip:hover { background: var(--bg-card); border-color: var(--border); color: var(--text); }
+  .chips .chip.on {
+    background: var(--cat, var(--accent));
+    border-color: transparent; color: var(--on-cat, var(--on-accent));
+    box-shadow: none;
+  }
+  .chips .chip.on:hover { background: var(--cat, var(--accent)); color: var(--on-cat, var(--on-accent)); }
+
+  /* 詳情 sheet -------------------------------------------------- */
+  body.sheet-open { overflow: hidden; }
+  .sheet { position: fixed; inset: 0; z-index: 88; display: flex; align-items: flex-end; justify-content: center; }
+  .sheet[hidden] { display: none; }
+  .sheet-backdrop { position: absolute; inset: 0; background: rgba(6, 6, 8, .58); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+  .sheet-panel {
+    position: relative; z-index: 1; width: min(560px, 100%);
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: 22px 22px 0 0;
+    padding: 22px 18px calc(18px + var(--safe-b));
+    animation: sheetIn .22s var(--ease) both;
+    outline: none;
+  }
+  @media (min-width: 620px) {
+    .sheet { align-items: center; }
+    .sheet-panel { border-radius: 20px; box-shadow: 0 24px 60px rgba(0, 0, 0, .35); }
+  }
+  @keyframes sheetIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .sheet-panel { animation: none; } }
+  .sheet-x {
+    position: absolute; top: 10px; right: 10px;
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 1px solid var(--border); background: var(--bg-card);
+    color: var(--muted); font-size: 19px; line-height: 1; cursor: pointer;
+  }
+  .sheet-top { display: flex; align-items: center; gap: 14px; padding-right: 40px; }
+  .sheet-icon {
+    width: 76px; height: 76px; flex-shrink: 0; border-radius: 18px; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 42px; line-height: 1;
+  }
+  .sheet-icon img { width: 76px; height: 76px; object-fit: cover; border-radius: 18px; }
+  .sheet-titles { min-width: 0; }
+  .sheet-titles h2 {
+    font-size: 20px; font-weight: 850; line-height: 1.2; letter-spacing: -.02em;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .sheet-sub { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .sheet-desc { margin: 16px 0 0; font-size: 14px; line-height: 1.6; color: var(--text); }
+  .sheet-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+  .sheet-tag {
+    font-size: 12px; font-weight: 650; color: var(--accent-text);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    border-radius: 999px; padding: 4px 10px;
+  }
+  .sheet-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+  .sheet-stat { font-size: 12.5px; color: var(--muted); }
+  .sheet-actions { display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px; margin-top: 20px; align-items: stretch; }
+  .sheet-open { border-radius: var(--radius-sm); padding: 12px 18px; font-size: 15px; font-weight: 800; border: 0; cursor: pointer; }
+  .sheet-mini {
+    border: 1px solid var(--border); background: var(--bg-card); color: var(--text);
+    border-radius: var(--radius-sm); padding: 0 12px; font-size: 12.5px; font-weight: 700;
+    cursor: pointer; white-space: nowrap;
+  }
+  .sheet-mini:hover { border-color: var(--border-strong); background: var(--bg-card-hover); }
+  .sheet-mini.on { color: var(--on-accent); background: var(--accent); border-color: transparent; }
+  @media (max-width: 430px) {
+    .sheet-actions { grid-template-columns: 1fr 1fr; }
+    .sheet-open { grid-column: 1 / -1; }
+    .sheet-icon { width: 64px; height: 64px; }
+    .sheet-icon img { width: 64px; height: 64px; }
+  }
+
 </style>
 <link rel="stylesheet" href="market.css" />
 </head>
 <body>
 <div class="wrap">
+  <div class="head-strip" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
   <div class="topbar" id="topbar">
     <header>
       <div class="head-row">
@@ -1546,19 +1686,19 @@
           <div class="head-sub">好工具，讓童軍生活更精彩。</div>
         </div>
         <div class="head-actions">
-          <button type="button" class="market-submit head-submit" onclick="submissionOpen('app')">＋ 提交作品</button>
-          <button type="button" class="market-submit head-submit share-link-btn" onclick="submissionOpen('link')">🌐 網站分享</button>
-          <button type="button" class="market-submit head-submit share-material-btn" onclick="submissionOpen('material')">📚 教材分享</button>
-          <button type="button" class="market-submit head-submit feedback-btn" onclick="reportOpen()" aria-haspopup="dialog" aria-controls="report-dialog" title="問題回報 / 意見回饋">回報/意見</button>
+          <button type="button" class="market-submit head-submit" onclick="submissionOpen('app')"><span data-icon="plus"></span> 提交作品</button>
+          <button type="button" class="market-submit head-submit share-link-btn" onclick="submissionOpen('link')"><span data-icon="globe"></span> 網站分享</button>
+          <button type="button" class="market-submit head-submit share-material-btn" onclick="submissionOpen('material')"><span data-icon="book"></span> 教材分享</button>
+          <button type="button" class="market-submit head-submit feedback-btn" onclick="reportOpen()" aria-haspopup="dialog" aria-controls="report-dialog" title="問題回報 / 意見回饋"><span data-icon="message"></span> 回報/意見</button>
           <button class="install-btn" id="install-btn" type="button" aria-label="安裝 App">
-            ⬇️ <span class="install-label">安裝</span>
+            <span data-icon="download"></span> <span class="install-label">安裝</span>
           </button>
-          <button class="icon-btn" id="theme-btn" type="button" title="切換深色 / 淺色" aria-label="切換主題">🌙</button>
+          <button class="icon-btn" id="theme-btn" type="button" title="切換深色 / 淺色" aria-label="切換主題"><span data-icon="moon"></span></button>
         </div>
       </div>
       <div class="search-row">
         <div class="search-wrap" style="width:100%;">
-          <span class="search-ico" aria-hidden="true">🔍</span>
+          <span class="search-ico" aria-hidden="true" data-icon="search"></span>
           <input class="search" id="search" type="search" enterkeyhint="search" placeholder="搜尋支部／分類／項目…" aria-label="搜尋（支部、分類、項目名）" autocomplete="off" />
           <button class="search-clear" id="search-clear" type="button" aria-label="清除搜尋">×</button>
         </div>
@@ -1577,29 +1717,18 @@
   <section class="hero" id="hero-spotlight" aria-label="今期主打" hidden>
     <div class="hero-card">
       <div class="hero-card-tools">
-        <button class="hero-share" id="hero-share" type="button" aria-label="分享此項目" title="分享">🔗</button>
-        <button class="hero-collapse" id="hero-collapse" type="button" aria-label="收埋今期主打" title="收埋">▴</button>
+        <button class="hero-share" id="hero-share" type="button" aria-label="分享此項目" title="分享"><span data-icon="share"></span></button>
+        <button class="hero-collapse" id="hero-collapse" type="button" aria-label="收埋今期主打" title="收埋"><span data-icon="chevronDown"></span></button>
       </div>
       <div class="hero-badge" id="hero-badge">今期主打</div>
       <div class="hero-icon-row">
-        <div class="hero-icon" id="hero-icon" role="img" aria-label="">🔔</div>
+        <div class="hero-icon" id="hero-icon" role="img" aria-label=""><span data-icon="sparkle"></span></div>
         <div class="hero-body">
           <div class="hero-title" id="hero-title">載入中…</div>
           <div class="hero-sub" id="hero-sub"></div>
         </div>
       </div>
       <div class="hero-meta" id="hero-meta" hidden></div>
-      <div class="hero-preview" id="hero-preview" aria-hidden="true">
-        <div class="pv-note">
-          <div class="pv-ico" id="pv-ico">🔔</div>
-          <div class="pv-tx">
-            <!-- 標題／內文／圖示都由 renderSpotlight() 用今期推廣項目嘅資料填：
-                 內文 = 該項目嘅「介紹」（見 spotlightPreviewMsg）；下面係未載入前嘅預設字 -->
-            <b id="pv-title">通告圖書館</b>
-            <span id="pv-msg">📢 有新通告：本週活動安排已更新，記得查看！</span>
-          </div>
-        </div>
-      </div>
       <div class="hero-actions">
         <button class="btn-primary" id="hero-open" type="button">立即開啟</button>
         <button class="btn-secondary" id="hero-all" type="button">查看全部</button>
@@ -1609,18 +1738,13 @@
 
   <div id="sections">
     <div class="skeleton" id="skeleton" aria-hidden="true">
-      <div class="sk-tile"><div class="sk-icon"></div><div class="sk-line"></div></div>
-      <div class="sk-tile"><div class="sk-icon"></div><div class="sk-line"></div></div>
-      <div class="sk-tile"><div class="sk-icon"></div><div class="sk-line"></div></div>
-      <div class="sk-tile"><div class="sk-icon"></div><div class="sk-line"></div></div>
-      <div class="sk-tile"><div class="sk-icon"></div><div class="sk-line"></div></div>
-      <div class="sk-tile"><div class="sk-icon"></div><div class="sk-line"></div></div>
-      <div class="sk-tile"><div class="sk-icon"></div><div class="sk-line"></div></div>
-      <div class="sk-tile"><div class="sk-icon"></div><div class="sk-line"></div></div>
+      <div class="sk-card"><span class="sk-sq"></span><span class="sk-lines"><span class="sk-line"></span><span class="sk-line short"></span></span></div>
+      <div class="sk-card"><span class="sk-sq"></span><span class="sk-lines"><span class="sk-line"></span><span class="sk-line short"></span></span></div>
+      <div class="sk-card"><span class="sk-sq"></span><span class="sk-lines"><span class="sk-line"></span><span class="sk-line short"></span></span></div>
     </div>
   </div>
   <div class="empty" id="empty">
-    <div class="empty-ico">🔎</div>
+    <div class="empty-ico" data-icon="search"></div>
     <b>未有內容</b>
     <p>試下改關鍵字，或者撳「全部」／轉第二個分頁睇下</p>
     <div class="empty-action" id="empty-action" hidden></div>
@@ -1629,18 +1753,18 @@
   <!-- 底部資訊 -->
   <footer class="foot-card" aria-label="底部資訊">
     <div class="foot-line">
-      <span class="ig-emoji" aria-hidden="true">📸</span>
+      <span class="ig-emoji" aria-hidden="true" data-icon="camera"></span>
       <a class="ig-title-link" href="https://www.instagram.com/noscout.system/" target="_blank" rel="noopener" style="text-decoration:none; color:inherit;">
         <span class="ig-title" style="font-weight:750;">追蹤我哋嘅 Instagram@noscout.system</span>
       </a>
       <span class="ig-sub" style="color:var(--muted);">童軍工具 · 教學 ·</span>
-      <button class="btn-secondary" type="button" aria-hidden="true" style="display:none;">🔳 QR</button>
+      <button class="btn-secondary" type="button" aria-hidden="true" style="display:none;"><span data-icon="qr"></span> QR</button>
       <span id="foot-count" hidden></span>
     </div>
   </footer>
 </div>
 
-<button class="to-top" id="to-top" type="button" aria-label="返回頂部">↑</button>
+<button class="to-top" id="to-top" type="button" aria-label="返回頂部"><span data-icon="arrowUp"></span></button>
 
 <div class="modal" id="ig-modal" hidden>
   <div class="modal-backdrop" id="ig-close"></div>
@@ -1657,21 +1781,46 @@
   <div class="modal-backdrop" onclick="closeSettingsModal()"></div>
   <div class="modal-card settings-card" role="dialog" aria-modal="true" aria-label="設置">
     <button class="modal-x" type="button" aria-label="關閉" onclick="closeSettingsModal()">×</button>
-    <div class="modal-title" style="margin-top:4px; font-size:20px;">⚙️ 設置</div>
+    <div class="modal-title" style="margin-top:4px; font-size:20px;"><span data-icon="gear"></span> 設置</div>
     
     <div class="settings-box" style="margin-top:16px; text-align:left; background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:14px;">
       <p class="tip" style="font-size:13px; line-height:1.6; color:var(--text); margin:0;">
-        💡 <b>提示：</b>喺瀏覽器選單選「加入主畫面 / 安裝 App」（Android 可撳右上角「安裝」），呢個「SCOUT APP STORE」就會變成電話桌面嘅一個 App。所有童軍工具、圖卡、簡報同連結都由呢度入。
+        <b>提示：</b>喺瀏覽器選單選「加入主畫面 / 安裝 App」（Android 可撳右上角「安裝」），呢個「SCOUT APP STORE」就會變成電話桌面嘅一個 App。所有童軍工具、圖卡、簡報同連結都由呢度入。
       </p>
     </div>
 
     <div class="settings-actions" style="margin-top:16px; display:flex; flex-direction:column; gap:10px;">
       <button class="btn-primary" type="button" onclick="const b=document.getElementById('install-btn'); if(b && b.style.display!=='none'){b.click();} else{if(typeof showToast==='function') showToast('請喺瀏覽器選單點選「加入主畫面」');} closeSettingsModal();" style="width:100%;">
-        ⬇️ 安裝 SCOUT APP STORE 至桌面
+        <span data-icon="download"></span> 安裝 SCOUT APP STORE 至桌面
       </button>
       <button class="btn-secondary" type="button" onclick="document.getElementById('theme-btn').click();" style="width:100%;">
-        🌙 切換主題 (深色 / 淺色)
+        <span data-icon="moon"></span> 切換主題 (深色 / 淺色)
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- App 詳情 sheet（App Store 式）：撳卡先睇詳情，再撳「開啟」。
+     收藏／讚好／分享全部收喺呢度，主畫面貨架可以保持安靜。 -->
+<div class="sheet" id="app-sheet" hidden>
+  <div class="sheet-backdrop" onclick="closeAppSheet()"></div>
+  <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-name" tabindex="-1">
+    <button class="sheet-x" type="button" aria-label="關閉" onclick="closeAppSheet()">×</button>
+    <div class="sheet-top">
+      <div class="sheet-icon" id="sheet-icon" aria-hidden="true"></div>
+      <div class="sheet-titles">
+        <h2 id="sheet-name"></h2>
+        <div class="sheet-sub" id="sheet-sub"></div>
+      </div>
+    </div>
+    <p class="sheet-desc" id="sheet-desc"></p>
+    <div class="sheet-tags" id="sheet-tags" hidden></div>
+    <div class="sheet-stats" id="sheet-stats" hidden></div>
+    <div class="sheet-actions">
+      <button class="btn-primary sheet-open" id="sheet-open" type="button">開啟</button>
+      <button class="sheet-mini" id="sheet-fav" type="button" aria-pressed="false"><span data-icon="star"></span> 收藏</button>
+      <button class="sheet-mini" id="sheet-heart" type="button" aria-pressed="false"><span data-icon="heart"></span> 讚好</button>
+      <button class="sheet-mini" id="sheet-share" type="button"><span data-icon="share"></span> 分享</button>
     </div>
   </div>
 </div>
@@ -1690,27 +1839,21 @@
 
     <div class="share-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-top:16px;">
       <button type="button" class="share-option" onclick="shareTo('whatsapp')">
-        <span class="share-ico">💬</span>
         <span>WhatsApp</span>
       </button>
       <button type="button" class="share-option" onclick="shareTo('facebook')">
-        <span class="share-ico">📘</span>
         <span>Facebook</span>
       </button>
       <button type="button" class="share-option" onclick="shareTo('telegram')">
-        <span class="share-ico">✈️</span>
         <span>Telegram</span>
       </button>
       <button type="button" class="share-option" onclick="shareTo('x')">
-        <span class="share-ico">🐦</span>
         <span>X (Twitter)</span>
       </button>
       <button type="button" class="share-option" onclick="shareTo('line')">
-        <span class="share-ico">🟢</span>
         <span>LINE</span>
       </button>
       <button type="button" class="share-option" onclick="shareTo('system')">
-        <span class="share-ico">📲</span>
         <span>系統分享</span>
       </button>
     </div>
@@ -1742,11 +1885,11 @@
   <h2 id="submit-title">分享你的作品</h2>
   <p id="submit-intro">填上作品連結及標籤。提交後會寫入商店資料庫，並同時登記到管理員嘅投稿表＋電郵通知管理員；批核後才會公開上架。</p>
   <div class="submit-tabs" role="tablist" aria-label="分享類型">
-    <button type="button" id="submit-tab-app" class="submit-tab is-active" role="tab" aria-selected="true" data-submit-kind="app">🧰 提交作品</button>
-    <button type="button" id="submit-tab-link" class="submit-tab" role="tab" aria-selected="false" data-submit-kind="link">🌐 網站分享</button>
-    <button type="button" id="submit-tab-material" class="submit-tab" role="tab" aria-selected="false" data-submit-kind="material">📚 教材分享</button>
+    <button type="button" id="submit-tab-app" class="submit-tab is-active" role="tab" aria-selected="true" data-submit-kind="app"><span data-icon="tools"></span> 提交作品</button>
+    <button type="button" id="submit-tab-link" class="submit-tab" role="tab" aria-selected="false" data-submit-kind="link"><span data-icon="globe"></span> 網站分享</button>
+    <button type="button" id="submit-tab-material" class="submit-tab" role="tab" aria-selected="false" data-submit-kind="material"><span data-icon="book"></span> 教材分享</button>
   </div>
-  <div class="submit-tip" id="submit-tip">🧰 適合分享你開發或製作嘅童軍網頁小工具、電子進度紀錄、計分器或小遊戲。想分享一般網站或雲端教材？可切換上方「🌐 網站分享」或「📚 教材分享」。</div>
+  <div class="submit-tip" id="submit-tip">適合分享你開發或製作嘅童軍網頁小工具、電子進度紀錄、計分器或小遊戲。想分享一般網站或雲端教材？可切換上方「網站分享」或「教材分享」。</div>
   <form id="submit-form">
     <label><span id="submit-name-label">作品名稱</span><input id="submit-name" name="name" maxlength="80" required placeholder="例如：露營裝備清單" /></label>
     <label><span id="submit-url-label">作品連結</span><input id="submit-url" name="url" type="url" maxlength="2048" required placeholder="https://…" /></label>
@@ -1782,8 +1925,8 @@
   <p class="report-intro">送到 Scout Admin，管理員會盡快跟進。可匿名提交，聯絡資料均為選填。</p>
   <p class="report-source">來源 APP：<b>SCOUT APP STORE</b></p>
   <div class="report-tabs" role="tablist" aria-label="回報類型">
-    <button type="button" id="report-tab-issue" class="report-tab is-active" role="tab" aria-selected="true" aria-controls="report-pane-issue" data-report-kind="issue">🐛 問題回報</button>
-    <button type="button" id="report-tab-feedback" class="report-tab" role="tab" aria-selected="false" aria-controls="report-pane-feedback" data-report-kind="feedback">💬 意見回饋</button>
+    <button type="button" id="report-tab-issue" class="report-tab is-active" role="tab" aria-selected="true" aria-controls="report-pane-issue" data-report-kind="issue"><span data-icon="bug"></span> 問題回報</button>
+    <button type="button" id="report-tab-feedback" class="report-tab" role="tab" aria-selected="false" aria-controls="report-pane-feedback" data-report-kind="feedback"><span data-icon="message"></span> 意見回饋</button>
   </div>
   <form id="report-form" class="report-form" novalidate>
     <div class="report-pane is-active" id="report-pane-issue" role="tabpanel" aria-labelledby="report-tab-issue" data-report-pane="issue">
@@ -1816,10 +1959,10 @@
       <div class="report-field">
         <span class="report-field-label">類型</span>
         <div class="report-radios" role="radiogroup" aria-label="意見類型">
-          <label><input type="radio" name="feedback-type" value="建議" checked /> 💡 建議</label>
-          <label><input type="radio" name="feedback-type" value="讚" /> 👍 讚</label>
-          <label><input type="radio" name="feedback-type" value="批評" /> 👎 批評</label>
-          <label><input type="radio" name="feedback-type" value="其他" /> 📝 其他</label>
+          <label><input type="radio" name="feedback-type" value="建議" checked /> 建議</label>
+          <label><input type="radio" name="feedback-type" value="讚" /> 讚</label>
+          <label><input type="radio" name="feedback-type" value="批評" /> 批評</label>
+          <label><input type="radio" name="feedback-type" value="其他" /> 其他</label>
         </div>
       </div>
       <label class="report-field" for="report-opinion">內容 <span class="report-required">*</span>
@@ -1849,31 +1992,31 @@
 
 <footer class="bottom-footer-bar" id="bottom-footer-bar">
   <nav class="bottom-nav" id="bottom-nav" aria-label="底欄導覽">
-    <button type="button" class="bnav-btn on" data-bnav="discover" onclick="handleBnav('discover')">
-      <span class="bnav-icon">📁</span>
+    <button type="button" class="bnav-btn on" data-bnav="discover" data-catn="0" onclick="handleBnav('discover')">
+      <span class="bnav-icon" data-icon="grid"></span>
       <span class="bnav-label">分類</span>
     </button>
-    <button type="button" class="bnav-btn" data-bnav="links" onclick="handleBnav('links')">
-      <span class="bnav-icon">🔗</span>
+    <button type="button" class="bnav-btn" data-bnav="links" data-catn="1" onclick="handleBnav('links')">
+      <span class="bnav-icon" data-icon="link"></span>
       <span class="bnav-label">連結</span>
     </button>
-    <button type="button" class="bnav-btn" data-bnav="tools" onclick="handleBnav('tools')">
-      <span class="bnav-icon">🧰</span>
+    <button type="button" class="bnav-btn" data-bnav="tools" data-catn="2" onclick="handleBnav('tools')">
+      <span class="bnav-icon" data-icon="tools"></span>
       <span class="bnav-label">教學工具</span>
     </button>
-    <button type="button" class="bnav-btn" data-bnav="charts" onclick="handleBnav('charts')">
-      <span class="bnav-icon">🏆</span>
+    <button type="button" class="bnav-btn" data-bnav="charts" data-catn="3" onclick="handleBnav('charts')">
+      <span class="bnav-icon" data-icon="trophy"></span>
       <span class="bnav-label">排行榜</span>
     </button>
-    <button type="button" class="bnav-btn" data-bnav="fav" onclick="handleBnav('fav')">
-      <span class="bnav-icon">⭐</span>
+    <button type="button" class="bnav-btn" data-bnav="fav" data-catn="5" onclick="handleBnav('fav')">
+      <span class="bnav-icon" data-icon="star"></span>
       <span class="bnav-label">收藏</span>
     </button>
   </nav>
   <div class="bottom-credit-line" aria-label="底部資訊">
-    <span class="ig-emoji" aria-hidden="true">📸</span>
+    <span class="ig-emoji" aria-hidden="true" data-icon="camera"></span>
     <a href="https://www.instagram.com/noscout.system/" target="_blank" rel="noopener"><span class="wide-only">追蹤我哋嘅 Instagram@noscout.system</span><span class="narrow-only">@noscout.system</span></a>
-    <button class="ig-qr-btn" id="ig-qr-btn" type="button">🔳 QR</button>
+    <button class="ig-qr-btn" id="ig-qr-btn" type="button"><span data-icon="qr"></span> QR</button>
     <span class="ig-sub">童軍工具·教學</span>
     <span class="credit-copy">© 2026 Scout System<span class="wide-only"> · App Store Edition</span></span>
     <button class="foot-edit" id="foot-edit" type="button" title="進入後台" aria-label="進入後台">edit</button>
@@ -1888,13 +2031,28 @@
 const themeBtn = document.getElementById("theme-btn");
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
-  themeBtn.textContent = t === "dark" ? "☀️" : "🌙";
+  if (themeBtn) themeBtn.innerHTML = svgIcon(t === "dark" ? "sun" : "moon");
   localStorage.setItem("theme", t);
   const meta = document.querySelector('meta[name="theme-color"]:not([media])')
     || document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = t === "dark" ? "#0b0d12" : "#faf6ec";
+  if (meta) meta.content = t === "dark" ? "#1f2430" : "#faf6ec";
 }
-applyTheme(localStorage.getItem("theme") || "dark");
+// 預設跟系統（用戶撳過 🌙 之後就用返佢自己揀嘅）
+const _savedTheme = (() => { try { return localStorage.getItem("theme"); } catch { return null; } })();
+const _sysLight = () => !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches);
+applyTheme(_savedTheme || (_sysLight() ? "light" : "dark"));
+// 未揀過主題 → 系統轉色時自動跟（唔會搶走手動選擇）
+if (window.matchMedia) {
+  const _mq = window.matchMedia("(prefers-color-scheme: light)");
+  const _onScheme = () => {
+    let saved = null;
+    try { saved = localStorage.getItem("theme"); } catch {}
+    if (!saved) { applyTheme(_mq.matches ? "light" : "dark"); if (!isAdminRoute() && typeof rerenderPublic === "function") rerenderPublic(); }
+  };
+  if (_mq.addEventListener) _mq.addEventListener("change", _onScheme);
+  else if (_mq.addListener) _mq.addListener(_onScheme);
+}
+hydrateIcons();                       // 靜態 icon 位（data-icon）一次過填好
 themeBtn.onclick = () => {
   applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
   if (!isAdminRoute() && typeof rerenderPublic === "function") rerenderPublic();
@@ -1986,21 +2144,7 @@ const SPOTLIGHT = {
   showStars: true,           // 展開後顯示「⭐ N 人收藏」「❤️ N 人讚好」—— 滿 100 先顯示
                              //（同排行榜一樣，主打多數係新推出，晒 3、5 個好難睇）
                              // ⚠️ 點擊數（🔥）一樣刻意唔顯示
-  preview: {
-    enabled: true,                                  // Hero 入面嘅「推送通知」預覽卡
-    // 通知預覽卡嘅文字：★ 默認跟今期推廣項目自己嘅「介紹」（後台填嘅描述），
-    // 下面呢句淨係「項目冇填介紹」時嘅後備，唔會再所有推廣都出同一句。
-    msg: "📢 有新通告：本週活動安排已更新，記得查看！"
-  }
 };
-
-// 通知預覽卡文案：有「介紹」就用介紹，冇先用 SPOTLIGHT.preview.msg 後備。
-// （以前係寫死一句，推廣邊個項目都係同一句「本週活動安排已更新」，睇落好假。）
-function spotlightPreviewMsg(app) {
-  const desc = String((app && app.description) || "").trim();
-  if (desc) return desc;
-  return (SPOTLIGHT.preview && SPOTLIGHT.preview.msg) || "";
-}
 
 const heroEl = document.getElementById("hero-spotlight");
 let _sectionsBlurred = false;
@@ -2019,7 +2163,7 @@ try {
 function syncHeroCollapseBtn() {
   const btn = document.getElementById("hero-collapse");
   if (!btn) return;
-  btn.textContent = _heroCollapsed ? "▾" : "▴";
+  btn.innerHTML = svgIcon(_heroCollapsed ? "chevronRight" : "chevronDown");
   btn.title = _heroCollapsed ? "睇詳情" : "收埋";
   btn.setAttribute("aria-label", _heroCollapsed ? "展開今期主打" : "收埋今期主打");
   btn.setAttribute("aria-expanded", _heroCollapsed ? "false" : "true");
@@ -2086,33 +2230,18 @@ function renderSpotlight() {
     metaEl.textContent = "";
     const bits = [];
     const minShow = typeof CHART_SCORE_MIN === "number" ? CHART_SCORE_MIN : 100;
-    if (SPOTLIGHT.showStars && (a.stars || 0) >= minShow) bits.push("⭐ " + a.stars.toLocaleString() + " 人收藏");
-    if (SPOTLIGHT.showStars && (a.hearts || 0) >= minShow) bits.push("❤️ " + a.hearts.toLocaleString() + " 人讚好");
+    if (SPOTLIGHT.showStars && (a.stars || 0) >= minShow) bits.push("star|" + a.stars.toLocaleString() + "|人收藏");
+    if (SPOTLIGHT.showStars && (a.hearts || 0) >= minShow) bits.push("heart|" + a.hearts.toLocaleString() + "|人讚好");
     const lv = (a.tags || []).filter(Boolean);
-    if (lv.length) bits.push("🎖 " + lv.map((t) => (typeof scoutTagShort === "function" ? scoutTagShort(t) : t)).join(" · "));
+    if (lv.length) bits.push("tag|" + lv.map((t) => (typeof scoutTagShort === "function" ? scoutTagShort(t) : t)).join(" · ") + "|");
     bits.forEach((t) => {
+      // 逐粒 meta 都係「線稿圖標 ＋ 文字」：icons 由 store.js 出，文字仍然用 textContent
+      const [ico, num, label] = t.split("|");
       const s = document.createElement("span");
-      s.textContent = t;                  // textContent：內容有 < > 都唔會爆版
+      s.innerHTML = svgIcon(ico) + " " + (label ? num + " " + label : num);
       metaEl.appendChild(s);
     });
     metaEl.hidden = !bits.length;          // 全部冇數據 → 成行隱藏
-  }
-
-  // 推送通知預覽：標題／圖示／內文全部跟住今期推廣項目
-  // （內文 = 該項目嘅「介紹」，冇填先出後備句 —— 見 spotlightPreviewMsg()）
-  const pvEl = document.getElementById("hero-preview");
-  if (pvEl) {
-    if (SPOTLIGHT.preview && SPOTLIGHT.preview.enabled) {
-      pvEl.hidden = false;
-      const pvt = document.getElementById("pv-title");
-      if (pvt) pvt.textContent = a.name;
-      const pvm = document.getElementById("pv-msg");
-      if (pvm) pvm.textContent = spotlightPreviewMsg(a);
-      const pvi = document.getElementById("pv-ico");
-      if (pvi) pvi.innerHTML = appIconHTML(a, "tile");
-    } else {
-      pvEl.hidden = true;
-    }
   }
 
   // 下面 Grid 真有內容先 Blur（防止「Blur 咗但完全冇內容」）；
@@ -2169,7 +2298,7 @@ async function shareApp(app) {
   if (navigator.share) {
     try { await navigator.share(data); return; } catch (e) { if (e && e.name === "AbortError") return; }
   }
-  try { await navigator.clipboard.writeText(app.url); showToast("🔗 連結已複製"); }
+  try { await navigator.clipboard.writeText(app.url); showToast("連結已複製"); }
   catch (e) { showToast(app.url); }
 }
 const heroShareBtn = document.getElementById("hero-share");

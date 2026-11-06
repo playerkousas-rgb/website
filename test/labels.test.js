@@ -120,8 +120,20 @@ assert.ok(tagRow.includes("可多選"), "未揀時要有「可多選」提示");
 assert.ok(!tagRow.includes("tag-clear"), "未揀支部時唔應該有清除掣");
 assert.ok(!appSrc.includes("branch-tab"), "舊 .branch-tab 灰字 tabs 已經唔再用");
 assert.ok(els["sort-row"].hidden === true && els["sort-row"].innerHTML === "", "探索分類唔再有排序列（排名晒喺排行榜）");
-assert.ok(els.sections.innerHTML.includes("like-heart"), "每個項目下方都有心心（讚好）");
-assert.ok(els.sections.innerHTML.includes("fav-star"), "項目保留收藏星星");
+// ROUND 2：主畫面改「貨架 + 大卡」，卡片只負責開詳情；
+// 收藏／讚好／分享搬入詳情 sheet（主畫面保持安靜 = App Store 感）。
+assert.ok(els.sections.innerHTML.includes('class="card"'), "貨架用 .card 大卡");
+assert.ok(els.sections.innerHTML.includes('class="shelf"'), "每個分類一條 .shelf 貨架");
+assert.ok(!els.sections.innerHTML.includes("tile-bar"), "卡片唔再下面擠 3 粒小掣（已搬入 sheet）");
+assert.ok(html.includes('id="app-sheet"'), "有詳情 sheet markup");
+assert.ok(html.includes('id="sheet-fav"') && html.includes('id="sheet-heart"') && html.includes('id="sheet-share"'),
+  "詳情 sheet 有收藏／讚好／分享三個動作");
+assert.ok(/function openAppSheet\(idx\)/.test(appSrc) && /function closeAppSheet\(\)/.test(appSrc),
+  "sheet 有開／關函數");
+assert.ok(/openAppSheet\(idx\)/.test(appSrc), "撳卡會開詳情 sheet（唔再即刻跳走）");
+assert.ok(/function catIconHTML/.test(appSrc) && /svgIcon\(icon\)/.test(appSrc), "分類圖標用 store.js 統一線稿 SVG");
+assert.ok(/const ICON_PATHS = \{/.test(storeSrc) && /function svgIcon/.test(storeSrc), "線稿圖標集喺 store.js（公開／後台共用）");
+assert.ok(/const EMOJI_TO_ICON = \{/.test(storeSrc) && /ICON_FALLBACK/.test(storeSrc), "舊 emoji 有對應表，對應唔到有 fallback");
 
 // 多選 = OR
 run("setTag('小童軍'); setTag('幼童軍');");
@@ -130,10 +142,10 @@ assert.strictEqual(run("tagFilter.length"), 2, "tagFilter 要係陣式（多選�
 assert.strictEqual(JSON.parse(mem.get("scout-tag-filter")).tags.length, 2, "篩選記住喺 localStorage");
 // 揀咗要有明顯樣式：accent 底（.on）＋ ✓，同埋行尾「已揀 N 個 · ✕ 清除」
 assert.ok(/class="tag-chip lv-chip on"/.test(els["tag-row"].innerHTML), "揀咗就有 on（accent 漸層）");
-assert.ok((els["tag-row"].innerHTML.match(/✓/g) || []).length === 2, "揀咗嘅支部各有一個 ✓");
+assert.ok((els["tag-row"].innerHTML.match(/class="chip-ico"/g) || []).length === 2, "揀咗嘅支部各有一個 ✓ 線稿圖標");
 assert.ok(els["tag-row"].innerHTML.includes("已揀 2 個"), "要顯示「已揀 N 個」");
 assert.ok(/class="tag-chip tag-clear"/.test(els["tag-row"].innerHTML) && appSrc.includes('onclick="clearTags()"'),
-  "要有「✕ 清除」掣，而且駁住 clearTags()");
+  "要有「清除」掣（線稿 × 圖標），而且駁住 clearTags()");
 
 // 第三個 -> 再 OR 埋；撳多次同一個 -> 取消
 run("setTag('童軍');");
@@ -168,12 +180,26 @@ assert.ok(html.includes('id="bottom-nav"') && html.includes('data-bnav="fav"'), 
 assert.ok(html.includes("我的收藏"), "入口叫「我的收藏」，唔係「我的最愛」");
 assert.ok(html.includes("提交作品") && !html.includes("提交我的作品"), "投稿掣改名做「提交作品」");
 assert.ok(!els.sections.innerHTML.includes('<div class="tile-tags">'), "每個 APP 下方唔再標支部");
-assert.ok(els.sections.innerHTML.includes('title="收藏"') && els.sections.innerHTML.includes('title="讚好"') && els.sections.innerHTML.includes('title="分享"'), "每個 APP 下方改為 3 個按鈕 星 (收藏) 心 (讚好) 分享");
-// 圖示要全站一致：⭐ = 收藏、❤️ = 讚好（底欄「收藏」都係星星，唔可以一邊心一邊星）
-assert.ok(/btn-star fav-star[^>]*title="收藏"/.test(els.sections.innerHTML), "收藏掣用星星 ⭐");
-assert.ok(/btn-heart like-heart[^>]*title="讚好"/.test(els.sections.innerHTML), "讚好掣用心心 ❤️");
-assert.ok(/data-bnav="fav"[\s\S]{0,120}?bnav-icon">⭐/.test(html), "底欄「收藏」用星星 ⭐，唔係心心");
-assert.ok(!/bnav-icon">❤️/.test(html), "心心淨係留俾讚好，唔好再當收藏用");
+// ROUND 2：3 個動作由卡片搬入詳情 sheet（卡片只負責開詳情）
+assert.ok(html.includes("詳情 sheet") || html.includes('id="app-sheet"'), "詳情 sheet 存在");
+assert.ok(/id="sheet-fav"[^>]*><span data-icon="star"><\/span> 收藏/.test(html), "sheet 收藏掣用星星線稿圖標");
+assert.ok(/id="sheet-heart"[^>]*><span data-icon="heart"><\/span> 讚好/.test(html), "sheet 讚好掣用心心線稿圖標");
+assert.ok(/id="sheet-share"[^>]*><span data-icon="share"><\/span> 分享/.test(html), "sheet 有分享掣");
+assert.ok(/svgIcon\("star", favOn \? "is-fill" : ""\)/.test(appSrc) && /svgIcon\("heart", heartOn \? "is-fill" : ""\)/.test(appSrc),
+  "收藏／讚好圖標跟狀態轉填色");
+assert.ok(/data-bnav="fav"[\s\S]{0,160}?bnav-icon" data-icon="star"/.test(html), "底欄「收藏」用星星線稿圖標");
+assert.ok(!/bnav-icon"[^>]*>❤/.test(html), "心心淨係留俾讚好，唔好再當收藏用");
+// 公開版（HTML ＋ app.js ＋ market.js）唔可以再有 emoji 圖示：介面一律用 store.js 線稿圖標
+const stripCode = (x) => x
+  .replace(/<!--[\s\S]*?-->/g, "")
+  .replace(/\/\*[\s\S]*?\*\//g, "")
+  .replace(/^\s*\/\/.*$/gm, "")
+  .replace(/(?<!:)\/\/.*$/gm, "");
+const EMOJI_RX = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/u;
+assert.ok(!EMOJI_RX.test(stripCode(html)), "公開版 HTML 唔可以再有 emoji 圖示（emoji 太土炮）");
+assert.ok(!EMOJI_RX.test(stripCode(appSrc)), "app.js 唔可以再有 emoji 圖示");
+assert.ok(!EMOJI_RX.test(stripCode(read("market.js"))), "market.js 唔可以再有 emoji 圖示");
+assert.ok(!EMOJI_RX.test(els.sections.innerHTML), "render() 輸出嘅貨架／排行榜唔可以有 emoji");
 
 // 心心（讚好）：撳 = +1 並記住，再撳 = 取消
 run("SITES.pages[0].categories[1].apps[0].hearts = 1;");
@@ -201,7 +227,7 @@ assert.ok(tagChipRule.includes("var(--bg-card)") && !tagChipRule.includes("--acc
 // 今期主打：默認收起 + 唔顯示點擊數 + 收藏／讚好滿 100 先顯示
 assert.ok(/collapsedByDefault:\s*true/.test(html), "SPOTLIGHT 默認收起");
 assert.ok(/showStars:\s*true/.test(html), "SPOTLIGHT 保留收藏數");
-assert.ok(!/bits\.push\("🔥/.test(html), "hero 唔再顯示點擊數（新项目多數 0 次）");
+assert.ok(!/bits\.push\("flame/.test(html), "hero 唔再顯示點擊數（新项目多數 0 次）");
 assert.ok(!html.includes("SPOTLIGHT.showStats"), "showStats 已換成 showStars");
 assert.ok(/\(a\.stars \|\| 0\) >= minShow/.test(html) && /\(a\.hearts \|\| 0\) >= minShow/.test(html), "今期主打 ⭐／❤️ 滿 100 先顯示（同排行榜一樣）");
 
@@ -220,15 +246,19 @@ assert.ok(!/flex-wrap:\s*nowrap\s*;/.test(styleCode), "唔准再用 nowrap 令�
 assert.ok(/\.bottom-credit-line \.credit-copy \{[^}]*text-overflow: ellipsis/.test(style), "版權文字識刪節（唔會推走 QR／edit 掣）");
 assert.ok(!/\.bottom-credit-line \{[^}]*overflow: hidden/.test(style), "底欄細字行唔可以 overflow:hidden 切走啲掣");
 assert.ok(mobile.includes(".bottom-credit-line .ig-sub"), "手機先收走裝飾文字（童軍工具·教學），留住啲掣");
-assert.ok(/\.tile-bar \{[^}]*gap: 4px/.test(style) && /\.tile-btn \{[^}]*padding: 4px 4px/.test(style),
-  "tile 3 粒掣（收藏／支持／分享）要收窄到放得落一格");
-assert.ok(/\.tile-btn svg \{ width: 15px/.test(mobile), "手機 tile 掣圖示再細一格");
+// 貨架：手機橫向滑動（grid-auto-flow: column），桌面變 2／3 欄格
+assert.ok(/\.shelf \{[^}]*grid-auto-flow: column/.test(style), "手機貨架橫向滑動");
+assert.ok(/\.shelf \{[^}]*scroll-snap-type/.test(style), "貨架有 scroll snap（滑動會對齊卡邊）");
+assert.ok(/@media \(min-width: 700px\)[\s\S]{0,200}\.shelf \{[^}]*grid-template-columns: repeat\(2/.test(style),
+  "平板／桌面貨架變 2 欄");
+assert.ok(/\.card \{[^}]*border-radius: var\(--radius\)/.test(style), "卡片用同一個圓角 token");
 assert.ok(/\.admin-cat-head \{[^}]*flex-wrap: wrap/.test(styleCode), "後台分類列識轉行（🎨 emoji／刪分類唔會走出螢幕）");
 
-// ── 3c) 今期主打嘅通知預覽：內文跟項目嘅「介紹」──────────────────
-assert.ok(/function spotlightPreviewMsg[\s\S]{0,240}app\.description/.test(html), "通知預覽內文讀項目嘅介紹");
-assert.ok(/if \(pvm\) pvm\.textContent = spotlightPreviewMsg\(a\)/.test(html), "推送預覽用 spotlightPreviewMsg(a)");
-assert.ok(!/pvm\.textContent = SPOTLIGHT\.preview\.msg/.test(html), "唔可以再寫死一句「本週活動安排已更新」");
+// ── 3c) 今期主打：唔再扮「手機推送通知」（假螢幕）；只顯示真資料 ──────
+assert.ok(!html.includes("pv-note"), "唔可以有假通知卡（house rule：唔准假螢幕／假通知）");
+assert.ok(!html.includes("spotlightPreviewMsg"), "假通知文案嘅死碼要清走");
+assert.ok(/setText\("hero-title", a\.name\)/.test(html) && /setText\("hero-sub", a\.description/.test(html),
+  "今期主打標題／副題仍然讀真實項目資料");
 
 console.log("✅ labels.test.js 全部通過");
 
@@ -242,7 +272,7 @@ assert.deepStrictEqual(chartNames(), ['行軍地圖計算','幼童軍專章追�
 run("setSort('hearts');");
 assert.deepStrictEqual(chartNames(), ['幼童軍專章追蹤','小童軍集會助手','行軍地圖計算'], "❤️ 最受歡迎按心數排名");
 assert.ok(els["sort-row"].innerHTML.includes("最多人點擊") && els["sort-row"].innerHTML.includes("最多人收藏") && els["sort-row"].innerHTML.includes("最受歡迎"), "排行榜指標列 = 🔥⭐❤️ 三選一");
-assert.ok(els.sections.innerHTML.includes("❤️ 最受歡迎"), "排行榜標題跟指標改");
+assert.ok(/<h2><svg class="ic[^"]*"[^>]*>/.test(els.sections.innerHTML) && els.sections.innerHTML.includes("最受歡迎"), "排行榜標題跟指標改（線稿圖標＋文字）");
 run("setSort('clicks');");
 run("activeChip='cat-0'; render();");
 assert.equal(chartNames().length,2);

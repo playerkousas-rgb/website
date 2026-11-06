@@ -193,8 +193,30 @@ try {
     if (!hasAny(sz)) iconProblems.push(`manifest 缺 any ${sz}`);
     if (!hasMask(sz)) iconProblems.push(`manifest 缺 maskable ${sz}`);
   }
-  if (mf.theme_color !== "#0b0d12" || mf.background_color !== "#0b0d12") {
-    warn("manifest theme_color／background_color 同圖標主色（#0b0d12）唔一致");
+  // 深色主題底色：三個地方（CSS --bg、<meta theme-color>、manifest）必須一致，
+  // 否則 Android 狀態欄／PWA 啟動畫面會同頁面唔同色，一開就見到「換色跳一下」。
+  const darkBlock = (() => {
+    const i = html.indexOf('[data-theme="dark"] {');
+    return i < 0 ? "" : html.slice(i, html.indexOf("}", i));
+  })();
+  const darkBg = (darkBlock.match(/--bg:\s*(#[0-9a-fA-F]{6})/) || [])[1];
+  if (!darkBg) bad("index.html 深色主題搵唔到 --bg（#rrggbb）");
+  else {
+    const metaBg = (html.match(/<meta name="theme-color" content="([^"]+)"/) || [])[1];
+    const metaApple = (html.match(/<meta name="apple-mobile-web-app-background-color" content="([^"]+)"/) || [])[1];
+    for (const [label, got] of [
+      ["manifest theme_color", mf.theme_color],
+      ["manifest background_color", mf.background_color],
+      ["<meta theme-color>", metaBg],
+      ["<meta apple-mobile-web-app-background-color>", metaApple],
+    ]) {
+      if (got !== darkBg) bad(`${label}（${got}）同深色主題 --bg（${darkBg}）唔一致`);
+    }
+    if (!new RegExp('--bg:\\s*' + darkBg + ';', "i").test(darkBlock)) bad("深色 --bg token 格式唔對");
+    if (!new RegExp('t === "dark" \\? "#[0-9a-fA-F]{6}"').test(html)) warn("index.html 主題切換冇更新 theme-color meta");
+    if (mf.theme_color === darkBg && metaBg === darkBg && metaApple === darkBg) {
+      ok(`深色底色三處一致（--bg／meta／manifest 都係 ${darkBg}）`);
+    }
   }
 } catch (e) { iconProblems.push("manifest.webmanifest 解析唔到：" + e.message); }
 
@@ -226,15 +248,52 @@ const gradientHits = (uiCss.match(/(linear|radial|conic)-gradient\(/g) || []).le
 if (gradientHits) designProblems.push(`UI CSS 仲有 ${gradientHits} 個 gradient（house rules：一律用實色 + 留白分組）`);
 const eyebrowHits = (uiCss.match(/eyebrow|text-transform:\s*uppercase/g) || []).length;
 if (eyebrowHits) designProblems.push(`仲有 ${eyebrowHits} 個 eyebrow／uppercase 小標籤（house rules：直接用中文標題）`);
+/* 色板：金（品牌）＋ 6 隻分類色 ＋ 金銀銅 ＋ 語意色。
+   規則精神唔再係「只准一隻色」（2026-11-06 用戶決定：對象係青少年，要活潑），
+   而係「**只准呢一套**」—— 唔可以隨手加第七隻色，咁樣先唔會變雜牌。 */
+const PALETTE_OK = new Set([
+  // 品牌金（淺／深）
+  "#b3821a", "#e8c87a", "#f0d59b", "#8a5a05", "#b8860b", "#f0cf8a", "#1a1200", "#12100c",
+  // 分類色板 6 色（淺）
+  "#10897a", "#2f6fd0", "#d4553c", "#7a55c9", "#3d8b3f", "#b8860b",
+  // 分類色板 6 色（深）
+  "#4fd6c2", "#7fb3f7", "#ff9d7c", "#bda2f5", "#94dc8f",
+  // 排行榜金銀銅
+  "#7c8ba1", "#b06a3b", "#a9b7c9", "#d99a6c",
+  // 語意色（danger／ok／warn）淺＋深
+  "#dc2626", "#f87171", "#059669", "#34d399", "#b45309", "#fbbf24"
+]);
+function hexHsl(hex) {
+  let h = hex.replace("#", "");
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  if (h.length < 6) return { s: 0, l: 0 };
+  const r = parseInt(h.slice(0, 2), 16) / 255, g = parseInt(h.slice(2, 4), 16) / 255, b = parseInt(h.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2;
+  const d = max - min;
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  return { s, l };
+}
+// 只捉「有明顯彩度、又唔係深底／淺白」嘅色：灰階同深色背景唔算
+const allHexes = [...new Set((uiCss.toLowerCase().match(/#[0-9a-f]{3,8}\b/g) || []))];
+const strayColors = allHexes.filter((hex) => {
+  const { s: sat, l: lum } = hexHsl(hex);
+  return sat > 0.28 && lum > 0.12 && lum < 0.9 && !PALETTE_OK.has(hex);
+});
+if (strayColors.length) {
+  designProblems.push(`UI 出現色板以外嘅彩色：${strayColors.join("、")}（只准金＋6 隻分類色＋金銀銅＋語意色，見 DESIGN.md §2）`);
+}
+if (!/--c1:\s*#[0-9a-f]{6}/i.test(uiCss) || !/--c6:\s*#[0-9a-f]{6}/i.test(uiCss)) {
+  designProblems.push("6 隻分類色（--c1…--c6）token 唔齊");
+}
 const offBrand = ["#2563eb", "#3b82f6", "#0d9488", "#14b8a6", "#d97706", "#f59e0b", "#60a5fa"]
   .filter((hex) => uiCss.toLowerCase().includes(hex));
-if (offBrand.length) designProblems.push(`UI 出現第二隻品牌色：${offBrand.join("、")}（只准金色系）`);
+if (offBrand.length) designProblems.push(`UI 出現舊版彩色：${offBrand.join("、")}（已換成 6 隻分類色）`);
 const glowHits = (uiCss.match(/(?<!backdrop-)filter:\s*(blur|drop-shadow)\(/g) || []).length;
 if (glowHits) designProblems.push(`UI 仲有 ${glowHits} 個裝飾性 blur／drop-shadow（house rules：一個 elevation 夠）`);
 // DESIGN.md 一定要存在（docs/23 §3 硬性第 3 步：有 design language）
 if (!exists("DESIGN.md")) designProblems.push("缺 DESIGN.md（設計語言唯一真理）");
 if (designProblems.length) designProblems.forEach((p) => bad("設計規則：" + p));
-else ok("設計 house rules：0 gradient／0 eyebrow／單一金色品牌／無裝飾光暈，DESIGN.md 在");
+else ok("設計 house rules：0 gradient／0 eyebrow／金＋6 色分類色板（無色板外彩色）／無裝飾光暈，DESIGN.md 在");
 
 /* ── 結算 ───────────────────────────────────────────────────── */
 console.log("");

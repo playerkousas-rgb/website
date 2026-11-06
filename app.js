@@ -48,14 +48,154 @@ function toggleHeart(id) {
   if (typeof trackHeart === "function") trackHeart(id, had ? -1 : 1);
 }
 function openApp(app) {
-  trackClick(app._id);
+  if (typeof trackClick === "function") trackClick(app._id);
   window.location.href = app.url;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   App 詳情 sheet（App Store 式 bottom sheet）
+   撳卡唔再即刻跳走：先睇詳情 → 再撳「開啟」。
+   收藏／讚好／分享全部收埋喺呢度，主畫面（貨架）可以保持安靜。
+   ════════════════════════════════════════════════════════════════ */
+let _sheetApp = null;
+let _sheetEscBound = false;
+let _sheetTrigger = null;   // 閂 sheet 之後，focus 要返去撳佢嗰張卡（鍵盤／讀屏用）
+
+function syncSheetButtons() {
+  const app = _sheetApp;
+  if (!app) return;
+  const favBtn = document.getElementById("sheet-fav");
+  const heartBtn = document.getElementById("sheet-heart");
+  const favOn = isFavorite(app._id), heartOn = isHearted(app._id);
+  if (favBtn) {
+    favBtn.classList.toggle("on", favOn);
+    favBtn.setAttribute("aria-pressed", favOn ? "true" : "false");
+    favBtn.innerHTML = `${svgIcon("star", favOn ? "is-fill" : "")} 收藏`;
+  }
+  if (heartBtn) {
+    heartBtn.classList.toggle("on", heartOn);
+    heartBtn.setAttribute("aria-pressed", heartOn ? "true" : "false");
+    heartBtn.innerHTML = `${svgIcon("heart", heartOn ? "is-fill" : "")} 讚好`;
+  }
+}
+
+function openAppSheet(idx) {
+  const app = REG[idx];
+  if (!app) return;
+  const sheet = document.getElementById("app-sheet");
+  if (!sheet) { openApp(app); return; } // markup 未載入 → 退化做直接開，唔會撳咗冇反應
+  _sheetApp = app;
+  _sheetTrigger = document.activeElement;
+
+  const iconEl = document.getElementById("sheet-icon");
+  if (iconEl) iconEl.innerHTML = appIconHTML(app, "sheet");
+  const nameEl = document.getElementById("sheet-name");
+  if (nameEl) nameEl.textContent = app.name || "";
+  const subEl = document.getElementById("sheet-sub");
+  if (subEl) subEl.textContent = app.cat || "";
+  const descEl = document.getElementById("sheet-desc");
+  if (descEl) {
+    descEl.textContent = app.description || app.note || "未有簡介。";
+    descEl.hidden = false;
+  }
+  const tagsEl = document.getElementById("sheet-tags");
+  if (tagsEl) {
+    const tags = app.tags || [];
+    tagsEl.innerHTML = tags.map((t) => `<span class="sheet-tag">${esc(t)}</span>`).join("");
+    tagsEl.hidden = !tags.length;
+  }
+  const statsEl = document.getElementById("sheet-stats");
+  if (statsEl) {
+    const bits = [];
+    if (app.clicks >= 100) bits.push(`${svgIcon("flame")} ${Number(app.clicks).toLocaleString()} 次開啟`);
+    if (app.stars >= 100) bits.push(`${svgIcon("star")} ${Number(app.stars).toLocaleString()} 收藏`);
+    if (app.hearts >= 100) bits.push(`${svgIcon("heart")} ${Number(app.hearts).toLocaleString()} 讚好`);
+    statsEl.innerHTML = bits.map((b) => `<span class="sheet-stat">${b}</span>`).join("");
+    statsEl.hidden = !bits.length;
+  }
+
+  const openBtn = document.getElementById("sheet-open");
+  if (openBtn) openBtn.onclick = () => {
+    if (typeof trackClick === "function") trackClick(app._id);
+    window.location.href = app.url;
+  };
+  const favBtn = document.getElementById("sheet-fav");
+  if (favBtn) {
+    favBtn.dataset.id = app._id || "";
+    favBtn.onclick = () => { toggleFav(favBtn); syncSheetButtons(); };
+  }
+  const heartBtn = document.getElementById("sheet-heart");
+  if (heartBtn) {
+    heartBtn.dataset.id = app._id || "";
+    heartBtn.onclick = () => { toggleHeartBtn(heartBtn); syncSheetButtons(); };
+  }
+  const shareBtn = document.getElementById("sheet-share");
+  if (shareBtn) shareBtn.onclick = () => openShareModal(app._id);
+  syncSheetButtons();
+
+  sheet.hidden = false;
+  document.body.classList.add("sheet-open");
+  const panel = sheet.querySelector(".sheet-panel");
+  if (panel) panel.focus?.();
+
+  if (!_sheetEscBound) {
+    _sheetEscBound = true;
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !document.getElementById("app-sheet")?.hidden) closeAppSheet();
+    });
+  }
+}
+
+function closeAppSheet() {
+  const sheet = document.getElementById("app-sheet");
+  if (!sheet || sheet.hidden) return;
+  sheet.hidden = true;
+  document.body.classList.remove("sheet-open");
+  _sheetApp = null;
+  if (_sheetTrigger && typeof _sheetTrigger.focus === "function") {
+    try { _sheetTrigger.focus({ preventScroll: true }); } catch { _sheetTrigger.focus(); }
+  }
+  _sheetTrigger = null;
 }
 
 function iconHTML(app) {
   // 唔再為每粒 app 隨機上漸層底色（readme design-review：無漸層、accent 只落一處）。
   // icon 自己就係主角：真圖標 + 留白，比「十種顏色嘅圓角方塊」安靜得多。
   return `<div class="tile-icon">${appIconHTML(app, "tile")}</div>`;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ROUND 2 · App Store 版面
+   ── 貨架（shelf）＋ 大卡 ＋ 詳情 sheet ＋ 統一線稿分類圖標
+   規則見 DESIGN.md：冇漸層、冇光暈、一隻金 accent、icon 做主角。
+   ════════════════════════════════════════════════════════════════ */
+
+/* 分類小圖標：圖標本體喺 store.js（ICON_PATHS／svgIcon），公開版同後台
+   共用同一套 24px 線稿，所以每條貨架／每個 chip 開頭都一致。
+   後台新揀嘅值係 "i:compass"；舊資料嘅 emoji 會經 EMOJI_TO_ICON 對應；
+   對應唔到就用通用方格 —— 公開版永遠唔會漏返 emoji 出街。 */
+function catIconHTML(icon, name) {
+  return `<span class="cat-ico" aria-hidden="true" title="${esc(name || "")}">${svgIcon(icon)}</span>`;
+}
+
+/* 貨架卡：icon 左、名＋描述右（App Store「編輯精選」橫向卡）。
+   一粒卡只做一件事：撳落去開詳情 sheet；收藏／讚好／分享搬入 sheet。 */
+function cardHTML(idx, delay) {
+  const app = REG[idx];
+  const d = Math.min(delay || 0, 12) * 30;
+  const desc = String(app.description || app.note || "").trim();
+  // 冇描述就唔好留個空 span（會偷偷撐高卡，每張卡高矮唔一）
+  const descHTML = desc ? `<span class="card-desc">${esc(desc)}</span>` : "";
+  return `
+  <a class="card" href="${esc(app.url)}" data-idx="${idx}" data-id="${esc(app._id || "")}"
+     style="animation-delay:${d}ms" aria-label="${esc(app.name)}：開啟詳情">
+    <span class="card-icon">${appIconHTML(app, "card")}</span>
+    <span class="card-copy">
+      <span class="tile-name">${esc(app.name)}</span>
+      ${descHTML}
+    </span>
+    <span class="card-go" aria-hidden="true">›</span>
+  </a>`;
 }
 
 // ── 公開版面狀態 ─────────────────────────────────────────────
@@ -75,10 +215,10 @@ let ACTIVE_PAGE = null;
 let activeChip = "all";
 let marketView = "discover";
 const CHART_METRICS = {
-  clicks:  { title: "🔥 最多人點擊", unit: "次開啟", value: (a) => Number(a.clicks || 0) },
-  stars:   { title: "⭐ 最多人收藏", unit: "收藏",   value: (a) => Number(a.stars || 0) },
-  hearts:  { title: "❤️ 最受歡迎",   unit: "個心",   value: (a) => Number(a.hearts || 0) },
-  latest:  { title: "🆕 最新上架",   unit: "上架",   value: (a) => {
+  clicks:  { title: "最多人點擊", ico: "flame",   unit: "次開啟", value: (a) => Number(a.clicks || 0) },
+  stars:   { title: "最多人收藏", ico: "star",    unit: "收藏",   value: (a) => Number(a.stars || 0) },
+  hearts:  { title: "最受歡迎",   ico: "heart",   unit: "個心",   value: (a) => Number(a.hearts || 0) },
+  latest:  { title: "最新上架",   ico: "sparkle", unit: "上架",   value: (a) => {
     const time = Date.parse(a.created_at || "");
     return Number.isNaN(time) ? 0 : time;
   } }
@@ -99,7 +239,7 @@ function chartHTML(apps) {
   const m = CHART_METRICS[metric];
   const ranked = [...apps].sort((a, b) => m.value(b) - m.value(a) || a.name.localeCompare(b.name, 'zh-HK')).slice(0, 50);
   if (!ranked.length) return '';
-  return `<section class="chart-section"><div class="sec-head"><h2>${m.title}</h2><span class="num">TOP ${ranked.length}</span></div><div class="chart-list">${ranked.map((a,i) => {
+  return `<section class="chart-section"><div class="sec-head"><h2>${svgIcon(m.ico)} ${esc(m.title)}</h2><span class="num">TOP ${ranked.length}</span></div><div class="chart-list">${ranked.map((a,i) => {
     const idx = REG.push(a)-1;
     const value = m.value(a);
     const scoreHTML = metric === 'latest'
@@ -107,7 +247,7 @@ function chartHTML(apps) {
       : value >= CHART_SCORE_MIN
         ? `<div class="chart-score"><b>${value.toLocaleString()}</b><small>${m.unit}</small></div>`
         : '';
-    return `<a class="chart-item tile" href="${esc(a.url)}" data-idx="${idx}" data-id="${esc(a._id)}"><span class="chart-rank">${i+1}</span>${iconHTML(a)}<div class="chart-copy"><h3>${esc(a.name)}</h3><p>${esc(a.description || '')}</p></div>${scoreHTML}<span class="chart-open">開啟 ↗</span></a>`;
+    return `<a class="chart-item tile" href="${esc(a.url)}" data-idx="${idx}" data-id="${esc(a._id)}"><span class="chart-rank">${i+1}</span>${iconHTML(a)}<div class="chart-copy"><h3>${esc(a.name)}</h3><p>${esc(a.description || '')}</p></div>${scoreHTML}<span class="chart-open">開啟</span></a>`;
   }).join('')}</div></section>`;
 }
 // 適用支部篩選：可以**同時揀幾個**（OR —— 揀「小＋幼」= 兩個支部嘅嘢都俾我睇）
@@ -134,10 +274,10 @@ function persistTagFilter() {
 // 手機版淨係顯示 emoji（文字包咗喺 .wide-only，細屏被 CSS 收埋）
 const SORT_KEY = "showcase-sort";
 const SORTS = [
-  { id: "clicks", ico: "🔥", label: "最多人點擊", hint: "按開啟次數排名" },
-  { id: "stars",  ico: "⭐", label: "最多人收藏", hint: "按全站收藏人數排名" },
-  { id: "hearts", ico: "❤️", label: "最受歡迎",   hint: "按全站讚好心數排名" },
-  { id: "latest", ico: "🆕", label: "最新上架",   hint: "按上架時間排序" }
+  { id: "clicks", ico: "flame",   label: "最多人點擊", hint: "按開啟次數排名" },
+  { id: "stars",  ico: "star",    label: "最多人收藏", hint: "按全站收藏人數排名" },
+  { id: "hearts", ico: "heart",   label: "最受歡迎",   hint: "按全站讚好心數排名" },
+  { id: "latest", ico: "sparkle", label: "最新上架",   hint: "按上架時間排序" }
 ];
 let sortMode = SORTS.some((s) => s.id === localStorage.getItem(SORT_KEY))
   ? localStorage.getItem(SORT_KEY) : "clicks";
@@ -215,33 +355,6 @@ function switchPage(id) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// ── Tile ─────────────────────────────────────────────────────
-function tileHTML(idx, delay) {
-  const app = REG[idx];
-  const d = Math.min(delay || 0, 12) * 30;
-  const starred = isFavorite(app._id);
-  const hearted = isHearted(app._id);
-  return `
-  <a class="tile" href="${esc(app.url)}" title="${esc(app.description || app.name)}"
-     data-idx="${idx}" data-id="${esc(app._id || "")}" style="animation-delay:${d}ms">
-    ${app.github ? `<span class="gh-badge" title="GitHub repo" onclick="event.preventDefault(); event.stopPropagation(); window.open('${esc(app.github)}','_blank')">GH</span>` : ""}
-    ${iconHTML(app)}
-    <div class="tile-name">${esc(app.name)}</div>
-    ${app.description ? `<div class="tile-desc">${esc(app.description)}</div>` : ""}
-    <div class="tile-bar">
-      <button type="button" class="tile-btn btn-star fav-star ${starred ? "on" : ""}" title="收藏" aria-label="收藏" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); toggleFav(this)">
-        <svg class="star-ico" width="16" height="16" viewBox="0 0 24 24" fill="${starred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      </button>
-      <button type="button" class="tile-btn btn-heart like-heart ${hearted ? "on" : ""}" title="讚好" aria-label="讚好" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); toggleHeartBtn(this)">
-        <svg class="heart-ico" width="16" height="16" viewBox="0 0 24 24" fill="${hearted ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-      </button>
-      <button type="button" class="tile-btn btn-share" title="分享" aria-label="分享" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); openShareModal('${esc(app._id || "")}')">
-        <svg class="share-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-      </button>
-    </div>
-  </a>`;
-}
-
 function toggleFav(el) {
   const id = el.dataset.id;
   if (!id) return;
@@ -272,15 +385,25 @@ function sectionHTML(title, icon, apps, id) {
   if (!apps.length) return "";
   const start = REG.length;
   apps.forEach((a) => REG.push(a));
-  const tiles = apps.map((_, i) => tileHTML(start + i, i)).join("");
+  const cards = apps.map((_, i) => cardHTML(start + i, i)).join("");
+  // 分類貨架先有「全部」；「我的收藏」唔需要。
+  // 得 1–2 個就唔出（貨架本身都睇得晒，多粒掣反而嘈）。
+  const more = /^cat-\d+$/.test(String(id)) && apps.length > 2
+    ? `<button type="button" class="sec-more" onclick="jumpTo('${esc(id)}')" ` +
+      `aria-label="睇晒「${esc(title)}」全部 ${apps.length} 個">全部 <span aria-hidden="true">›</span></button>`
+    : "";
+  // 分類色：cat-0 → c1, cat-1 → c2 …（6 隻循環）；「我的收藏」用品牌金
+  const m = /^cat-(\d+)$/.exec(String(id));
+  const catAttr = m ? ` data-catn="${Number(m[1]) % 6}"` : "";
   return `
-  <section id="${id}">
+  <section id="${id}" class="shelf-sec"${catAttr}>
     <div class="sec-head">
-      ${icon ? `<span class="sec-ico">${icon}</span>` : `<img class="sec-ico-logo" src="${SITE_LOGO}" alt="" />`}
+      ${catIconHTML(icon, title)}
       <h2>${esc(title)}</h2>
       <span class="num">${apps.length}</span>
+      ${more}
     </div>
-    <div class="grid">${tiles}</div>
+    <div class="shelf">${cards}</div>
   </section>`;
 }
 
@@ -344,19 +467,19 @@ function renderTagRow() {
   tagRowEl.className = "tag-row";
   const picked = tagFilter.length;
   tagRowEl.innerHTML =
-    `<span class="tag-row-hint">🔍<span class="wide-only"> 適用支部</span><span class="narrow-only">支部</span>：</span>` +
+    `<span class="tag-row-hint">${svgIcon("filter")}<span class="wide-only"> 適用支部</span><span class="narrow-only">支部</span>：</span>` +
     SCOUT_TAGS.map((t) => {
       const on = tagActive(t);
       return `<button type="button" class="tag-chip lv-chip${on ? " on" : ""}" ` +
         `onclick="setTag('${esc(t)}')" title="${esc(t)}" ` +
         `aria-label="${esc(t)}" aria-pressed="${on ? "true" : "false"}">` +
-        `${on ? '<span class="chip-ico" aria-hidden="true">✓</span>' : ""}` +
+        `${on ? `<span class="chip-ico" aria-hidden="true">${svgIcon("check")}</span>` : ""}` +
         `${chipTxt(t, scoutTagShort(t))}</button>`;
     }).join("") +
     (picked
       ? `<span class="tag-row-note">已揀 ${picked} 個</span>` +
         `<button type="button" class="tag-chip tag-clear" onclick="clearTags()" ` +
-        `title="清除支部篩選" aria-label="清除支部篩選">✕ 清除</button>`
+        `title="清除支部篩選" aria-label="清除支部篩選">${svgIcon("close")} 清除</button>`
       : `<span class="tag-row-note muted-hint">可多選</span>`);
 }
 
@@ -375,13 +498,13 @@ function renderSortRow() {
   if (count < 2) { sortRowEl.hidden = true; sortRowEl.innerHTML = ""; return; }
   sortRowEl.hidden = false;
   sortRowEl.innerHTML =
-    `<span class="tag-row-hint">🏆<span class="wide-only"> 排行榜</span>：</span>` +
+    `<span class="tag-row-hint">${svgIcon("trophy")}<span class="wide-only"> 排行榜</span>：</span>` +
     SORTS.map((s) => {
       const on = sortMode === s.id;
       return `<button type="button" class="tag-chip sort-chip ${on ? "on" : ""}" ` +
         `onclick="setSort('${s.id}')" title="${esc(s.label)} — ${esc(s.hint)}" ` +
         `aria-label="${esc(s.label)}" aria-pressed="${on ? "true" : "false"}">` +
-        `<span class="chip-ico">${s.ico}</span><span class="wide-only">${esc(s.label)}</span></button>`;
+        `<span class="chip-ico">${svgIcon(s.ico)}</span><span class="wide-only">${esc(s.label)}</span></button>`;
     }).join("");
 }
 
@@ -438,7 +561,7 @@ function render() {
   if (activeChip === "fav") {
     const favApps = [];
     for (const { c } of catIdx) for (const a of shownOf(c)) if (favIds.has(a._id)) favApps.push(a);
-    html += sectionHTML("我的收藏", "⭐", favApps, "favorites");
+    html += sectionHTML("我的收藏", "star", favApps, "favorites");
   } else if (activeChip !== "all") {
     // 揀咗某個分類 chip → 只顯示嗰個分類（可疊加支部／搜尋）
     const selIdx = Number(String(activeChip).replace("cat-", ""));
@@ -466,15 +589,15 @@ function render() {
     const p = emptyEl.querySelector("p");
     if (activeChip === "fav") {
       b.textContent = "暫時未有收藏嘅項目";
-      p.textContent = "喺項目下面撳 ☆ 就可以加入我的收藏！";
+      p.textContent = "打開項目詳情，撳「收藏」就會加入呢個清單。";
     } else if (activeChip !== "all") {
       b.textContent = "呢個分類暫時冇項目";
       p.textContent = tagFilter.length
-        ? `撳多次「${tagFilter.map(tagLabel).join("／")}」取消支部篩選，或者撳「✕ 清除」`
+        ? `撳多次「${tagFilter.map(tagLabel).join("／")}」取消支部篩選，或者撳「清除」`
         : "試下撳「全部」睇下其他分類";
     } else if (tagFilter.length && q) {
       b.textContent = "冇符合嘅結果";
-      p.textContent = `換個關鍵字，或者撳「✕ 清除」取消支部篩選`;
+      p.textContent = `換個關鍵字，或者撳「清除」取消支部篩選`;
     } else if (tagFilter.length) {
       b.textContent = `暫時冇「${tagFilter.map(tagLabel).join("／")}」支部嘅項目`;
       p.textContent = "試下揀其他支部（可以同時揀幾個），或者撳「全部」睇晒";
@@ -485,25 +608,19 @@ function render() {
   }
 
   // Build chip bar — 純文字（emoji 圖示阻位，被刻意抽走）；
-  // 「我的收藏」唔再係 chip，搬咗去搜尋欄嗰行（#fav-jump）。
+  // 「我的收藏」唔再係 chip，入口喺底部常駐列（data-bnav="fav"）。
   // 手機版用短名（全部／進度紀錄…），桌面版用全名。
-  const chipBtn = (id, full, short) =>
-    `<button type="button" class="chip ${activeChip === id ? "on" : ""}" data-chip="${esc(id)}" ` +
-    `onclick="jumpTo('${esc(id)}')" title="${esc(full)}">${chipTxt(full, short)}</button>`;
+  const chipBtn = (id, full, short, catn) =>
+    `<button type="button" class="chip ${activeChip === id ? "on" : ""}" data-chip="${esc(id)}"` +
+    (catn == null ? "" : ` data-catn="${catn}"`) +
+    ` onclick="jumpTo('${esc(id)}')" title="${esc(full)}">${chipTxt(full, short)}</button>`;
   chipsEl.innerHTML =
     chipBtn("all", "全部", "全部") +
-    catIdx.map(({ c, i }) => chipBtn("cat-" + i, c.name, catShort(c.name))).join("");
-
-  // 搜尋欄隔籬嘅「⭐ 我的收藏」掣：收藏視圖時高亮
-  const favJump = document.getElementById("fav-jump");
-  if (favJump) {
-    const on = activeChip === "fav";
-    favJump.classList.toggle("on", on);
-    favJump.setAttribute("aria-pressed", on ? "true" : "false");
-  }
+    catIdx.map(({ c, i }) => chipBtn("cat-" + i, c.name, catShort(c.name), i % 6)).join("");
 
   renderTagRow();
   renderSortRow();
+  if (typeof hydrateIcons === "function") hydrateIcons(sectionsEl);
   measurePanes();
   watchSections();
   updateBnavState();
@@ -559,15 +676,18 @@ async function main() {
   }
 }
 
-// 公開版面 click 委派（tile 開啟／GH badge）
+// 公開版面 click 委派：撳卡 → 開詳情 sheet（唔再一下就跳走，App Store 式）
+// 舊 tile（.tile）仍然支援：排行榜以外嘅舊 markup／後台預覽會用到。
 sectionsEl.addEventListener("click", (e) => {
   const gh = e.target.closest(".gh-badge");
   if (gh) return; // GH 已經自帶 window.open
-  const a = e.target.closest(".tile");
-  if (!a) return;
+  const hit = e.target.closest(".card, .tile");
+  if (!hit) return;
   e.preventDefault();
-  const idx = Number(a.dataset.idx);
-  if (REG[idx]) openApp(REG[idx]);
+  const idx = Number(hit.dataset.idx);
+  if (!REG[idx]) return;
+  if (hit.classList.contains("tile") && !hit.classList.contains("card")) openApp(REG[idx]);
+  else openAppSheet(idx);
 });
 searchEl.addEventListener("input", () => { activeChip = "all"; render(); });
 searchClear.addEventListener("click", () => { searchEl.value = ""; searchEl.focus(); activeChip = "all"; render(); });
@@ -617,7 +737,7 @@ function closeShareModal() {
 function copyShareUrl() {
   if (!_currentShareApp) return;
   navigator.clipboard.writeText(_currentShareApp.url).then(() => {
-    if (typeof showToast === "function") showToast("📋 連結已複製！");
+    if (typeof showToast === "function") showToast("連結已複製");
   }).catch(() => {
     if (typeof showToast === "function") showToast(_currentShareApp.url);
   });
@@ -713,14 +833,14 @@ function renderBnavPlaceholder(section) {
     p.textContent = "管理員仲未上架任何有用連結，歡迎率先分享好用網站！";
     if (act) {
       act.hidden = false;
-      act.innerHTML = `<button type="button" class="market-submit share-link-btn" onclick="submissionOpen('link')">🌐 立即分享網站連結</button>`;
+      act.innerHTML = `<button type="button" class="market-submit share-link-btn" onclick="submissionOpen('link')">${svgIcon("globe")} 立即分享網站連結</button>`;
     }
   } else {
     b.textContent = "「教學工具」尚未開放";
     p.textContent = "學習圖卡、PPT 簡報等教學材料仲未上架，歡迎率先分享雲端教材！";
     if (act) {
       act.hidden = false;
-      act.innerHTML = `<button type="button" class="market-submit share-material-btn" onclick="submissionOpen('material')">📚 立即分享教材連結</button>`;
+      act.innerHTML = `<button type="button" class="market-submit share-material-btn" onclick="submissionOpen('material')">${svgIcon("book")} 立即分享教材連結</button>`;
     }
   }
   emptyEl.style.display = "block";

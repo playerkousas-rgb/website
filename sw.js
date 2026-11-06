@@ -32,7 +32,15 @@
 //            本站圖標補齊 9 個檔（favicon.ico/16/32/apple-touch/maskable/og-image）
 //      v40 = 設計統一（readme design-review house rules）：去漸層／去光暈／去英文
 //            eyebrow／單一金色 accent（同 9 個圖標一致）＋ DESIGN.md 設計語言
-const CACHE = 'scout-tools-v40';
+//      v44 = 深色主題再提亮一級（底色 #12141c → #1f2430、卡面 #1d2231 → #2b3141，
+//            因為用戶話「深色版太暗」)；theme-color／manifest 底色同 --bg 綁定，lint 驗一致
+//      v43 = 色版活潑化（對象係青少年）：6 隻分類色（貨架／卡片／chip／底欄）、
+//            頂部彩色條、排行榜金銀銅、深色底提亮；預設主題跟系統
+//      v42 = 全站圖示去 emoji 化：一套 24px 線稿圖標（store.js ICON_PATHS／svgIcon）
+//            ＋ 舊 emoji 自動對應（EMOJI_TO_ICON）＋ 後台圖標選擇器（存 "i:key"）
+//      v41 = ROUND 2 App Store 版面：分類貨架（橫滑→2/3 欄）＋大卡＋詳情 sheet
+//            ＋統一線稿分類圖標；排行榜改直立列表；今期主打加大的 icon、刪假通知卡
+const CACHE = 'scout-tools-v44';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
