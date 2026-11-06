@@ -141,6 +141,18 @@
   a { color: inherit; text-decoration: none; }
   button, input, select { font: inherit; color: inherit; }
   img { display: block; max-width: 100%; }
+
+  /* ── 線稿圖標（全站 UI icon；由 store.js svgIcon() 出）──────────
+     尺寸跟 font-size（1em），所以撳掣字級一改，icon 自動跟。
+     填色版（已收藏 ★／已讚好 ♥）加 .is-fill。 */
+  .ic {
+    width: 1em; height: 1em; flex-shrink: 0;
+    display: inline-block; vertical-align: -.14em;
+    overflow: visible; pointer-events: none;
+  }
+  .ic.is-fill { fill: currentColor; }
+  /* 靜態 icon 位（HTML 寫 data-icon="search"，boot 後由 hydrateIcons() 填 svg）*/
+  [data-icon] { display: inline-flex; align-items: center; justify-content: center; }
   :focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
@@ -668,10 +680,6 @@
     background: var(--bg-card-hover);
     transform: translateY(-2px);
   }
-  .share-option .share-ico {
-    font-size: 20px;
-    line-height: 1;
-  }
 
   /* 註：舊「支部 Tabs」（.branch-tabs／.branch-tab 灰字＋幼底線）已經刪走 ——
      支部篩選而家同排行榜指標一樣用 .tag-chip：未揀中性殼、揀咗 accent ＋✓，
@@ -770,7 +778,7 @@
     touch-action: manipulation;
   }
   .bnav-btn .bnav-icon {
-    font-size: 16px;
+    font-size: 18px;
     line-height: 1;
     display: inline-flex;
     align-items: center;
@@ -784,11 +792,11 @@
     color: var(--text);
   }
   .bnav-btn.on {
-    color: #6366f1;
+    color: var(--accent-text);
     font-weight: 700;
   }
   .bnav-btn.on .bnav-icon {
-    background: rgba(99, 102, 241, 0.15);
+    background: var(--accent-soft);
   }
   /* 舊嘅 bottom-sub-line 已合併為 bottom-credit-line，保留兼容但隱藏 */
   .bottom-sub-line { display: none; }
@@ -1275,7 +1283,13 @@
     background: rgba(255, 255, 255, .3);
     border-color: rgba(255, 255, 255, .95); color: #fff;
   }
-  .tag-check.on .tc-box::after { content: "✓"; }
+  /* 剔號用 CSS 畫（唔用 ✓ 字元）：粗幼同圓角同其他線稿圖標一致 */
+  .tag-check.on .tc-box::after {
+    content: "";
+    width: 5px; height: 9px; margin-top: -2px;
+    border: solid currentColor; border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
   [data-theme="dark"] .tag-check.on { color: #0b0d12; }
   [data-theme="dark"] .tag-check.on .tc-box {
     background: rgba(0, 0, 0, .22); border-color: #0b0d12; color: #0b0d12;
@@ -1374,6 +1388,13 @@
     transition: transform .12s, background .15s, border-color .15s;
   }
   .emoji-cell:hover { transform: scale(1.1); border-color: var(--accent); background: var(--accent-soft); }
+  /* 線稿圖標格：24px 圖標＋細中文名，睇得明過一堆 emoji */
+  .emoji-cell.icon-cell { flex-direction: column; gap: 3px; font-size: 22px; color: var(--text); }
+  .emoji-cell.icon-cell .ic { width: 24px; height: 24px; }
+  .emoji-cell.icon-cell::after {
+    content: attr(title); font-size: 9.5px; color: var(--muted);
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   .emoji-total { font-size: 12px; color: var(--muted); align-self: center; margin-left: auto; }
   .emoji-none-hint {
     grid-column: 1 / -1; text-align: left;
@@ -1456,13 +1477,14 @@
   .shelf-sec { margin-top: 26px; }
   .shelf-sec .sec-head { margin-bottom: 10px; padding: 0; gap: 9px; }
   .sec-head h2 { font-size: var(--fs-3); font-weight: 800; letter-spacing: -.02em; }
+  /* 貨架／排行榜標題前嘅圖標用金（同分類圖標一致），文字保持 --text */
+  .sec-head h2 .ic { color: var(--accent); }
   .sec-head .num {
     font-size: 11.5px; font-weight: 700; color: var(--muted);
     background: transparent; border: 0; padding: 0; margin-left: 0;
   }
   .cat-ico { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; color: var(--accent); flex-shrink: 0; }
-  .cat-ico svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-  .cat-ico-emoji { font-size: 16px; line-height: 1; }
+  .cat-ico .ic { width: 20px; height: 20px; }
   .sec-more {
     margin-left: auto; border: 0; background: none;
     color: var(--accent-text); font-size: 13px; font-weight: 750;
@@ -1601,19 +1623,19 @@
           <div class="head-sub">好工具，讓童軍生活更精彩。</div>
         </div>
         <div class="head-actions">
-          <button type="button" class="market-submit head-submit" onclick="submissionOpen('app')">＋ 提交作品</button>
-          <button type="button" class="market-submit head-submit share-link-btn" onclick="submissionOpen('link')">🌐 網站分享</button>
-          <button type="button" class="market-submit head-submit share-material-btn" onclick="submissionOpen('material')">📚 教材分享</button>
-          <button type="button" class="market-submit head-submit feedback-btn" onclick="reportOpen()" aria-haspopup="dialog" aria-controls="report-dialog" title="問題回報 / 意見回饋">回報/意見</button>
+          <button type="button" class="market-submit head-submit" onclick="submissionOpen('app')"><span data-icon="plus"></span> 提交作品</button>
+          <button type="button" class="market-submit head-submit share-link-btn" onclick="submissionOpen('link')"><span data-icon="globe"></span> 網站分享</button>
+          <button type="button" class="market-submit head-submit share-material-btn" onclick="submissionOpen('material')"><span data-icon="book"></span> 教材分享</button>
+          <button type="button" class="market-submit head-submit feedback-btn" onclick="reportOpen()" aria-haspopup="dialog" aria-controls="report-dialog" title="問題回報 / 意見回饋"><span data-icon="message"></span> 回報/意見</button>
           <button class="install-btn" id="install-btn" type="button" aria-label="安裝 App">
-            ⬇️ <span class="install-label">安裝</span>
+            <span data-icon="download"></span> <span class="install-label">安裝</span>
           </button>
-          <button class="icon-btn" id="theme-btn" type="button" title="切換深色 / 淺色" aria-label="切換主題">🌙</button>
+          <button class="icon-btn" id="theme-btn" type="button" title="切換深色 / 淺色" aria-label="切換主題"><span data-icon="moon"></span></button>
         </div>
       </div>
       <div class="search-row">
         <div class="search-wrap" style="width:100%;">
-          <span class="search-ico" aria-hidden="true">🔍</span>
+          <span class="search-ico" aria-hidden="true" data-icon="search"></span>
           <input class="search" id="search" type="search" enterkeyhint="search" placeholder="搜尋支部／分類／項目…" aria-label="搜尋（支部、分類、項目名）" autocomplete="off" />
           <button class="search-clear" id="search-clear" type="button" aria-label="清除搜尋">×</button>
         </div>
@@ -1632,12 +1654,12 @@
   <section class="hero" id="hero-spotlight" aria-label="今期主打" hidden>
     <div class="hero-card">
       <div class="hero-card-tools">
-        <button class="hero-share" id="hero-share" type="button" aria-label="分享此項目" title="分享">🔗</button>
-        <button class="hero-collapse" id="hero-collapse" type="button" aria-label="收埋今期主打" title="收埋">▴</button>
+        <button class="hero-share" id="hero-share" type="button" aria-label="分享此項目" title="分享"><span data-icon="share"></span></button>
+        <button class="hero-collapse" id="hero-collapse" type="button" aria-label="收埋今期主打" title="收埋"><span data-icon="chevronDown"></span></button>
       </div>
       <div class="hero-badge" id="hero-badge">今期主打</div>
       <div class="hero-icon-row">
-        <div class="hero-icon" id="hero-icon" role="img" aria-label="">🔔</div>
+        <div class="hero-icon" id="hero-icon" role="img" aria-label=""><span data-icon="sparkle"></span></div>
         <div class="hero-body">
           <div class="hero-title" id="hero-title">載入中…</div>
           <div class="hero-sub" id="hero-sub"></div>
@@ -1659,7 +1681,7 @@
     </div>
   </div>
   <div class="empty" id="empty">
-    <div class="empty-ico">🔎</div>
+    <div class="empty-ico" data-icon="search"></div>
     <b>未有內容</b>
     <p>試下改關鍵字，或者撳「全部」／轉第二個分頁睇下</p>
     <div class="empty-action" id="empty-action" hidden></div>
@@ -1668,18 +1690,18 @@
   <!-- 底部資訊 -->
   <footer class="foot-card" aria-label="底部資訊">
     <div class="foot-line">
-      <span class="ig-emoji" aria-hidden="true">📸</span>
+      <span class="ig-emoji" aria-hidden="true" data-icon="camera"></span>
       <a class="ig-title-link" href="https://www.instagram.com/noscout.system/" target="_blank" rel="noopener" style="text-decoration:none; color:inherit;">
         <span class="ig-title" style="font-weight:750;">追蹤我哋嘅 Instagram@noscout.system</span>
       </a>
       <span class="ig-sub" style="color:var(--muted);">童軍工具 · 教學 ·</span>
-      <button class="btn-secondary" type="button" aria-hidden="true" style="display:none;">🔳 QR</button>
+      <button class="btn-secondary" type="button" aria-hidden="true" style="display:none;"><span data-icon="qr"></span> QR</button>
       <span id="foot-count" hidden></span>
     </div>
   </footer>
 </div>
 
-<button class="to-top" id="to-top" type="button" aria-label="返回頂部">↑</button>
+<button class="to-top" id="to-top" type="button" aria-label="返回頂部"><span data-icon="arrowUp"></span></button>
 
 <div class="modal" id="ig-modal" hidden>
   <div class="modal-backdrop" id="ig-close"></div>
@@ -1696,20 +1718,20 @@
   <div class="modal-backdrop" onclick="closeSettingsModal()"></div>
   <div class="modal-card settings-card" role="dialog" aria-modal="true" aria-label="設置">
     <button class="modal-x" type="button" aria-label="關閉" onclick="closeSettingsModal()">×</button>
-    <div class="modal-title" style="margin-top:4px; font-size:20px;">⚙️ 設置</div>
+    <div class="modal-title" style="margin-top:4px; font-size:20px;"><span data-icon="gear"></span> 設置</div>
     
     <div class="settings-box" style="margin-top:16px; text-align:left; background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:14px;">
       <p class="tip" style="font-size:13px; line-height:1.6; color:var(--text); margin:0;">
-        💡 <b>提示：</b>喺瀏覽器選單選「加入主畫面 / 安裝 App」（Android 可撳右上角「安裝」），呢個「SCOUT APP STORE」就會變成電話桌面嘅一個 App。所有童軍工具、圖卡、簡報同連結都由呢度入。
+        <b>提示：</b>喺瀏覽器選單選「加入主畫面 / 安裝 App」（Android 可撳右上角「安裝」），呢個「SCOUT APP STORE」就會變成電話桌面嘅一個 App。所有童軍工具、圖卡、簡報同連結都由呢度入。
       </p>
     </div>
 
     <div class="settings-actions" style="margin-top:16px; display:flex; flex-direction:column; gap:10px;">
       <button class="btn-primary" type="button" onclick="const b=document.getElementById('install-btn'); if(b && b.style.display!=='none'){b.click();} else{if(typeof showToast==='function') showToast('請喺瀏覽器選單點選「加入主畫面」');} closeSettingsModal();" style="width:100%;">
-        ⬇️ 安裝 SCOUT APP STORE 至桌面
+        <span data-icon="download"></span> 安裝 SCOUT APP STORE 至桌面
       </button>
       <button class="btn-secondary" type="button" onclick="document.getElementById('theme-btn').click();" style="width:100%;">
-        🌙 切換主題 (深色 / 淺色)
+        <span data-icon="moon"></span> 切換主題 (深色 / 淺色)
       </button>
     </div>
   </div>
@@ -1733,9 +1755,9 @@
     <div class="sheet-stats" id="sheet-stats" hidden></div>
     <div class="sheet-actions">
       <button class="btn-primary sheet-open" id="sheet-open" type="button">開啟</button>
-      <button class="sheet-mini" id="sheet-fav" type="button" aria-pressed="false">☆ 收藏</button>
-      <button class="sheet-mini" id="sheet-heart" type="button" aria-pressed="false">♡ 讚好</button>
-      <button class="sheet-mini" id="sheet-share" type="button">↗ 分享</button>
+      <button class="sheet-mini" id="sheet-fav" type="button" aria-pressed="false"><span data-icon="star"></span> 收藏</button>
+      <button class="sheet-mini" id="sheet-heart" type="button" aria-pressed="false"><span data-icon="heart"></span> 讚好</button>
+      <button class="sheet-mini" id="sheet-share" type="button"><span data-icon="share"></span> 分享</button>
     </div>
   </div>
 </div>
@@ -1754,27 +1776,21 @@
 
     <div class="share-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-top:16px;">
       <button type="button" class="share-option" onclick="shareTo('whatsapp')">
-        <span class="share-ico">💬</span>
         <span>WhatsApp</span>
       </button>
       <button type="button" class="share-option" onclick="shareTo('facebook')">
-        <span class="share-ico">📘</span>
         <span>Facebook</span>
       </button>
       <button type="button" class="share-option" onclick="shareTo('telegram')">
-        <span class="share-ico">✈️</span>
         <span>Telegram</span>
       </button>
       <button type="button" class="share-option" onclick="shareTo('x')">
-        <span class="share-ico">🐦</span>
         <span>X (Twitter)</span>
       </button>
       <button type="button" class="share-option" onclick="shareTo('line')">
-        <span class="share-ico">🟢</span>
         <span>LINE</span>
       </button>
       <button type="button" class="share-option" onclick="shareTo('system')">
-        <span class="share-ico">📲</span>
         <span>系統分享</span>
       </button>
     </div>
@@ -1806,11 +1822,11 @@
   <h2 id="submit-title">分享你的作品</h2>
   <p id="submit-intro">填上作品連結及標籤。提交後會寫入商店資料庫，並同時登記到管理員嘅投稿表＋電郵通知管理員；批核後才會公開上架。</p>
   <div class="submit-tabs" role="tablist" aria-label="分享類型">
-    <button type="button" id="submit-tab-app" class="submit-tab is-active" role="tab" aria-selected="true" data-submit-kind="app">🧰 提交作品</button>
-    <button type="button" id="submit-tab-link" class="submit-tab" role="tab" aria-selected="false" data-submit-kind="link">🌐 網站分享</button>
-    <button type="button" id="submit-tab-material" class="submit-tab" role="tab" aria-selected="false" data-submit-kind="material">📚 教材分享</button>
+    <button type="button" id="submit-tab-app" class="submit-tab is-active" role="tab" aria-selected="true" data-submit-kind="app"><span data-icon="tools"></span> 提交作品</button>
+    <button type="button" id="submit-tab-link" class="submit-tab" role="tab" aria-selected="false" data-submit-kind="link"><span data-icon="globe"></span> 網站分享</button>
+    <button type="button" id="submit-tab-material" class="submit-tab" role="tab" aria-selected="false" data-submit-kind="material"><span data-icon="book"></span> 教材分享</button>
   </div>
-  <div class="submit-tip" id="submit-tip">🧰 適合分享你開發或製作嘅童軍網頁小工具、電子進度紀錄、計分器或小遊戲。想分享一般網站或雲端教材？可切換上方「🌐 網站分享」或「📚 教材分享」。</div>
+  <div class="submit-tip" id="submit-tip">適合分享你開發或製作嘅童軍網頁小工具、電子進度紀錄、計分器或小遊戲。想分享一般網站或雲端教材？可切換上方「網站分享」或「教材分享」。</div>
   <form id="submit-form">
     <label><span id="submit-name-label">作品名稱</span><input id="submit-name" name="name" maxlength="80" required placeholder="例如：露營裝備清單" /></label>
     <label><span id="submit-url-label">作品連結</span><input id="submit-url" name="url" type="url" maxlength="2048" required placeholder="https://…" /></label>
@@ -1846,8 +1862,8 @@
   <p class="report-intro">送到 Scout Admin，管理員會盡快跟進。可匿名提交，聯絡資料均為選填。</p>
   <p class="report-source">來源 APP：<b>SCOUT APP STORE</b></p>
   <div class="report-tabs" role="tablist" aria-label="回報類型">
-    <button type="button" id="report-tab-issue" class="report-tab is-active" role="tab" aria-selected="true" aria-controls="report-pane-issue" data-report-kind="issue">🐛 問題回報</button>
-    <button type="button" id="report-tab-feedback" class="report-tab" role="tab" aria-selected="false" aria-controls="report-pane-feedback" data-report-kind="feedback">💬 意見回饋</button>
+    <button type="button" id="report-tab-issue" class="report-tab is-active" role="tab" aria-selected="true" aria-controls="report-pane-issue" data-report-kind="issue"><span data-icon="bug"></span> 問題回報</button>
+    <button type="button" id="report-tab-feedback" class="report-tab" role="tab" aria-selected="false" aria-controls="report-pane-feedback" data-report-kind="feedback"><span data-icon="message"></span> 意見回饋</button>
   </div>
   <form id="report-form" class="report-form" novalidate>
     <div class="report-pane is-active" id="report-pane-issue" role="tabpanel" aria-labelledby="report-tab-issue" data-report-pane="issue">
@@ -1880,10 +1896,10 @@
       <div class="report-field">
         <span class="report-field-label">類型</span>
         <div class="report-radios" role="radiogroup" aria-label="意見類型">
-          <label><input type="radio" name="feedback-type" value="建議" checked /> 💡 建議</label>
-          <label><input type="radio" name="feedback-type" value="讚" /> 👍 讚</label>
-          <label><input type="radio" name="feedback-type" value="批評" /> 👎 批評</label>
-          <label><input type="radio" name="feedback-type" value="其他" /> 📝 其他</label>
+          <label><input type="radio" name="feedback-type" value="建議" checked /> 建議</label>
+          <label><input type="radio" name="feedback-type" value="讚" /> 讚</label>
+          <label><input type="radio" name="feedback-type" value="批評" /> 批評</label>
+          <label><input type="radio" name="feedback-type" value="其他" /> 其他</label>
         </div>
       </div>
       <label class="report-field" for="report-opinion">內容 <span class="report-required">*</span>
@@ -1914,30 +1930,30 @@
 <footer class="bottom-footer-bar" id="bottom-footer-bar">
   <nav class="bottom-nav" id="bottom-nav" aria-label="底欄導覽">
     <button type="button" class="bnav-btn on" data-bnav="discover" onclick="handleBnav('discover')">
-      <span class="bnav-icon">📁</span>
+      <span class="bnav-icon" data-icon="grid"></span>
       <span class="bnav-label">分類</span>
     </button>
     <button type="button" class="bnav-btn" data-bnav="links" onclick="handleBnav('links')">
-      <span class="bnav-icon">🔗</span>
+      <span class="bnav-icon" data-icon="link"></span>
       <span class="bnav-label">連結</span>
     </button>
     <button type="button" class="bnav-btn" data-bnav="tools" onclick="handleBnav('tools')">
-      <span class="bnav-icon">🧰</span>
+      <span class="bnav-icon" data-icon="tools"></span>
       <span class="bnav-label">教學工具</span>
     </button>
     <button type="button" class="bnav-btn" data-bnav="charts" onclick="handleBnav('charts')">
-      <span class="bnav-icon">🏆</span>
+      <span class="bnav-icon" data-icon="trophy"></span>
       <span class="bnav-label">排行榜</span>
     </button>
     <button type="button" class="bnav-btn" data-bnav="fav" onclick="handleBnav('fav')">
-      <span class="bnav-icon">⭐</span>
+      <span class="bnav-icon" data-icon="star"></span>
       <span class="bnav-label">收藏</span>
     </button>
   </nav>
   <div class="bottom-credit-line" aria-label="底部資訊">
-    <span class="ig-emoji" aria-hidden="true">📸</span>
+    <span class="ig-emoji" aria-hidden="true" data-icon="camera"></span>
     <a href="https://www.instagram.com/noscout.system/" target="_blank" rel="noopener"><span class="wide-only">追蹤我哋嘅 Instagram@noscout.system</span><span class="narrow-only">@noscout.system</span></a>
-    <button class="ig-qr-btn" id="ig-qr-btn" type="button">🔳 QR</button>
+    <button class="ig-qr-btn" id="ig-qr-btn" type="button"><span data-icon="qr"></span> QR</button>
     <span class="ig-sub">童軍工具·教學</span>
     <span class="credit-copy">© 2026 Scout System<span class="wide-only"> · App Store Edition</span></span>
     <button class="foot-edit" id="foot-edit" type="button" title="進入後台" aria-label="進入後台">edit</button>
@@ -1952,13 +1968,14 @@
 const themeBtn = document.getElementById("theme-btn");
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
-  themeBtn.textContent = t === "dark" ? "☀️" : "🌙";
+  if (themeBtn) themeBtn.innerHTML = svgIcon(t === "dark" ? "sun" : "moon");
   localStorage.setItem("theme", t);
   const meta = document.querySelector('meta[name="theme-color"]:not([media])')
     || document.querySelector('meta[name="theme-color"]');
   if (meta) meta.content = t === "dark" ? "#0b0d12" : "#faf6ec";
 }
 applyTheme(localStorage.getItem("theme") || "dark");
+hydrateIcons();                       // 靜態 icon 位（data-icon）一次過填好
 themeBtn.onclick = () => {
   applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
   if (!isAdminRoute() && typeof rerenderPublic === "function") rerenderPublic();
@@ -2069,7 +2086,7 @@ try {
 function syncHeroCollapseBtn() {
   const btn = document.getElementById("hero-collapse");
   if (!btn) return;
-  btn.textContent = _heroCollapsed ? "▾" : "▴";
+  btn.innerHTML = svgIcon(_heroCollapsed ? "chevronRight" : "chevronDown");
   btn.title = _heroCollapsed ? "睇詳情" : "收埋";
   btn.setAttribute("aria-label", _heroCollapsed ? "展開今期主打" : "收埋今期主打");
   btn.setAttribute("aria-expanded", _heroCollapsed ? "false" : "true");
@@ -2136,13 +2153,15 @@ function renderSpotlight() {
     metaEl.textContent = "";
     const bits = [];
     const minShow = typeof CHART_SCORE_MIN === "number" ? CHART_SCORE_MIN : 100;
-    if (SPOTLIGHT.showStars && (a.stars || 0) >= minShow) bits.push("⭐ " + a.stars.toLocaleString() + " 人收藏");
-    if (SPOTLIGHT.showStars && (a.hearts || 0) >= minShow) bits.push("❤️ " + a.hearts.toLocaleString() + " 人讚好");
+    if (SPOTLIGHT.showStars && (a.stars || 0) >= minShow) bits.push("star|" + a.stars.toLocaleString() + "|人收藏");
+    if (SPOTLIGHT.showStars && (a.hearts || 0) >= minShow) bits.push("heart|" + a.hearts.toLocaleString() + "|人讚好");
     const lv = (a.tags || []).filter(Boolean);
-    if (lv.length) bits.push("🎖 " + lv.map((t) => (typeof scoutTagShort === "function" ? scoutTagShort(t) : t)).join(" · "));
+    if (lv.length) bits.push("tag|" + lv.map((t) => (typeof scoutTagShort === "function" ? scoutTagShort(t) : t)).join(" · ") + "|");
     bits.forEach((t) => {
+      // 逐粒 meta 都係「線稿圖標 ＋ 文字」：icons 由 store.js 出，文字仍然用 textContent
+      const [ico, num, label] = t.split("|");
       const s = document.createElement("span");
-      s.textContent = t;                  // textContent：內容有 < > 都唔會爆版
+      s.innerHTML = svgIcon(ico) + " " + (label ? num + " " + label : num);
       metaEl.appendChild(s);
     });
     metaEl.hidden = !bits.length;          // 全部冇數據 → 成行隱藏
@@ -2202,7 +2221,7 @@ async function shareApp(app) {
   if (navigator.share) {
     try { await navigator.share(data); return; } catch (e) { if (e && e.name === "AbortError") return; }
   }
-  try { await navigator.clipboard.writeText(app.url); showToast("🔗 連結已複製"); }
+  try { await navigator.clipboard.writeText(app.url); showToast("連結已複製"); }
   catch (e) { showToast(app.url); }
 }
 const heroShareBtn = document.getElementById("hero-share");

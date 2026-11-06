@@ -70,12 +70,12 @@ function syncSheetButtons() {
   if (favBtn) {
     favBtn.classList.toggle("on", favOn);
     favBtn.setAttribute("aria-pressed", favOn ? "true" : "false");
-    favBtn.innerHTML = `${favOn ? "★" : "☆"} 收藏`;
+    favBtn.innerHTML = `${svgIcon("star", favOn ? "is-fill" : "")} 收藏`;
   }
   if (heartBtn) {
     heartBtn.classList.toggle("on", heartOn);
     heartBtn.setAttribute("aria-pressed", heartOn ? "true" : "false");
-    heartBtn.innerHTML = `${heartOn ? "♥" : "♡"} 讚好`;
+    heartBtn.innerHTML = `${svgIcon("heart", heartOn ? "is-fill" : "")} 讚好`;
   }
 }
 
@@ -107,9 +107,9 @@ function openAppSheet(idx) {
   const statsEl = document.getElementById("sheet-stats");
   if (statsEl) {
     const bits = [];
-    if (app.clicks >= 100) bits.push(`🔥 ${Number(app.clicks).toLocaleString()} 次開啟`);
-    if (app.stars >= 100) bits.push(`⭐ ${Number(app.stars).toLocaleString()} 收藏`);
-    if (app.hearts >= 100) bits.push(`❤️ ${Number(app.hearts).toLocaleString()} 讚好`);
+    if (app.clicks >= 100) bits.push(`${svgIcon("flame")} ${Number(app.clicks).toLocaleString()} 次開啟`);
+    if (app.stars >= 100) bits.push(`${svgIcon("star")} ${Number(app.stars).toLocaleString()} 收藏`);
+    if (app.hearts >= 100) bits.push(`${svgIcon("heart")} ${Number(app.hearts).toLocaleString()} 讚好`);
     statsEl.innerHTML = bits.map((b) => `<span class="sheet-stat">${b}</span>`).join("");
     statsEl.hidden = !bits.length;
   }
@@ -170,47 +170,12 @@ function iconHTML(app) {
    規則見 DESIGN.md：冇漸層、冇光暈、一隻金 accent、icon 做主角。
    ════════════════════════════════════════════════════════════════ */
 
-/* 分類小圖標：後台仍然可以揀 emoji，但常見嘅會換成同一套 24px 線稿，
-   令每條貨架嘅開頭一致（以前係 🧭🎮🧰🃏 乜都有，睇落好雜）。
-   未對應到嘅 emoji 照用返後台設定，唔會亂咁改人嘅選擇。 */
-const CAT_ICON_MAP = {
-  "🧭": "compass", "🎮": "game", "🕹️": "game", "🧰": "tools", "🛠️": "tools",
-  "🃏": "cards", "📽️": "slides", "🎬": "slides", "🔗": "link", "🌐": "globe",
-  "📚": "book", "📖": "book", "📝": "note", "🎨": "art", "🔔": "bell",
-  "🗺️": "map", "⛺": "camp", "🏆": "trophy", "🧪": "lab", "⚙️": "gear",
-  "🎯": "target", "📊": "chart", "⏱️": "clock", "🧮": "calc"
-};
-const CAT_PATHS = {
-  compass: '<circle cx="12" cy="12" r="9"/><polygon points="15.4 8.6 13.3 13.3 8.6 15.4 10.7 10.7"/>',
-  game: '<rect x="2.5" y="8" width="19" height="9.5" rx="4.5"/><path d="M7 11.2v3M5.5 12.7h3"/><circle cx="16.5" cy="12" r="1"/><circle cx="18.6" cy="14" r="1"/>',
-  tools: '<rect x="3" y="8" width="18" height="12" rx="2.5"/><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/>',
-  cards: '<rect x="3" y="5" width="11" height="15" rx="2"/><path d="M17 7.5l2 14.2"/><path d="M9 9.5h2.2M9 13h3"/>',
-  slides: '<rect x="2.5" y="5" width="19" height="12.5" rx="2"/><path d="M12 17.5V21M8.5 21h7"/><path d="M6.5 9.5h6M6.5 13h4"/>',
-  link: '<path d="M10 13a4 4 0 0 0 5.7 0l2.6-2.6a4 4 0 0 0-5.7-5.7L11.4 6"/><path d="M14 11a4 4 0 0 0-5.7 0l-2.6 2.6a4 4 0 0 0 5.7 5.7L12.6 18"/>',
-  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"/>',
-  book: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H19v3H6.5A2.5 2.5 0 0 1 4 20.5z"/>',
-  note: '<path d="M5 3.5h9l5 5V21H5z"/><path d="M14 3.5v5h5M8 13h8M8 17h5"/>',
-  art: '<path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-1 2-2s-.7-2 .6-2H18a3 3 0 0 0 3-3c0-6-4-9-9-9z"/><circle cx="8.5" cy="10" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="15.5" cy="10" r="1"/>',
-  bell: '<path d="M18 15V10a6 6 0 1 0-12 0v5l-1.8 3h15.6z"/><path d="M10 21h4"/>',
-  map: '<path d="M9 4l6 2.5 5-2v14l-5 2-6-2.5-5 2v-14z"/><path d="M9 4v14M15 6.5v14"/>',
-  camp: '<path d="M12 4l8.5 15.5h-17z"/><path d="M12 9.5l4 10M12 9.5l-4 10"/>',
-  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 5.5H5.5A2.5 2.5 0 0 0 8 10M16 5.5h2.5A2.5 2.5 0 0 1 16 10"/><path d="M12 13v4M9 20h6"/>',
-  lab: '<path d="M9.5 3v6L4.5 18a2 2 0 0 0 1.7 3h11.6a2 2 0 0 0 1.7-3L14.5 9V3"/><path d="M8 3h8M7 14h10"/>',
-  gear: '<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.2 5.2l2.1 2.1M16.7 16.7l2.1 2.1M18.8 5.2l-2.1 2.1M7.3 16.7l-2.1 2.1"/>',
-  target: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>',
-  chart: '<path d="M4 20V4"/><path d="M4 20h16"/><rect x="7" y="12" width="3" height="5" rx="1"/><rect x="12" y="8" width="3" height="9" rx="1"/><rect x="17" y="5" width="3" height="12" rx="1"/>',
-  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5.3l3.4 2"/>',
-  calc: '<rect x="4.5" y="2.5" width="15" height="19" rx="2.5"/><path d="M8 7h8"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01M8.5 15h.01M12 15h.01M15.5 15h.01M8.5 18.5h.01M12 18.5h.01M15.5 18.5h.01"/>',
-  grid: '<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>'
-};
-function catIconHTML(emoji, name) {
-  const key = CAT_ICON_MAP[String(emoji || "").trim()] || (emoji ? null : "grid");
-  if (key && CAT_PATHS[key]) {
-    return `<span class="cat-ico" aria-hidden="true"><svg viewBox="0 0 24 24">${CAT_PATHS[key]}</svg></span>`;
-  }
-  // 後台自己揀嘅 emoji 冇線稿版本 → 照用（唔好亂改人嘅選擇）
-  if (emoji) return `<span class="cat-ico cat-ico-emoji" aria-hidden="true">${esc(emoji)}</span>`;
-  return `<span class="cat-ico" aria-hidden="true"><svg viewBox="0 0 24 24">${CAT_PATHS.grid}</svg></span>`;
+/* 分類小圖標：圖標本體喺 store.js（ICON_PATHS／svgIcon），公開版同後台
+   共用同一套 24px 線稿，所以每條貨架／每個 chip 開頭都一致。
+   後台新揀嘅值係 "i:compass"；舊資料嘅 emoji 會經 EMOJI_TO_ICON 對應；
+   對應唔到就用通用方格 —— 公開版永遠唔會漏返 emoji 出街。 */
+function catIconHTML(icon, name) {
+  return `<span class="cat-ico" aria-hidden="true" title="${esc(name || "")}">${svgIcon(icon)}</span>`;
 }
 
 /* 貨架卡：icon 左、名＋描述右（App Store「編輯精選」橫向卡）。
@@ -250,10 +215,10 @@ let ACTIVE_PAGE = null;
 let activeChip = "all";
 let marketView = "discover";
 const CHART_METRICS = {
-  clicks:  { title: "🔥 最多人點擊", unit: "次開啟", value: (a) => Number(a.clicks || 0) },
-  stars:   { title: "⭐ 最多人收藏", unit: "收藏",   value: (a) => Number(a.stars || 0) },
-  hearts:  { title: "❤️ 最受歡迎",   unit: "個心",   value: (a) => Number(a.hearts || 0) },
-  latest:  { title: "🆕 最新上架",   unit: "上架",   value: (a) => {
+  clicks:  { title: "最多人點擊", ico: "flame",   unit: "次開啟", value: (a) => Number(a.clicks || 0) },
+  stars:   { title: "最多人收藏", ico: "star",    unit: "收藏",   value: (a) => Number(a.stars || 0) },
+  hearts:  { title: "最受歡迎",   ico: "heart",   unit: "個心",   value: (a) => Number(a.hearts || 0) },
+  latest:  { title: "最新上架",   ico: "sparkle", unit: "上架",   value: (a) => {
     const time = Date.parse(a.created_at || "");
     return Number.isNaN(time) ? 0 : time;
   } }
@@ -274,7 +239,7 @@ function chartHTML(apps) {
   const m = CHART_METRICS[metric];
   const ranked = [...apps].sort((a, b) => m.value(b) - m.value(a) || a.name.localeCompare(b.name, 'zh-HK')).slice(0, 50);
   if (!ranked.length) return '';
-  return `<section class="chart-section"><div class="sec-head"><h2>${m.title}</h2><span class="num">TOP ${ranked.length}</span></div><div class="chart-list">${ranked.map((a,i) => {
+  return `<section class="chart-section"><div class="sec-head"><h2>${svgIcon(m.ico)} ${esc(m.title)}</h2><span class="num">TOP ${ranked.length}</span></div><div class="chart-list">${ranked.map((a,i) => {
     const idx = REG.push(a)-1;
     const value = m.value(a);
     const scoreHTML = metric === 'latest'
@@ -282,7 +247,7 @@ function chartHTML(apps) {
       : value >= CHART_SCORE_MIN
         ? `<div class="chart-score"><b>${value.toLocaleString()}</b><small>${m.unit}</small></div>`
         : '';
-    return `<a class="chart-item tile" href="${esc(a.url)}" data-idx="${idx}" data-id="${esc(a._id)}"><span class="chart-rank">${i+1}</span>${iconHTML(a)}<div class="chart-copy"><h3>${esc(a.name)}</h3><p>${esc(a.description || '')}</p></div>${scoreHTML}<span class="chart-open">開啟 ↗</span></a>`;
+    return `<a class="chart-item tile" href="${esc(a.url)}" data-idx="${idx}" data-id="${esc(a._id)}"><span class="chart-rank">${i+1}</span>${iconHTML(a)}<div class="chart-copy"><h3>${esc(a.name)}</h3><p>${esc(a.description || '')}</p></div>${scoreHTML}<span class="chart-open">開啟</span></a>`;
   }).join('')}</div></section>`;
 }
 // 適用支部篩選：可以**同時揀幾個**（OR —— 揀「小＋幼」= 兩個支部嘅嘢都俾我睇）
@@ -309,10 +274,10 @@ function persistTagFilter() {
 // 手機版淨係顯示 emoji（文字包咗喺 .wide-only，細屏被 CSS 收埋）
 const SORT_KEY = "showcase-sort";
 const SORTS = [
-  { id: "clicks", ico: "🔥", label: "最多人點擊", hint: "按開啟次數排名" },
-  { id: "stars",  ico: "⭐", label: "最多人收藏", hint: "按全站收藏人數排名" },
-  { id: "hearts", ico: "❤️", label: "最受歡迎",   hint: "按全站讚好心數排名" },
-  { id: "latest", ico: "🆕", label: "最新上架",   hint: "按上架時間排序" }
+  { id: "clicks", ico: "flame",   label: "最多人點擊", hint: "按開啟次數排名" },
+  { id: "stars",  ico: "star",    label: "最多人收藏", hint: "按全站收藏人數排名" },
+  { id: "hearts", ico: "heart",   label: "最受歡迎",   hint: "按全站讚好心數排名" },
+  { id: "latest", ico: "sparkle", label: "最新上架",   hint: "按上架時間排序" }
 ];
 let sortMode = SORTS.some((s) => s.id === localStorage.getItem(SORT_KEY))
   ? localStorage.getItem(SORT_KEY) : "clicks";
@@ -499,19 +464,19 @@ function renderTagRow() {
   tagRowEl.className = "tag-row";
   const picked = tagFilter.length;
   tagRowEl.innerHTML =
-    `<span class="tag-row-hint">🔍<span class="wide-only"> 適用支部</span><span class="narrow-only">支部</span>：</span>` +
+    `<span class="tag-row-hint">${svgIcon("filter")}<span class="wide-only"> 適用支部</span><span class="narrow-only">支部</span>：</span>` +
     SCOUT_TAGS.map((t) => {
       const on = tagActive(t);
       return `<button type="button" class="tag-chip lv-chip${on ? " on" : ""}" ` +
         `onclick="setTag('${esc(t)}')" title="${esc(t)}" ` +
         `aria-label="${esc(t)}" aria-pressed="${on ? "true" : "false"}">` +
-        `${on ? '<span class="chip-ico" aria-hidden="true">✓</span>' : ""}` +
+        `${on ? `<span class="chip-ico" aria-hidden="true">${svgIcon("check")}</span>` : ""}` +
         `${chipTxt(t, scoutTagShort(t))}</button>`;
     }).join("") +
     (picked
       ? `<span class="tag-row-note">已揀 ${picked} 個</span>` +
         `<button type="button" class="tag-chip tag-clear" onclick="clearTags()" ` +
-        `title="清除支部篩選" aria-label="清除支部篩選">✕ 清除</button>`
+        `title="清除支部篩選" aria-label="清除支部篩選">${svgIcon("close")} 清除</button>`
       : `<span class="tag-row-note muted-hint">可多選</span>`);
 }
 
@@ -530,13 +495,13 @@ function renderSortRow() {
   if (count < 2) { sortRowEl.hidden = true; sortRowEl.innerHTML = ""; return; }
   sortRowEl.hidden = false;
   sortRowEl.innerHTML =
-    `<span class="tag-row-hint">🏆<span class="wide-only"> 排行榜</span>：</span>` +
+    `<span class="tag-row-hint">${svgIcon("trophy")}<span class="wide-only"> 排行榜</span>：</span>` +
     SORTS.map((s) => {
       const on = sortMode === s.id;
       return `<button type="button" class="tag-chip sort-chip ${on ? "on" : ""}" ` +
         `onclick="setSort('${s.id}')" title="${esc(s.label)} — ${esc(s.hint)}" ` +
         `aria-label="${esc(s.label)}" aria-pressed="${on ? "true" : "false"}">` +
-        `<span class="chip-ico">${s.ico}</span><span class="wide-only">${esc(s.label)}</span></button>`;
+        `<span class="chip-ico">${svgIcon(s.ico)}</span><span class="wide-only">${esc(s.label)}</span></button>`;
     }).join("");
 }
 
@@ -593,7 +558,7 @@ function render() {
   if (activeChip === "fav") {
     const favApps = [];
     for (const { c } of catIdx) for (const a of shownOf(c)) if (favIds.has(a._id)) favApps.push(a);
-    html += sectionHTML("我的收藏", "⭐", favApps, "favorites");
+    html += sectionHTML("我的收藏", "star", favApps, "favorites");
   } else if (activeChip !== "all") {
     // 揀咗某個分類 chip → 只顯示嗰個分類（可疊加支部／搜尋）
     const selIdx = Number(String(activeChip).replace("cat-", ""));
@@ -621,15 +586,15 @@ function render() {
     const p = emptyEl.querySelector("p");
     if (activeChip === "fav") {
       b.textContent = "暫時未有收藏嘅項目";
-      p.textContent = "喺項目下面撳 ☆ 就可以加入我的收藏！";
+      p.textContent = "打開項目詳情，撳「收藏」就會加入呢個清單。";
     } else if (activeChip !== "all") {
       b.textContent = "呢個分類暫時冇項目";
       p.textContent = tagFilter.length
-        ? `撳多次「${tagFilter.map(tagLabel).join("／")}」取消支部篩選，或者撳「✕ 清除」`
+        ? `撳多次「${tagFilter.map(tagLabel).join("／")}」取消支部篩選，或者撳「清除」`
         : "試下撳「全部」睇下其他分類";
     } else if (tagFilter.length && q) {
       b.textContent = "冇符合嘅結果";
-      p.textContent = `換個關鍵字，或者撳「✕ 清除」取消支部篩選`;
+      p.textContent = `換個關鍵字，或者撳「清除」取消支部篩選`;
     } else if (tagFilter.length) {
       b.textContent = `暫時冇「${tagFilter.map(tagLabel).join("／")}」支部嘅項目`;
       p.textContent = "試下揀其他支部（可以同時揀幾個），或者撳「全部」睇晒";
@@ -651,6 +616,7 @@ function render() {
 
   renderTagRow();
   renderSortRow();
+  if (typeof hydrateIcons === "function") hydrateIcons(sectionsEl);
   measurePanes();
   watchSections();
   updateBnavState();
@@ -767,7 +733,7 @@ function closeShareModal() {
 function copyShareUrl() {
   if (!_currentShareApp) return;
   navigator.clipboard.writeText(_currentShareApp.url).then(() => {
-    if (typeof showToast === "function") showToast("📋 連結已複製！");
+    if (typeof showToast === "function") showToast("連結已複製");
   }).catch(() => {
     if (typeof showToast === "function") showToast(_currentShareApp.url);
   });
@@ -863,14 +829,14 @@ function renderBnavPlaceholder(section) {
     p.textContent = "管理員仲未上架任何有用連結，歡迎率先分享好用網站！";
     if (act) {
       act.hidden = false;
-      act.innerHTML = `<button type="button" class="market-submit share-link-btn" onclick="submissionOpen('link')">🌐 立即分享網站連結</button>`;
+      act.innerHTML = `<button type="button" class="market-submit share-link-btn" onclick="submissionOpen('link')">${svgIcon("globe")} 立即分享網站連結</button>`;
     }
   } else {
     b.textContent = "「教學工具」尚未開放";
     p.textContent = "學習圖卡、PPT 簡報等教學材料仲未上架，歡迎率先分享雲端教材！";
     if (act) {
       act.hidden = false;
-      act.innerHTML = `<button type="button" class="market-submit share-material-btn" onclick="submissionOpen('material')">📚 立即分享教材連結</button>`;
+      act.innerHTML = `<button type="button" class="market-submit share-material-btn" onclick="submissionOpen('material')">${svgIcon("book")} 立即分享教材連結</button>`;
     }
   }
   emptyEl.style.display = "block";

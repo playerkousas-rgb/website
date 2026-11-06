@@ -62,29 +62,35 @@ const data = {
 };
 const out = analyticsHTML(data);
 
-// ── KPI：⭐ 收藏、❤️ 讚好、🔥 點擊 ───────────────────────────
-assert.ok(out.includes("⭐ 全站收藏"), "KPI 要有「⭐ 全站收藏」");
-assert.ok(out.includes("❤️ 全站讚好"), "KPI 要有「❤️ 全站讚好」");
-assert.ok(out.includes("🔥 App 總點擊"), "KPI 要保留「🔥 App 總點擊」");
-assert.ok(out.includes(">35<"), "⭐ 收藏總數 = 5 + 30 = 35");
-assert.ok(out.includes(">10<"), "❤️ 讚好總數 = 1 + 9 = 10");
-assert.ok(out.includes(">12<"), "🔥 點擊總數 = 10 + 2 = 12");
-assert.ok(out.includes("👥 累計獨立訪客"), "Supabase 模式要有訪客 KPI");
+// 圖示升級做線稿 SVG 之後，文字斷言要先剝走 <svg>（圖標本身另外驗）
+const stripSvg = (x) => x.replace(/<svg[\s\S]*?<\/svg>/g, "");
+const txt = stripSvg(out);
 
-// ── 新分區：每個 App 嘅 ⭐ 收藏 ＋ ❤️ 讚好 ───────────────────
-assert.ok(out.includes("⭐ 收藏 ＋ ❤️ 讚好"), "要有「⭐ 收藏 ＋ ❤️ 讚好」分區");
-assert.ok(out.includes("⭐ 30") && out.includes("❤️ 9"), "逐個 App 都要列出收藏／讚好數");
+// ── KPI：收藏、讚好、點擊（全部配線稿圖標）─────────────────────
+assert.ok(txt.includes("全站收藏"), "KPI 要有「全站收藏」");
+assert.ok(txt.includes("全站讚好"), "KPI 要有「全站讚好」");
+assert.ok(txt.includes("App 總點擊"), "KPI 要保留「App 總點擊」");
+assert.ok(/class="ic"/.test(out), "KPI 要用線稿圖標，唔用 emoji");
+assert.ok(!/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(out), "統計面板唔可以再有 emoji");
+assert.ok(out.includes(">35<"), "收藏總數 = 5 + 30 = 35");
+assert.ok(out.includes(">10<"), "讚好總數 = 1 + 9 = 10");
+assert.ok(out.includes(">12<"), "點擊總數 = 10 + 2 = 12");
+assert.ok(txt.includes("累計獨立訪客"), "Supabase 模式要有訪客 KPI");
+
+// ── 新分區：每個 App 嘅收藏 ＋ 讚好 ─────────────────────────
+assert.ok(/收藏\s*＋\s*讚好/.test(txt), "要有「收藏 ＋ 讚好」分區");
+assert.ok(/num-star">\s*30\s*</.test(txt) && /num-heart">\s*9\s*</.test(txt), "逐個 App 都要列出收藏／讚好數");
 assert.ok(out.includes("analytics-fav-track"), "每行要有收藏／讚好 bar");
 assert.ok(out.includes("trk-star") && out.includes("trk-heart"), "bar 要分金色（收藏）同紅色（讚好）");
 // 排位：收藏多行先
-const rows = out.match(/analytics-app-row[\s\S]*?<\/div>\s*<\/div>/g) || [];
-assert.ok(out.indexOf("⭐ 30") < out.indexOf("⭐ 5"), "收藏多的排前面");
+const starOrder = (txt.match(/num-star">\s*\d+/g) || []).map((x) => x.replace(/\D/g, ""));
+assert.deepStrictEqual(starOrder, ["30", "5"], "收藏多的排前面");
 
 // ── Demo 模式：冇訪客數，但 ⭐／❤️ 照計 ─────────────────────
 const demo = analyticsHTML(null, { demo: true });
 assert.ok(demo.includes("Demo 模式"), "Demo 模式要有提示");
-assert.ok(!demo.includes("👥 累計獨立訪客"), "Demo 模式唔應該假裝有訪客數");
-assert.ok(demo.includes("⭐ 全站收藏") && demo.includes("❤️ 全站讚好"), "Demo 模式一樣有收藏／讚好統計");
+assert.ok(!stripSvg(demo).includes("累計獨立訪客"), "Demo 模式唔應該假裝有訪客數");
+assert.ok(stripSvg(demo).includes("全站收藏") && stripSvg(demo).includes("全站讚好"), "Demo 模式一樣有收藏／讚好統計");
 assert.ok(!demo.includes("近 30 日入站趨勢"), "Demo 模式冇入站趨勢圖");
 
 // ── CSS 都要有（新欄位唔可以爆版）───────────────────────────

@@ -64,6 +64,177 @@ function esc(s) {
   }[c]));
 }
 
+/* ════════════════════════════════════════════════════════════════
+   全站線稿圖標（UI icon set）
+   ──────────────────────────────────────────────────────────────
+   唔再用 emoji 做介面圖示：emoji 每個系統畫法唔同、粗幼唔一、顏色跟系統，
+   睇落好「土炮」，亦做唔到「同一套語言」。所有 UI 圖示一律經 svgIcon() 出：
+     24×24 viewBox、fill:none、stroke:currentColor、粗細 1.6、
+     round cap/join；尺寸由 CSS 用 font-size 控制（預設 1em）。
+
+   一隻字串欄位 icon 可以係：
+     "i:compass" → 直接指定線稿圖標（後台新揀嘅寫法）
+     "🧭"        → 舊資料 emoji，經 EMOJI_TO_ICON 對應
+     對應唔到    → ICON_FALLBACK（通用方格），永遠唔會漏返 emoji 出街
+   ════════════════════════════════════════════════════════════════ */
+const ICON_PATHS = {
+  grid: '<rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/>',
+  list: '<path d="M4 6h16M4 12h16M4 18h10"/>',
+  compass: '<circle cx="12" cy="12" r="9"/><path d="M15.6 8.4 13.4 13.4 8.4 15.6 10.6 10.6z"/>',
+  game: '<rect x="2.5" y="8" width="19" height="9.5" rx="4.5"/><path d="M7 11.2v3M5.5 12.7h3"/><circle cx="16.3" cy="11.8" r="1"/><circle cx="18.4" cy="13.8" r="1"/>',
+  tools: '<rect x="3" y="8" width="18" height="12" rx="2.5"/><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/>',
+  cards: '<rect x="3" y="5" width="11" height="15" rx="2"/><path d="M17 7.5l2 14.2"/><path d="M8.5 9.5h3M8.5 13h3.5"/>',
+  slides: '<rect x="2.5" y="5" width="19" height="12.5" rx="2"/><path d="M12 17.5V21M8.5 21h7"/><path d="M6.5 9.5h6M6.5 13h4"/>',
+  book: '<path d="M12 6.6C10.6 5.1 8.4 4.3 4 4.3v14.4c4.4 0 6.6.8 8 2.3 1.4-1.5 3.6-2.3 8-2.3V4.3c-4.4 0-6.6.8-8 2.3z"/><path d="M12 6.6v14.4"/>',
+  note: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>',
+  art: '<path d="M12 3.2a8.9 8.9 0 1 0 0 17.8c1 0 1.8-.8 1.8-1.8 0-.6-.3-1-.3-1.7 0-1 .8-1.7 1.8-1.7h1.9a4.4 4.4 0 0 0 4.4-4.4c0-4.5-4.3-8.2-9.6-8.2z"/><circle cx="8.2" cy="10" r="1"/><circle cx="12" cy="7.6" r="1"/><circle cx="15.6" cy="9.6" r="1"/>',
+  bell: '<path d="M18 15V10a6 6 0 1 0-12 0v5l-1.7 2.4h15.4z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+  map: '<path d="M9 3.8 3.5 6.2v14L9 17.8l6 2.4 5.5-2.4v-14L15 6.2 9 3.8z"/><path d="M9 3.8v14M15 6.2v14"/>',
+  camp: '<path d="M12 4.6 3.4 20h17.2L12 4.6z"/><path d="M12 11.4V20"/>',
+  trophy: '<path d="M8 3.8h8v5.4a4 4 0 0 1-8 0z"/><path d="M8 5.6H5.4V8a3 3 0 0 0 3 3M16 5.6h2.6V8a3 3 0 0 1-3 3"/><path d="M12 13.2v3.6M9 20h6"/>',
+  lab: '<path d="M9.2 3h5.6"/><path d="M10.2 3v6.6L5.6 18a2 2 0 0 0 1.8 3h9.2a2 2 0 0 0 1.8-3l-4.6-8.4V3"/><path d="M7.6 15h8.8"/>',
+  gear: '<circle cx="12" cy="12" r="3.1"/><path d="M12 3.2v2.2M12 18.6v2.2M4.8 7.9l1.9 1.1M17.3 15l1.9 1.1M4.8 16.1l1.9-1.1M17.3 9l1.9-1.1"/>',
+  target: '<circle cx="12" cy="12" r="8.8"/><circle cx="12" cy="12" r="4.9"/><circle cx="12" cy="12" r="1.3"/>',
+  chart: '<path d="M4 20V4M4 20h16"/><rect x="7" y="12" width="3.2" height="5" rx="1.1"/><rect x="12.4" y="8.4" width="3.2" height="8.6" rx="1.1"/><rect x="17.4" y="5.2" width="3.2" height="11.8" rx="1.1"/>',
+  clock: '<circle cx="12" cy="12" r="8.8"/><path d="M12 7.6V12l3.2 2"/>',
+  calc: '<rect x="4.6" y="3" width="14.8" height="18" rx="2.6"/><path d="M8 7.6h8"/><circle cx="8.8" cy="12.2" r=".95"/><circle cx="12" cy="12.2" r=".95"/><circle cx="15.2" cy="12.2" r=".95"/><circle cx="8.8" cy="16.4" r=".95"/><circle cx="12" cy="16.4" r=".95"/><circle cx="15.2" cy="16.4" r=".95"/>',
+  link: '<path d="M10 13.6a4 4 0 0 0 5.7 0l2.8-2.8a4 4 0 0 0-5.7-5.7L11.5 6.4"/><path d="M14 10.4a4 4 0 0 0-5.7 0L5.5 13.2a4 4 0 0 0 5.7 5.7l1.3-1.3"/>',
+  globe: '<circle cx="12" cy="12" r="8.8"/><path d="M3.2 12h17.6"/><path d="M12 3.2c2.4 2.4 3.6 5.4 3.6 8.8s-1.2 6.4-3.6 8.8c-2.4-2.4-3.6-5.4-3.6-8.8S9.6 5.6 12 3.2z"/>',
+  search: '<circle cx="11" cy="11" r="6.6"/><path d="M16 16l4.2 4.2"/>',
+  close: '<path d="M6.2 6.2l11.6 11.6M17.8 6.2 6.2 17.8"/>',
+  plus: '<path d="M12 5.2v13.6M5.2 12h13.6"/>',
+  minus: '<path d="M5.2 12h13.6"/>',
+  check: '<path d="M5 12.8 9.8 17.5 19 6.5"/>',
+  star: '<path d="M12 3.6l2.6 5.6 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 10l6-.8z"/>',
+  heart: '<path d="M12 20.2s-7.6-4.6-7.6-9.7A4.4 4.4 0 0 1 12 7.3a4.4 4.4 0 0 1 7.6 3.2c0 5.1-7.6 9.7-7.6 9.7z"/>',
+  flame: '<path d="M12 3.2c3.6 3.7 6 6.5 6 9.7a6 6 0 0 1-12 0c0-3.2 2.4-6 6-9.7z"/><path d="M12 20a3.3 3.3 0 0 0 3.3-3.3c0-1.9-1.5-3.1-3.3-4.9-1.8 1.8-3.3 3-3.3 4.9A3.3 3.3 0 0 0 12 20z"/>',
+  sparkle: '<path d="M11 3.4l1.8 4.9 4.9 1.8-4.9 1.8L11 16.8 9.2 11.9 4.3 10.1l4.9-1.8z"/><path d="M18 15.4l.9 2.3 2.3.9-2.3.9-.9 2.3-.9-2.3-2.3-.9 2.3-.9z"/>',
+  download: '<path d="M12 4v10.4"/><path d="M7.8 10.6 12 14.8l4.2-4.2"/><path d="M4.6 19.4h14.8"/>',
+  upload: '<path d="M12 20.4V10"/><path d="M7.8 13.8 12 9.6l4.2 4.2"/><path d="M4.6 4.6h14.8"/>',
+  moon: '<path d="M20.2 14.6A8.6 8.6 0 0 1 9.4 3.8a8.6 8.6 0 1 0 10.8 10.8z"/>',
+  sun: '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.8v2.4M12 18.8v2.4M4.5 12h2.4M17.1 12h2.4M6.4 6.4l1.7 1.7M15.9 15.9l1.7 1.7M6.4 17.6l1.7-1.7M15.9 8.1l1.7-1.7"/>',
+  share: '<path d="M12 15.2V3.8"/><path d="M8.2 7.4 12 3.6l3.8 3.8"/><path d="M6.4 12.6H5.2a2 2 0 0 0-2 2v4.6a2 2 0 0 0 2 2h13.6a2 2 0 0 0 2-2v-4.6a2 2 0 0 0-2-2h-1.2"/>',
+  copy: '<rect x="9" y="9" width="11.4" height="11.4" rx="2.4"/><path d="M15.4 6.2V5.4a2 2 0 0 0-2-2H5.4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h.8"/>',
+  message: '<path d="M20.4 15.4a2.6 2.6 0 0 1-2.6 2.6H8.2L4 21V6.6A2.6 2.6 0 0 1 6.6 4h11.2a2.6 2.6 0 0 1 2.6 2.6z"/>',
+  mail: '<rect x="3" y="5.2" width="18" height="13.6" rx="2.4"/><path d="M3.6 7.2 12 12.8l8.4-5.6"/>',
+  phone: '<path d="M6.4 3.2h3l1.4 4-2 1.4a10.6 10.6 0 0 0 6.4 6.4l1.4-2 4 1.4v3a2.4 2.4 0 0 1-2.6 2.4C10.4 20 4 13.6 4 5.8a2.4 2.4 0 0 1 2.4-2.6z"/>',
+  camera: '<rect x="3" y="6.6" width="18" height="13.4" rx="3"/><circle cx="12" cy="13.3" r="3.6"/><path d="M8.6 6.6 10 4h4l1.4 2.6"/>',
+  qr: '<rect x="3" y="3" width="7.2" height="7.2" rx="1.6"/><rect x="13.8" y="3" width="7.2" height="7.2" rx="1.6"/><rect x="3" y="13.8" width="7.2" height="7.2" rx="1.6"/><path d="M13.8 13.8h3.4v3.4h-3.4z"/><path d="M20.4 13.8v3.4M17.2 20.4h3.2"/>',
+  filter: '<path d="M3.6 5.2h16.8l-6.6 7.8V20l-3.6-2.2v-4.8z"/>',
+  arrowUp: '<path d="M12 19.4V4.6"/><path d="M6.2 10.4 12 4.6l5.8 5.8"/>',
+  chevronLeft: '<path d="M14.5 5.5 8 12l6.5 6.5"/>',
+  chevronRight: '<path d="M9.5 5.5 16 12l-6.5 6.5"/>',
+  chevronDown: '<path d="M5.5 9.5 12 16l6.5-6.5"/>',
+  external: '<path d="M14 4h6v6"/><path d="M20 4l-8.4 8.4"/><path d="M18.4 14.2v4.4a2 2 0 0 1-2 2H5.6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4.4"/>',
+  eye: '<path d="M2.6 12S6.2 5.6 12 5.6 21.4 12 21.4 12 17.8 18.4 12 18.4 2.6 12 2.6 12z"/><circle cx="12" cy="12" r="3"/>',
+  users: '<circle cx="9.2" cy="8.2" r="3.4"/><path d="M3.4 20c0-3.3 2.6-5.6 5.8-5.6s5.8 2.3 5.8 5.6"/><path d="M16.2 5.4a3.4 3.4 0 0 1 0 6.6M17.8 14.8c1.8.7 2.8 2.4 2.8 4.6"/>',
+  calendar: '<rect x="3.4" y="5" width="17.2" height="16" rx="2.6"/><path d="M8 2.8v4M16 2.8v4M3.4 10h17.2"/>',
+  save: '<path d="M4.6 3.6h10.8L19.4 8v12.4H4.6z"/><path d="M8.2 3.6v5.6h7.2V3.6"/><rect x="8.2" y="13.4" width="7.2" height="7"/>',
+  refresh: '<path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20.2 3.8v4.6h-4.6"/>',
+  pin: '<path d="M12 21s6.2-5.4 6.2-10.2a6.2 6.2 0 1 0-12.4 0C5.8 15.6 12 21 12 21z"/><circle cx="12" cy="10.6" r="2.3"/>',
+  bug: '<rect x="7.2" y="8" width="9.6" height="11" rx="4.8"/><path d="M12 4v4M7.2 12H4M20 12h-3.2M7.6 17 5.2 19.4M16.4 17l2.4 2.4M7.6 9.2 5.2 6.8M16.4 9.2l2.4-2.4"/>',
+  thumbUp: '<path d="M7.2 20.4V10l4-6.4a2 2 0 0 1 2.6 1l.6 4.4h4.2a2 2 0 0 1 2 2.4l-1.4 7a2 2 0 0 1-2 1.6H7.2z"/><path d="M7.2 10H4.4v10.4h2.8"/>',
+  thumbDown: '<path d="M16.8 3.6V14l-4 6.4a2 2 0 0 1-2.6-1l-.6-4.4H5.4a2 2 0 0 1-2-2.4l1.4-7a2 2 0 0 1 2-1.6h10z"/><path d="M16.8 14h2.8V3.6h-2.8"/>',
+  lock: '<rect x="4.6" y="10" width="14.8" height="10.6" rx="2.6"/><path d="M8.2 10V7.6a3.8 3.8 0 0 1 7.6 0V10"/>',
+  warning: '<path d="M12 3.8 2.8 20h18.4z"/><path d="M12 9.6v5"/><circle cx="12" cy="17.6" r=".95"/>',
+  info: '<circle cx="12" cy="12" r="8.8"/><path d="M12 11v5.4"/><circle cx="12" cy="7.9" r=".95"/>',
+  tag: '<path d="M11.2 3.2H6a2 2 0 0 0-2 2v5.2l9.6 9.6a2 2 0 0 0 2.8 0l4.4-4.4a2 2 0 0 0 0-2.8z"/><circle cx="8.4" cy="8.4" r="1.3"/>',
+  folder: '<path d="M3.4 7.4a2 2 0 0 1 2-2h4.2l2.2 2.6h6.8a2 2 0 0 1 2 2v8.2a2 2 0 0 1-2 2H5.4a2 2 0 0 1-2-2z"/>',
+  cloud: '<path d="M7.6 18.6h9.6a3.8 3.8 0 0 0 .4-7.6 5.6 5.6 0 0 0-10.7-1.4 4.6 4.6 0 0 0 .7 9z"/>',
+  image: '<rect x="3" y="4.6" width="18" height="14.8" rx="2.6"/><circle cx="8.4" cy="10" r="1.6"/><path d="M3.8 17.6 9.4 12l3.8 3.8 2.6-2.4 4.4 4.2"/>',
+  trash: '<path d="M4.4 7h15.2"/><path d="M9.2 7V4.6h5.6V7"/><path d="M6.4 7l1 13.2h9.2l1-13.2"/>',
+  pencil: '<path d="M4 20l4.2-1 10.6-10.6a2.3 2.3 0 0 0-3.2-3.2L5 15.8z"/><path d="M14.6 6.6 17.4 9.4"/>',
+  play: '<path d="M8.6 5.4 19 12 8.6 18.6z"/>',
+  home: '<path d="M3.6 10.4 12 3.6l8.4 6.8V20a1.6 1.6 0 0 1-1.6 1.6H5.2A1.6 1.6 0 0 1 3.6 20z"/><path d="M9.4 21.6v-7h5.2v7"/>',
+  gift: '<rect x="3.4" y="9.2" width="17.2" height="4" rx="1.2"/><path d="M5 13.2v7.4a1.4 1.4 0 0 0 1.4 1.4h11.2a1.4 1.4 0 0 0 1.4-1.4v-7.4"/><path d="M12 9.2v12.8"/><path d="M12 9.2C10.4 6 8.6 4.4 7 5.2c-1.6.8-1 3 1.6 4zM12 9.2c1.6-3.2 3.4-4.8 5-4s1 3-1.6 4z"/>'
+};
+
+// 舊資料／後台舊選擇嘅 emoji → 線稿圖標（對應唔到一律用 ICON_FALLBACK）
+const EMOJI_TO_ICON = {
+  "🧭": "compass", "🎮": "game", "🕹️": "game", "🎲": "game",
+  "🧰": "tools", "🛠️": "tools", "🔧": "tools", "⚒️": "tools",
+  "🃏": "cards", "🎴": "cards", "📽️": "slides", "🎬": "slides", "🖥️": "slides",
+  "🔗": "link", "🌐": "globe", "🌍": "globe", "🔌": "link",
+  "📚": "book", "📖": "book", "📕": "book", "📘": "book", "📙": "book",
+  "📝": "note", "📄": "note", "🗒️": "note", "📋": "list",
+  "🎨": "art", "🖌️": "art", "🔔": "bell", "📣": "bell", "📢": "bell",
+  "🗺️": "map", "🧭": "compass", "⛺": "camp", "🏕️": "camp", "⛰️": "camp",
+  "🏆": "trophy", "🥇": "trophy", "🏅": "trophy", "🎖️": "trophy",
+  "🧪": "lab", "⚗️": "lab", "⚙️": "gear", "🔧": "tools", "🛠": "tools",
+  "🎯": "target", "📊": "chart", "📈": "chart", "📉": "chart",
+  "⏱️": "clock", "⏰": "clock", "🕘": "clock", "🕒": "clock",
+  "🧮": "calc", "🧾": "calc", "🔢": "calc",
+  "📸": "camera", "📷": "camera", "🖼️": "image", "🏞️": "image", "🌄": "image",
+  "📁": "folder", "🗂️": "folder", "📂": "folder",
+  "☁️": "cloud", "💾": "save", "🔄": "refresh", "♻️": "refresh", "↻": "refresh",
+  "🔍": "search", "🔎": "search", "✦": "sparkle", "✨": "sparkle", "🆕": "sparkle", "🌟": "sparkle",
+  "⭐": "star", "★": "star", "☆": "star",
+  "❤️": "heart", "♥": "heart", "♡": "heart", "💛": "heart",
+  "🔥": "flame", "⚡": "flame", "💡": "info", "✅": "check", "✔️": "check", "☑️": "check",
+  "⚠️": "warning", "❗": "warning", "🚫": "warning", "⛔": "warning", "❌": "close", "✕": "close", "✖️": "close",
+  "📧": "mail", "✉️": "mail", "📮": "mail", "💬": "message", "📞": "phone", "☎️": "phone",
+  "👥": "users", "👤": "users", "📅": "calendar", "🗓️": "calendar", "📌": "pin",
+  "🔒": "lock", "🔐": "lock", "🔑": "lock", "👀": "eye", "🐛": "bug", "👍": "thumbUp", "👎": "thumbDown",
+  "▶️": "play", "►": "play", "📤": "upload", "📥": "download", "⬇️": "download", "⬆️": "upload",
+  "🏠": "home", "🎁": "gift", "🏷️": "tag", "🔳": "qr", "🔲": "qr", "☰": "list", "🗑️": "trash", "✏️": "pencil",
+  "➡️": "chevronRight", "⬅️": "chevronLeft", "⬆": "arrowUp", "↑": "arrowUp", "→": "chevronRight", "‹": "chevronLeft", "›": "chevronRight"
+};
+const ICON_FALLBACK = "grid";
+
+// 一隻 icon 值（"i:key" / emoji / key / 空）→ 圖標名
+function iconName(v) {
+  const s = String(v == null ? "" : v).trim();
+  if (!s) return ICON_FALLBACK;
+  if (s.startsWith("i:")) {
+    const k = s.slice(2);
+    return ICON_PATHS[k] ? k : ICON_FALLBACK;
+  }
+  if (ICON_PATHS[s]) return s;          // 直接寫 key（內部用）
+  if (EMOJI_TO_ICON[s]) return EMOJI_TO_ICON[s];
+  // emoji 後面可能帶 VARIATION SELECTOR（"🏕" vs "🏕️"）→ 試埋去掉 FE0F
+  const bare = s.replace(/\uFE0F/g, "");
+  if (EMOJI_TO_ICON[bare]) return EMOJI_TO_ICON[bare];
+  return ICON_FALLBACK;
+}
+
+// 出 <svg>（class 只做尺寸／填色；粗細同圓角寫死喺度，唔靠外部 CSS）
+function svgIcon(v, cls) {
+  const name = iconName(v);
+  return `<svg class="ic${cls ? " " + cls : ""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" ` +
+    `stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">` +
+    `${ICON_PATHS[name] || ICON_PATHS[ICON_FALLBACK]}</svg>`;
+}
+/* 靜態 HTML 嘅 icon 位：<span data-icon="search"></span>
+   由 boot／render 之後統一填 <svg>（唔喺 HTML 抄多次 path，保持單一來源）。*/
+function hydrateIcons(root) {
+  const scope = root || (typeof document !== "undefined" ? document : null);
+  if (!scope || !scope.querySelectorAll) return;
+  scope.querySelectorAll("[data-icon]:not([data-icon-ready])").forEach((el) => {
+    el.innerHTML = svgIcon(el.dataset.icon);
+    el.setAttribute("data-icon-ready", "1");
+  });
+}
+
+// 後台 icon 選擇器用：圖標名清單（連中文名）
+const ICON_LABELS = {
+  grid: "通用", star: "收藏", heart: "讚好", flame: "熱門", sparkle: "最新", trophy: "排行榜",
+  compass: "指南針", map: "地圖", camp: "露營", target: "目標", game: "遊戲", cards: "圖卡",
+  slides: "簡報", book: "書本", note: "筆記", list: "清單", art: "美術", bell: "通告",
+  tools: "工具", lab: "實驗", gear: "設定", chart: "圖表", calc: "計算", clock: "時間",
+  link: "連結", globe: "網站", mail: "電郵", message: "訊息", phone: "電話", users: "成員",
+  calendar: "日程", tag: "標籤", pin: "標記", folder: "資料夾", image: "圖片", camera: "相片",
+  cloud: "雲端", save: "儲存", download: "下載", upload: "上載", refresh: "更新", search: "搜尋",
+  share: "分享", copy: "複製", play: "播放", lock: "後台", eye: "預覽", bug: "問題", warning: "注意",
+  info: "說明", check: "完成", close: "關閉", plus: "新增", pencil: "編輯", trash: "刪除", gift: "禮物", home: "主頁", qr: "QR Code", external: "外部連結"
+};
+// 揀得到嘅圖標（順序 = 後台顯示順序）
+const ICON_CHOICES = [
+  "grid", "compass", "map", "camp", "target", "trophy", "star", "heart", "flame", "sparkle",
+  "game", "cards", "slides", "book", "note", "list", "art", "bell", "chart", "calc",
+  "clock", "tools", "lab", "gear", "link", "globe", "mail", "phone", "users", "calendar",
+  "tag", "folder", "image", "camera", "cloud", "play", "gift", "lock", "qr", "external"
+];
+
 // 攞外部 App 嘅圖示（64px）候選 chain，逐個試，失敗行落下一個：
 //   1) 我哋自己 /api/favicon —— 用 Chrome 分頁標籤嗰個原理：伺服器端攞該站 HTML
 //      讀 <link rel="icon">（瀏覽器受 CORS 限制讀唔到別站 HTML，所以要放伺服器做），
@@ -124,7 +295,9 @@ function appIconHTML(app, size) {
   const cls = size === "row" ? ' class="row-ico"' : "";
   const lazy = size === "row" ? "" : ' loading="lazy" decoding="async"';
   const fallback = `this.onerror=null;this.src='${SITE_LOGO}'`;
-  if (src === "emoji") return esc(app.icon);
+  // emoji 圖示都升級做線稿（"🧭" → compass，"i:compass" → compass）；
+  // 對應唔到就用通用方格 —— 公開版唔會再見到大粒 emoji 當 app 圖標
+  if (src === "emoji") return svgIcon(app.icon);
   if (src === "upload") return `<img${cls} src="${esc(app.icon)}" alt=""${lazy} onerror="${fallback}" />`;
   if (src === "favicon") {
     // chain：(GitHub 頭像) → 自己 /api/favicon → Google s2 → 全站 Logo

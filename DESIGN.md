@@ -105,7 +105,35 @@
 卡片節奏：`card` padding 12、icon 與文字 gap 12、貨架 gap 10、貨架之間 26。
 任何新 element 都要落喺呢張表；表上冇嘅就唔好加。
 
-## 9. 驗收（交付前）
+## 9. 圖標系統（emoji 全面退役）
+
+**規矩：介面圖示一律用線稿 SVG，唔准用 emoji。** emoji 每個系統畫法唔同、粗幼唔一、
+顏色跟系統、放大又會起格 —— 睇落就係「土炮」。而家全站（公開＋後台）都係同一套圖標。
+
+| 項目 | 規格 |
+|---|---|
+| viewBox | `0 0 24 24` |
+| 線粗 | `stroke-width: 1.6`，`round` cap／join |
+| 填色 | `fill: none`（狀態版例外：已收藏 ★／已讚好 ♥ 加 `.is-fill`） |
+| 顏色 | `currentColor`（跟文字色），分類／排行榜圖標用 `--accent` |
+| 尺寸 | 由 `font-size` 控制（`.ic { width: 1em; height: 1em }`），唔好寫死 px |
+| 來源 | `store.js` 嘅 `ICON_PATHS`（69 個）＋ `svgIcon()`；公開／後台共用 |
+
+用法：
+
+```js
+svgIcon("compass")        // 直接出 <svg class="ic" …>
+svgIcon("star", "is-fill") // 已收藏（實心星）
+catIconHTML(c.icon, name)  // 貨架頭（值可以係 "i:compass" 或舊 emoji "🧭"）
+```
+
+- 靜態 HTML 唔抄 path：寫 `<span data-icon="search"></span>`，boot 時 `hydrateIcons()` 填 `<svg>`。
+- 資料欄位（分類／分頁 icon）新寫法係 `"i:compass"`；舊 emoji 經 `EMOJI_TO_ICON`（132 個）自動對應。
+- **對應唔到嘅值一律退做 `grid`（通用方格）**，公開版永遠唔會漏返 emoji 出街。
+- 後台「揀圖標」面板：40 個常用圖標（`ICON_CHOICES`，附中文名），存 `"i:key"`。
+- App 自己嘅 icon：`iconSource="favicon"`（首選，用 app 自己個站嘅 logo）→ `upload` → `emoji`（已升級做線稿）。
+
+## 10. 驗收（交付前）
 
 1. `npm run build` 全綠（lint 內置 house rules 檢查）。
 2. 390 / 768 / 1440 三個寬度親眼望一次：第一屏答到「呢個係乜、俾邊個、跟住做乜」；
@@ -113,6 +141,7 @@
 3. 遮住 logo：頁面仲成立（= 有 idea，唔係模板）。
 4. Squint：得返 2–3 嚿大細分明嘅 mass（標題／格／按鈕）。
 5. 冇任何一條上面 §3 嘅禁止項。
+6. 冇任何 emoji 做介面圖示（`npm test` 有硬性斷言：HTML／app.js／market.js／render 輸出）。
 
 > ⚠️ 呢個環境**冇瀏覽器截圖**。任何人（包括 AI）都唔准講「我望過圖、幾多分」；
 > 只可以講「跑過 lint／單測」同「肉眼望過實際預覽」——後者要人手做。

@@ -32,9 +32,11 @@
 //            本站圖標補齊 9 個檔（favicon.ico/16/32/apple-touch/maskable/og-image）
 //      v40 = 設計統一（readme design-review house rules）：去漸層／去光暈／去英文
 //            eyebrow／單一金色 accent（同 9 個圖標一致）＋ DESIGN.md 設計語言
+//      v42 = 全站圖示去 emoji 化：一套 24px 線稿圖標（store.js ICON_PATHS／svgIcon）
+//            ＋ 舊 emoji 自動對應（EMOJI_TO_ICON）＋ 後台圖標選擇器（存 "i:key"）
 //      v41 = ROUND 2 App Store 版面：分類貨架（橫滑→2/3 欄）＋大卡＋詳情 sheet
 //            ＋統一線稿分類圖標；排行榜改直立列表；今期主打加大的 icon、刪假通知卡
-const CACHE = 'scout-tools-v41';
+const CACHE = 'scout-tools-v42';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

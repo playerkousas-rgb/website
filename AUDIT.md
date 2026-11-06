@@ -292,3 +292,54 @@ ROUND 1 之後用戶仍然覺得「唔似 App Store、太殘舊」——問題�
 今次唔搏。
 
 ---
+
+---
+
+## 13. 圖示去 emoji 化（ROUND 3 · 全面升級）
+
+用戶：「我想將那類 EMOJI 全面升級，用 EMOJI 太土炮了。」→ 介面圖示由 emoji 全面換成
+**一套 24×24 線稿 SVG**，公開版同後台共用，舊資料嘅 emoji 自動對應。
+
+### 13.1 做咗乜
+
+| 範圍 | 之前 | 之後 |
+|---|---|---|
+| 圖標來源 | emoji（每部機畫法唔同、粗幼唔一） | `store.js` `ICON_PATHS`：**69 個**線稿（stroke 1.6／round／currentColor）＋ `svgIcon()` |
+| 頂欄 | ＋ 🌐 📚 ⬇️ 🌙 | plus／globe／book／download／moon（跟主題轉 sun） |
+| 搜尋／底部導覽 | 🔍 📁 🔗 🧰 🏆 ⭐ | search／grid／link／tools／trophy／star |
+| 分類貨架頭 | emoji 或 23 個對應圖標 | 全部走同一套；新增 `"i:key"` 寫法，舊 emoji 經 **132 個**對應表 |
+| 排行榜指標 | 🔥 ⭐ ❤️ 🆕 文字前綴 | flame／star／heart／sparkle 線稿圖標 |
+| 詳情 sheet | ☆ ♡ ↗ 字符 | star／heart（填色版跟狀態）／share |
+| 分享面板 | 💬 📘 ✈️ 🐦 🟢 📲 扮品牌 logo | **純文字格**（唔再用 emoji 冒認品牌標誌） |
+| 提交／回報對話框 | 🧰 🌐 📚 🐛 💬 💡 👍 👎 📝 | 線稿圖標 ＋ 乾淨文字 |
+| 今期主打 meta | ⭐ ❤️ 🎖 字串 | 「圖標 ＋ 數字」逐粒砌 |
+| 後台 | 分類／分頁／統計／工具列共 65 處 emoji | 全部線稿；`alert()` 文字順手去 emoji |
+| 後台圖標選擇器 | WhatsApp 式 emoji 揀選器（400+ emoji、8 個分頁） | **「線稿圖標」40 個**（附中文名，2 字排），值存 `i:key`；emoji 分頁收起（舊資料仍可對應） |
+| App 圖標 | `iconSource="emoji"` 直接出 emoji | 同一套線稿（對應唔到退 `grid`） |
+| 底部導覽選中色 | 殘留 `#6366f1` 紫藍（第二隻 accent） | 改回金色 `--accent-soft`／`--accent-text` |
+| 剔號 | CSS `content: "✓"` | CSS 畫剔（border 旋轉），同線稿粗細一致 |
+
+### 13.2 單一來源（點樣唔會再走樣）
+
+- `ICON_PATHS`＋`svgIcon()` 只喺 `store.js` 出現一次；公開版、後台、靜態 HTML 全部共用。
+- 靜態 HTML 用 `<span data-icon="search">`，boot 時 `hydrateIcons()` 一次過填 `<svg>`，唔會抄兩份 path。
+- 值嘅優先次序：`"i:key"` → 舊 emoji 對應 → `grid`（通用方格）。**永遠唔會漏返 emoji**。
+- 後台揀圖標 → 存 `"i:key"` → 公開版即刻用同一粒。
+
+### 13.3 驗證（機械）
+
+- `npm test` 全綠，新增硬性斷言：
+  - HTML／`app.js`／`market.js`（剝走註解後）**零 emoji**；
+  - `render()` 輸出零 emoji；
+  - `ICON_PATHS`／`EMOJI_TO_ICON`／`ICON_FALLBACK` 存在；
+  - 統計面板輸出零 emoji、審核卡圖示係 `<svg class="ic">`。
+- 69 個圖標 path 全部通過 HTML 解析（無未閉合標籤）。
+- `node scripts/lint.js` ✅、`npm run build` ✅（部署體積見 build 尾行）。
+- `sw.js` v41 → **v42**。
+
+### 13.4 已知限制
+
+- emoji 揀選器嘅資料（`EMOJI_GROUPS`／`EMOJI_ALL`／`EMOJI_INDEX`，約 4 KB）仍然留喺 bundle 做舊資料對應同搜尋索引，
+  但介面已經冇入口；下一輪可以連同 `emojiSearch()` 一齊刪走。
+- **未親眼睇過**：沙盒冇瀏覽器。要人手望：圖標喺 13px 細字時會唔會太幼、後台 40 格圖標面板排位、
+  深色模式下 `currentColor` 對比夠唔夠。
