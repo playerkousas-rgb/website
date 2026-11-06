@@ -39,7 +39,10 @@
   // 呢段要放喺 <style> 之前，令第一帧就已經係正確主題。
   (function () {
     var t = "dark";
-    try { t = localStorage.getItem("theme") || "dark"; } catch (e) {}
+    try {
+      t = localStorage.getItem("theme") ||
+        ((window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) ? "light" : "dark");
+    } catch (e) {}
     document.documentElement.dataset.theme = t;
     var m = document.querySelector('meta[name="theme-color"]');
     if (m) m.content = t === "dark" ? "#0b0d12" : "#faf6ec";
@@ -61,6 +64,21 @@
     --accent-soft: rgba(179, 130, 26, .12);
     --accent-text: #8a5a05;
     --on-accent: #1a1200;
+    /* ── 分類色板（6 色）：每條貨架／每個分類一隻色 ────────────
+       對象係青少年：太多灰同黑會「陰沉」，但亂加色又會變雜牌。
+       所以定死 6 隻（青綠／天藍／珊瑚／紫／草綠／琥珀），
+       只出現喺「分類」身上（貨架圖標、卡片細邊、chip 選中）。
+       金仍然係品牌色（主要動作、今期主打）。見 DESIGN.md §2。 */
+    --c1: #10897a;   /* 青綠 */
+    --c2: #2f6fd0;   /* 天藍 */
+    --c3: #d4553c;   /* 珊瑚 */
+    --c4: #7a55c9;   /* 紫羅蘭 */
+    --c5: #3d8b3f;   /* 草綠 */
+    --c6: #b8860b;   /* 琥珀 */
+    --rank-1: #b8860b;
+    --rank-2: #7c8ba1;
+    --rank-3: #b06a3b;
+    --on-cat: #ffffff;   /* 彩色底上面嘅字（淺色主題用白字） */
     --danger: #dc2626;
     --danger-soft: rgba(220, 38, 38, .1);
     --ok: #059669;
@@ -100,10 +118,10 @@
   }
   [data-theme="dark"] {
     color-scheme: dark;
-    --bg: #0b0d12;
-    --bg-elevated: #151922;
-    --bg-card: #1a1f2e;
-    --bg-card-hover: #22293e;
+    --bg: #12141c;
+    --bg-elevated: #1b1f2a;
+    --bg-card: #1d2231;
+    --bg-card-hover: #262d40;
     --text: #f1f5f9;
     --muted: #94a3b8;
     --border: rgba(255, 255, 255, .08);
@@ -113,6 +131,17 @@
     --accent-soft: rgba(232, 200, 122, .14);
     --accent-text: #f0d59b;
     --on-accent: #12100c;
+    /* 深色版：同一 6 隻色提亮（放喺深底上面先夠 contrast） */
+    --c1: #4fd6c2;
+    --c2: #7fb3f7;
+    --c3: #ff9d7c;
+    --c4: #bda2f5;
+    --c5: #94dc8f;
+    --c6: #f0cf8a;
+    --rank-1: #f0cf8a;
+    --rank-2: #a9b7c9;
+    --rank-3: #d99a6c;
+    --on-cat: #10121a;   /* 深色主題嘅分類色係淺色 → 上面用深字 */
     --danger: #f87171;
     --danger-soft: rgba(248, 113, 113, .14);
     --ok: #34d399;
@@ -792,11 +821,11 @@
     color: var(--text);
   }
   .bnav-btn.on {
-    color: var(--accent-text);
+    color: var(--cat, var(--accent-text));
     font-weight: 700;
   }
   .bnav-btn.on .bnav-icon {
-    background: var(--accent-soft);
+    background: color-mix(in srgb, var(--cat, var(--accent)) 16%, transparent);
   }
   /* 舊嘅 bottom-sub-line 已合併為 bottom-credit-line，保留兼容但隱藏 */
   .bottom-sub-line { display: none; }
@@ -821,7 +850,9 @@
   }
   .empty-ico {
     width: 72px; height: 72px; margin: 0 auto 14px; border-radius: 22px;
-    background: var(--bg-card); border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--c2) 12%, var(--bg-card));
+    border: 1px solid color-mix(in srgb, var(--c2) 26%, var(--border));
+    color: var(--c2);
     display: flex; align-items: center; justify-content: center;
     font-size: 30px; box-shadow: var(--shadow-sm);
   }
@@ -1052,11 +1083,11 @@
   .analytics-fav-track { display: grid; gap: 3px; margin-top: 6px; }
   .analytics-fav-track i { display: block; height: 4px; border-radius: 99px; background: var(--border); }
   .analytics-fav-track .trk-star { background: var(--accent); }
-  .analytics-fav-track .trk-heart { background: #ef4444; }
+  .analytics-fav-track .trk-heart { background: var(--c3); }
   .analytics-fav-nums { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; min-width: 76px; }
   .analytics-fav-nums span { font-size: 12px; font-weight: 800; white-space: nowrap; }
   .analytics-fav-nums .num-star { color: var(--accent); }
-  .analytics-fav-nums .num-heart { color: #ef4444; }
+  .analytics-fav-nums .num-heart { color: var(--c3); }
   .analytics-app-row > strong { min-width: 64px; text-align: right; color: var(--accent-text); font-size: 15px; }
   .analytics-app-row > strong small { color: var(--muted); font-size: 10px; font-weight: 600; }
   .analytics-note { margin: 13px 2px 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
@@ -1462,6 +1493,26 @@
      規則：實色、單一金 accent、icon 做主角、冇漸層／光暈（見 DESIGN.md）
      ══════════════════════════════════════════════════════════════ */
 
+  /* 分類色：section／chip／底欄掣都靠 data-catn 揀色（0–5 循環） */
+  [data-catn="0"] { --cat: var(--c1); }
+  [data-catn="1"] { --cat: var(--c2); }
+  [data-catn="2"] { --cat: var(--c3); }
+  [data-catn="3"] { --cat: var(--c4); }
+  [data-catn="4"] { --cat: var(--c5); }
+  [data-catn="5"] { --cat: var(--c6); }
+
+  /* 頂部彩色條：一眼就知「呢個係青春版」 */
+  .head-strip {
+    display: flex; gap: 0; height: 3px; border-radius: 99px;
+    overflow: hidden; margin: 0 0 10px;
+  }
+  .head-strip i { flex: 1; background: var(--c1); }
+  .head-strip i:nth-child(2) { background: var(--c2); }
+  .head-strip i:nth-child(3) { background: var(--c3); }
+  .head-strip i:nth-child(4) { background: var(--c4); }
+  .head-strip i:nth-child(5) { background: var(--c5); }
+  .head-strip i:nth-child(6) { background: var(--c6); }
+
   /* 頂欄：標題大一級，動作掣收做安靜嘅 ghost（只有「提交作品」用 accent） */
   .head-titles h1 { font-size: clamp(19px, 4.6vw, 23px); letter-spacing: -.03em; }
   .head-sub { font-size: 12.5px; letter-spacing: 0; }
@@ -1474,20 +1525,20 @@
   .market-submit.head-submit[onclick*="'app'"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
 
   /* 貨架 ------------------------------------------------------- */
-  .shelf-sec { margin-top: 26px; }
+  .shelf-sec { margin-top: 26px; --cat: var(--accent); }
   .shelf-sec .sec-head { margin-bottom: 10px; padding: 0; gap: 9px; }
   .sec-head h2 { font-size: var(--fs-3); font-weight: 800; letter-spacing: -.02em; }
-  /* 貨架／排行榜標題前嘅圖標用金（同分類圖標一致），文字保持 --text */
-  .sec-head h2 .ic { color: var(--accent); }
+  /* 貨架／排行榜標題前嘅圖標跟分類色，文字保持 --text */
+  .sec-head h2 .ic { color: var(--cat, var(--accent)); }
   .sec-head .num {
-    font-size: 11.5px; font-weight: 700; color: var(--muted);
+    font-size: 11.5px; font-weight: 700; color: color-mix(in srgb, var(--cat, var(--accent)) 55%, var(--muted));
     background: transparent; border: 0; padding: 0; margin-left: 0;
   }
-  .cat-ico { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; color: var(--accent); flex-shrink: 0; }
+  .cat-ico { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; color: var(--cat, var(--accent)); flex-shrink: 0; }
   .cat-ico .ic { width: 20px; height: 20px; }
   .sec-more {
     margin-left: auto; border: 0; background: none;
-    color: var(--accent-text); font-size: 13px; font-weight: 750;
+    color: var(--cat, var(--accent-text)); font-size: 13px; font-weight: 750;
     padding: 6px 2px; cursor: pointer; white-space: nowrap;
   }
   .sec-more:hover { text-decoration: underline; text-underline-offset: 3px; }
@@ -1511,19 +1562,26 @@
     display: flex; align-items: center; gap: 12px;
     padding: 12px; min-width: 0;
     background: var(--bg-card);
-    border: 1px solid var(--border);
+    border: 1px solid color-mix(in srgb, var(--cat, var(--accent)) 22%, var(--border));
     border-radius: var(--radius);
     scroll-snap-align: start;
     transition: border-color .15s, background .15s, transform .15s var(--ease);
   }
-  .card:hover { border-color: var(--border-strong); background: var(--bg-card-hover); transform: translateY(-1px); }
+  .card:hover {
+    border-color: color-mix(in srgb, var(--cat, var(--accent)) 55%, var(--border));
+    background: color-mix(in srgb, var(--cat, var(--accent)) 7%, var(--bg-card-hover));
+    transform: translateY(-1px);
+  }
   .card:active { transform: scale(.985); }
   .card-icon {
-    width: 60px; height: 60px; flex-shrink: 0; border-radius: 15px;
-    display: flex; align-items: center; justify-content: center; overflow: hidden;
-    font-size: 34px; line-height: 1;   /* emoji 圖示都夠大，唔會縮到一粒豆 */
+    width: 62px; height: 62px; flex-shrink: 0; border-radius: 17px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; line-height: 1;
+    /* 彩色底盤：app logo 放喺自己分類色上面，成條貨架即刻有生命 */
+    background: color-mix(in srgb, var(--cat, var(--accent)) 14%, var(--bg-card));
+    padding: 4px;
   }
-  .card-icon img { width: 60px; height: 60px; object-fit: cover; border-radius: 15px; }
+  .card-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 13px; }
   .card-copy { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
   .card .tile-name {
     font-size: 14.5px; font-weight: 750; line-height: 1.28; text-align: left;
@@ -1541,8 +1599,12 @@
     color: var(--muted); font-weight: 700; padding: 9px 12px;
   }
   .chips .chip:hover { background: var(--bg-card); border-color: var(--border); color: var(--text); }
-  .chips .chip.on { background: var(--accent); border-color: transparent; color: var(--on-accent); }
-  [data-theme="dark"] .chips .chip.on { color: #0b0d12; }
+  .chips .chip.on {
+    background: var(--cat, var(--accent));
+    border-color: transparent; color: var(--on-cat, var(--on-accent));
+    box-shadow: none;
+  }
+  .chips .chip.on:hover { background: var(--cat, var(--accent)); color: var(--on-cat, var(--on-accent)); }
 
   /* 詳情 sheet -------------------------------------------------- */
   body.sheet-open { overflow: hidden; }
@@ -1612,6 +1674,7 @@
 </head>
 <body>
 <div class="wrap">
+  <div class="head-strip" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
   <div class="topbar" id="topbar">
     <header>
       <div class="head-row">
@@ -1929,23 +1992,23 @@
 
 <footer class="bottom-footer-bar" id="bottom-footer-bar">
   <nav class="bottom-nav" id="bottom-nav" aria-label="底欄導覽">
-    <button type="button" class="bnav-btn on" data-bnav="discover" onclick="handleBnav('discover')">
+    <button type="button" class="bnav-btn on" data-bnav="discover" data-catn="0" onclick="handleBnav('discover')">
       <span class="bnav-icon" data-icon="grid"></span>
       <span class="bnav-label">分類</span>
     </button>
-    <button type="button" class="bnav-btn" data-bnav="links" onclick="handleBnav('links')">
+    <button type="button" class="bnav-btn" data-bnav="links" data-catn="1" onclick="handleBnav('links')">
       <span class="bnav-icon" data-icon="link"></span>
       <span class="bnav-label">連結</span>
     </button>
-    <button type="button" class="bnav-btn" data-bnav="tools" onclick="handleBnav('tools')">
+    <button type="button" class="bnav-btn" data-bnav="tools" data-catn="2" onclick="handleBnav('tools')">
       <span class="bnav-icon" data-icon="tools"></span>
       <span class="bnav-label">教學工具</span>
     </button>
-    <button type="button" class="bnav-btn" data-bnav="charts" onclick="handleBnav('charts')">
+    <button type="button" class="bnav-btn" data-bnav="charts" data-catn="3" onclick="handleBnav('charts')">
       <span class="bnav-icon" data-icon="trophy"></span>
       <span class="bnav-label">排行榜</span>
     </button>
-    <button type="button" class="bnav-btn" data-bnav="fav" onclick="handleBnav('fav')">
+    <button type="button" class="bnav-btn" data-bnav="fav" data-catn="5" onclick="handleBnav('fav')">
       <span class="bnav-icon" data-icon="star"></span>
       <span class="bnav-label">收藏</span>
     </button>
@@ -1974,7 +2037,21 @@ function applyTheme(t) {
     || document.querySelector('meta[name="theme-color"]');
   if (meta) meta.content = t === "dark" ? "#0b0d12" : "#faf6ec";
 }
-applyTheme(localStorage.getItem("theme") || "dark");
+// 預設跟系統（用戶撳過 🌙 之後就用返佢自己揀嘅）
+const _savedTheme = (() => { try { return localStorage.getItem("theme"); } catch { return null; } })();
+const _sysLight = () => !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches);
+applyTheme(_savedTheme || (_sysLight() ? "light" : "dark"));
+// 未揀過主題 → 系統轉色時自動跟（唔會搶走手動選擇）
+if (window.matchMedia) {
+  const _mq = window.matchMedia("(prefers-color-scheme: light)");
+  const _onScheme = () => {
+    let saved = null;
+    try { saved = localStorage.getItem("theme"); } catch {}
+    if (!saved) { applyTheme(_mq.matches ? "light" : "dark"); if (!isAdminRoute() && typeof rerenderPublic === "function") rerenderPublic(); }
+  };
+  if (_mq.addEventListener) _mq.addEventListener("change", _onScheme);
+  else if (_mq.addListener) _mq.addListener(_onScheme);
+}
 hydrateIcons();                       // 靜態 icon 位（data-icon）一次過填好
 themeBtn.onclick = () => {
   applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");

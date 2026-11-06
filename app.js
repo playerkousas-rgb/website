@@ -392,8 +392,11 @@ function sectionHTML(title, icon, apps, id) {
     ? `<button type="button" class="sec-more" onclick="jumpTo('${esc(id)}')" ` +
       `aria-label="睇晒「${esc(title)}」全部 ${apps.length} 個">全部 <span aria-hidden="true">›</span></button>`
     : "";
+  // 分類色：cat-0 → c1, cat-1 → c2 …（6 隻循環）；「我的收藏」用品牌金
+  const m = /^cat-(\d+)$/.exec(String(id));
+  const catAttr = m ? ` data-catn="${Number(m[1]) % 6}"` : "";
   return `
-  <section id="${id}" class="shelf-sec">
+  <section id="${id}" class="shelf-sec"${catAttr}>
     <div class="sec-head">
       ${catIconHTML(icon, title)}
       <h2>${esc(title)}</h2>
@@ -607,12 +610,13 @@ function render() {
   // Build chip bar — 純文字（emoji 圖示阻位，被刻意抽走）；
   // 「我的收藏」唔再係 chip，入口喺底部常駐列（data-bnav="fav"）。
   // 手機版用短名（全部／進度紀錄…），桌面版用全名。
-  const chipBtn = (id, full, short) =>
-    `<button type="button" class="chip ${activeChip === id ? "on" : ""}" data-chip="${esc(id)}" ` +
-    `onclick="jumpTo('${esc(id)}')" title="${esc(full)}">${chipTxt(full, short)}</button>`;
+  const chipBtn = (id, full, short, catn) =>
+    `<button type="button" class="chip ${activeChip === id ? "on" : ""}" data-chip="${esc(id)}"` +
+    (catn == null ? "" : ` data-catn="${catn}"`) +
+    ` onclick="jumpTo('${esc(id)}')" title="${esc(full)}">${chipTxt(full, short)}</button>`;
   chipsEl.innerHTML =
     chipBtn("all", "全部", "全部") +
-    catIdx.map(({ c, i }) => chipBtn("cat-" + i, c.name, catShort(c.name))).join("");
+    catIdx.map(({ c, i }) => chipBtn("cat-" + i, c.name, catShort(c.name), i % 6)).join("");
 
   renderTagRow();
   renderSortRow();
