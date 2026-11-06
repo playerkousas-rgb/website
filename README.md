@@ -44,12 +44,13 @@
 | `dev-server.mjs` | 本地 dev server（靜態＋`/api/favicon`，同 Vercel 行為一致） |
 | `manifest.webmanifest` | PWA 配置 |
 | `sw.js` | Service worker（離線可開） |
-| `icons/` | 桌面圖標（已壓縮；新圖片規則見 OPTIMIZATION.md） |
+| `icons/` | 桌面圖標 **9 個檔齊**（favicon.ico／16／32、apple-touch-icon、icon-192／512、maskable 192／512、og-image）—— 規格見 readme `docs/33`，重生用 `bash scripts/make-icons.sh` |
 | `package.json` | 極簡腳本：`npm run check`／`build`／`preview` —— **刻意零 dependencies** |
 | `vercel.json` | 鎖死部署設定（framework null／build `npm run build`／輸出＝根目錄），唔靠 Vercel 自動偵測 |
 | `.vercelignore` / `.gitignore` | 部署／commit 排除清單 —— 防死重上傳 Vercel（**test/、scripts/ 唔准擋**，build 閘門用得到） |
 | `migrations/` | 手動執行嘅 SQL 升級（唔會上線，`.vercelignore` 已擋）；投稿相關見 `20260925-submission-contact.sql`；訪客統計見 `20261004-analytics.sql` |
-| `scripts/` | `lint.js`（防增肥守護）＋ `verify-assets.js`（部署清單核對），零依賴 |
+| `scripts/` | `lint.js`（防增肥＋**圖標標準**守護）＋ `verify-assets.js`（部署清單核對）＋ `make-icons.sh`（一次過出 9 個圖標），零依賴 |
+| `AUDIT.md` | 對照 readme（真理倉）嘅審閱報告：五大鐵律、G11 圖標標準、差距與優先次序 |
 | `OPTIMIZATION.md` | ⭐ 瘦身紀錄＋防增肥守則 —— **加套件／加圖片之前必讀** |
 
 ## 部署（Vercel）
@@ -189,7 +190,7 @@ hero 右上角仲有一粒 **🔗 分享掣**：用 Web Share API 分享該項�
 
 | 選項 | 行為 | 適用場景 |
 |---|---|---|
-| 🌐 **App 自帶 Logo**（預設） | GitHub repo 欄（或 URL 本身係 github.com）有填 → 用 repo 主人嘅 GitHub 頭像（64px）；否則自動攞該網站 favicon，順序：① 我哋 `/api/favicon`（同 Chrome 分頁標籤一樣自己讀該站 HTML）→ ② Google s2 備援 → ③ 全站 Logo | 對外連結到自己嘅 Vercel/網站，最方便 |
+| 🌐 **App 自帶 Logo**（預設） | 自動攞該 app 自己個站嘅 favicon，順序：① 我哋 `/api/favicon`（同 Chrome 分頁標籤一樣自己讀該站 HTML）→ ② 有 GitHub repo 欄就用 repo 主人頭像（站台冇 icon 時嘅後備）→ ③ Google s2 → ④ 全站 Logo。**每一條 URL 都帶 `?v=` cache-busting**（換咗 logo 即時見新圖） | 對外連結到自己嘅 Vercel/網站，最方便 |
 | 😀 **Emoji** | 由你揀一個字符 | 自家內部工具、快速標記 |
 | 🖼 **上傳圖片／圖片網址** | 後台直接由本機上傳圖片（自動縮到 192px 內、壓做 data URL），或者貼一張 https 圖片連結 | 想用特定 PNG / 設計過嘅 logo |
 | 🚫 **不用** | 直接用我哋全站 Logo | 想統一一個 brand |
@@ -208,10 +209,19 @@ Chrome 分頁標籤識顯示 ICON，係因為佢**自己攞咗成頁 HTML**，�
 1. 伺服器攞該站 HTML（https 唔通轉 http，跟重定向）
 2. 搵所有 `<link rel="icon">`（包括 `shortcut icon` / `apple-touch-icon`），
    按「PNG 優先、32–128px 最啱 64px tile」打分揀最佳
-3. 冇 link 或圖 404 → 試該站 `/favicon.ico`
-4. 都冇 → 回 404，前端 `<img>` 自動行備援：Google s2 → 全站 Logo
+3. 冇 link 或圖 404 → 讀該站 PWA manifest 嘅 icon → 再試 `/favicon.ico`
+4. 都冇 → 回 404，前端 `<img>` 自動行備援：GitHub 頭像 → Google s2 → 全站 Logo
 
-附帶好處：唔使經 Google、edge cache 7 日、SSRF 防護（只收域名，唔收 IP/內網）。
+**快取策略（2026-11-06 收緊）**
+
+| 情況 | 回應 header | 幾時見到新圖 |
+|---|---|---|
+| 平時 | `max-age=3600, s-maxage=86400, stale-while-revalidate=86400` | 最多 1 日（舊版 7 日） |
+| 帶 `?v=…`（前端每次都帶） | `no-store, max-age=0` | **即時**（連上游都 `no-cache`） |
+| 失敗（404） | `no-store` | 下次即刻再試，唔會爛足 7 日 |
+
+查「點解仲係舊圖」：開 `https://scoutappstore.vercel.app/api/favicon?host=<app 網域>&debug=1`，
+會回 JSON（`via` 話你知係經 `<link rel=icon>`／manifest／favicon.ico 攞到，`checkedAt` 係檢查時間）。
 
 ### ⚠️ 一鍵重設（清空 + 建立預設模板）
 

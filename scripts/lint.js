@@ -139,6 +139,84 @@ if (assets) {
   bad("sw.js 搵唔到 ASSETS 清單");
 }
 
+/* ── 8) 圖標標準（readme docs/33 · G11）：9 個檔 ＋ head 5 link 4 meta ──
+   為咗防「圖標冇換／換咗冇人知」再發生：任何一個檔缺失、尺寸錯、
+   head 少一條 link／meta、manifest 少一個 maskable，build 都會 fail。 */
+const ICON_SPEC = [
+  ["icons/favicon.ico", 0, 0],           // 0 = ICO，唔讀 IHDR
+  ["icons/favicon-16.png", 16, 16],
+  ["icons/favicon-32.png", 32, 32],
+  ["icons/apple-touch-icon.png", 180, 180],
+  ["icons/icon-192.png", 192, 192],
+  ["icons/icon-512.png", 512, 512],
+  ["icons/icon-maskable-192.png", 192, 192],
+  ["icons/icon-maskable-512.png", 512, 512],
+  ["icons/og-image.png", 1200, 630]
+];
+const iconProblems = [];
+let iconBytes = 0;
+for (const [f, w, h] of ICON_SPEC) {
+  if (!exists(f)) { iconProblems.push(`缺 ${f}`); continue; }
+  const buf = fs.readFileSync(path.join(ROOT, f));
+  iconBytes += buf.length;
+  if (w) {
+    if (buf.slice(1, 4).toString() !== "PNG") { iconProblems.push(`${f} 唔係 PNG`); continue; }
+    const pw = buf.readUInt32BE(16), ph = buf.readUInt32BE(20);
+    if (pw !== w || ph !== h) iconProblems.push(`${f} 尺寸 ${pw}×${ph}，應該 ${w}×${h}`);
+  }
+}
+if (iconBytes > 260 * 1024) iconProblems.push(`9 個圖標合計 ${(iconBytes / 1024).toFixed(0)}KB > 260KB 預算（跑 scripts/make-icons.sh 減色）`);
+
+// head：5 條 link（ico / 16 / 32 / apple-touch / manifest）
+const needLinks = [
+  ['rel="icon" href="/icons/favicon.ico"', "favicon.ico"],
+  ['sizes="16x16"', "16×16 PNG"],
+  ['sizes="32x32"', "32×32 PNG"],
+  ['rel="apple-touch-icon"', "apple-touch-icon 180"],
+  ['rel="manifest"', "manifest"]
+];
+for (const [needle, name] of needLinks) if (!html.includes(needle)) iconProblems.push(`index.html head 缺 ${name}`);
+// head：4 條 og meta（og:image 必須絕對網址）
+const ogImage = (html.match(/<meta property="og:image" content="([^"]+)"/) || [])[1];
+if (!ogImage) iconProblems.push("index.html 缺 og:image（貼連結冇預覽）");
+else if (!/^https:\/\//.test(ogImage)) iconProblems.push("og:image 一定要絕對網址（https://…），相對路徑分享平台攞唔到");
+for (const prop of ["og:image:width", "og:image:height"]) {
+  if (!html.includes(`property="${prop}"`)) iconProblems.push(`index.html 缺 ${prop}`);
+}
+// manifest：4 個 icon（any 192/512 ＋ maskable 192/512）
+try {
+  const mf = JSON.parse(read("manifest.webmanifest"));
+  const list = Array.isArray(mf.icons) ? mf.icons : [];
+  const hasAny = (sz) => list.some((i) => i.sizes === sz && (i.purpose || "any") === "any");
+  const hasMask = (sz) => list.some((i) => i.sizes === sz && (i.purpose || "").includes("maskable"));
+  for (const sz of ["192x192", "512x512"]) {
+    if (!hasAny(sz)) iconProblems.push(`manifest 缺 any ${sz}`);
+    if (!hasMask(sz)) iconProblems.push(`manifest 缺 maskable ${sz}`);
+  }
+  if (mf.theme_color !== "#0b0d12" || mf.background_color !== "#0b0d12") {
+    warn("manifest theme_color／background_color 同圖標主色（#0b0d12）唔一致");
+  }
+} catch (e) { iconProblems.push("manifest.webmanifest 解析唔到：" + e.message); }
+
+// 版本號一致性：store.js 嘅 ICON_VER ＝ index.html 嘅 ?v= ＝ manifest 嘅 ?v=
+// （三處唔同步 = 換圖標時一部分用戶見到新圖、一部分見到舊圖）
+const verMatch = read("store.js").match(/let ICON_VER = "([^"]+)"/);
+if (!verMatch) iconProblems.push("store.js 搵唔到 `let ICON_VER = \"...\"`");
+else {
+  const v = verMatch[1];
+  const htmlVers = [...html.matchAll(/[?&]v=([0-9A-Za-z._-]+)/g)].map((m) => m[1]);
+  const mfVers = [...read("manifest.webmanifest").matchAll(/[?&]v=([0-9A-Za-z._-]+)/g)].map((m) => m[1]);
+  const bad1 = htmlVers.filter((x) => x !== v);
+  const bad2 = mfVers.filter((x) => x !== v);
+  if (!htmlVers.length) iconProblems.push("index.html 圖標 URL 冇 ?v= cache-busting");
+  else if (bad1.length) iconProblems.push(`index.html 嘅 ?v=${[...new Set(bad1)].join(",")} 同 store.js ICON_VER(${v}) 唔一致`);
+  if (!mfVers.length) iconProblems.push("manifest 圖標 URL 冇 ?v= cache-busting");
+  else if (bad2.length) iconProblems.push(`manifest 嘅 ?v=${[...new Set(bad2)].join(",")} 同 store.js ICON_VER(${v}) 唔一致`);
+}
+
+if (iconProblems.length) iconProblems.forEach((p) => bad("圖標標準：" + p));
+else ok(`圖標標準 9 個檔齊、尺寸正確、合計 ${(iconBytes / 1024).toFixed(0)}KB（預算 260KB）；head 5 link ＋ og meta、manifest 4 個 icon 齊`);
+
 /* ── 結算 ───────────────────────────────────────────────────── */
 console.log("");
 if (failed) {

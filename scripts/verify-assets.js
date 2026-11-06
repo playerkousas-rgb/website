@@ -26,15 +26,22 @@ const DEPLOY = [
   "api/favicon.js",
   "icons/icon-192.png",
   "icons/icon-512.png",
+  "icons/icon-maskable-192.png",
+  "icons/icon-maskable-512.png",
+  "icons/apple-touch-icon.png",
+  "icons/favicon-16.png",
+  "icons/favicon-32.png",
+  "icons/favicon.ico",
+  "icons/og-image.png",
   "icons/ig-qr.png"
 ];
 /* 純開發用（.vercelignore 擋走，或者 Vercel build 用完即棄） */
 const DEV_ONLY = [
   "package.json", "package-lock.json", "vercel.json",
   ".vercelignore", ".gitignore",
-  "README.md", "OPTIMIZATION.md",
+  "README.md", "OPTIMIZATION.md", "AUDIT.md",
   "dev-server.mjs",
-  "scripts/lint.js", "scripts/verify-assets.js",
+  "scripts/lint.js", "scripts/verify-assets.js", "scripts/make-icons.sh",
   "migrations/20260924-market.sql", "migrations/20260924-hearts.sql", "migrations/20260925-submission-contact.sql", "migrations/20261004-analytics.sql", "migrations/20261022-share-modes.sql",
   "test/market.test.js", "test/notify-admin.test.js", "test/report.test.js",
   "test/favicon.test.js", "test/labels.test.js", "test/boot-order.test.js",

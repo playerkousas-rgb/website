@@ -199,14 +199,40 @@ const { resolveFavicon, safeHost, iconCandidates } = require("../api/favicon.js"
   assert.equal(res.code, 200);
   assert.equal(res.headers["Content-Type"], "image/png");
   assert.equal(res.headers["Access-Control-Allow-Origin"], "*");
-  assert.match(res.headers["Cache-Control"], /s-maxage=604800/);
+  // 預設：edge 只快 1 日（舊版 7 日 → 換 icon 要等成個星期，係「圖標冇換」成因之一）
+  assert.match(res.headers["Cache-Control"], /s-maxage=86400/);
+  assert.doesNotMatch(res.headers["Cache-Control"], /604800/);
+
+  // ?v=<時間戳>（前端 cache-busting）→ 一律 no-store，即時見新圖
+  res = mkRes();
+  await mod({ url: "/api/favicon?host=multi.test&v=1730000000000" }, res);
+  assert.equal(res.code, 200);
+  assert.match(res.headers["Cache-Control"], /no-store/);
+
+  // ?refresh=1 → 同上
+  res = mkRes();
+  await mod({ url: "/api/favicon?host=multi.test&refresh=1" }, res);
+  assert.match(res.headers["Cache-Control"], /no-store/);
+
+  // ?debug=1 → JSON（邊條路徑攞到圖，方便查「點解係舊圖」），而且唔可以被快取
+  res = mkRes();
+  await mod({ url: "/api/favicon?host=multi.test&debug=1" }, res);
+  assert.equal(res.code, 200);
+  assert.match(res.headers["Content-Type"], /application\/json/);
+  assert.equal(res.headers["Cache-Control"], "no-store");
+  const dbg = JSON.parse(String(res.body));
+  assert.equal(dbg.ok, true);
+  assert.equal(dbg.via, "link");
+
   res = mkRes();
   await mod({ url: "/api/favicon?host=127.0.0.1" }, res);
   assert.equal(res.code, 400);
   res = mkRes();
   await mod({ url: "/api/favicon?host=none.test" }, res);
   assert.equal(res.code, 404);
-  console.log("✓ handler：200 + CORS + 長 cache / 400 bad host / 404 冇 favicon");
+  // 失敗唔好快取（否則一次死機就 7 日都冇圖）
+  assert.match(res.headers["Cache-Control"], /no-store/);
+  console.log("✓ handler：200 + CORS + 1 日 cache / ?v&?refresh → no-store / ?debug → JSON / 400 / 404");
 
   globalThis.fetch = realFetch;
   console.log("\n全部通過 ✅");
