@@ -217,6 +217,25 @@ else {
 if (iconProblems.length) iconProblems.forEach((p) => bad("圖標標準：" + p));
 else ok(`圖標標準 9 個檔齊、尺寸正確、合計 ${(iconBytes / 1024).toFixed(0)}KB（預算 260KB）；head 5 link ＋ og meta、manifest 4 個 icon 齊`);
 
+/* ── 9) 設計 house rules（readme design-review）：防「美化」時又走返舊路 ──
+   規則出處：templates/repo-starter/docs/design-review.md §2 反 slop 清單。
+   呢度只做「機械驗得到」嘅部分；靚唔靚仍然要人眼睇圖（本 repo 冇截圖能力）。 */
+const designProblems = [];
+const uiCss = [read("index.html"), read("market.css")].join("\n");
+const gradientHits = (uiCss.match(/(linear|radial|conic)-gradient\(/g) || []).length;
+if (gradientHits) designProblems.push(`UI CSS 仲有 ${gradientHits} 個 gradient（house rules：一律用實色 + 留白分組）`);
+const eyebrowHits = (uiCss.match(/eyebrow|text-transform:\s*uppercase/g) || []).length;
+if (eyebrowHits) designProblems.push(`仲有 ${eyebrowHits} 個 eyebrow／uppercase 小標籤（house rules：直接用中文標題）`);
+const offBrand = ["#2563eb", "#3b82f6", "#0d9488", "#14b8a6", "#d97706", "#f59e0b", "#60a5fa"]
+  .filter((hex) => uiCss.toLowerCase().includes(hex));
+if (offBrand.length) designProblems.push(`UI 出現第二隻品牌色：${offBrand.join("、")}（只准金色系）`);
+const glowHits = (uiCss.match(/(?<!backdrop-)filter:\s*(blur|drop-shadow)\(/g) || []).length;
+if (glowHits) designProblems.push(`UI 仲有 ${glowHits} 個裝飾性 blur／drop-shadow（house rules：一個 elevation 夠）`);
+// DESIGN.md 一定要存在（docs/23 §3 硬性第 3 步：有 design language）
+if (!exists("DESIGN.md")) designProblems.push("缺 DESIGN.md（設計語言唯一真理）");
+if (designProblems.length) designProblems.forEach((p) => bad("設計規則：" + p));
+else ok("設計 house rules：0 gradient／0 eyebrow／單一金色品牌／無裝飾光暈，DESIGN.md 在");
+
 /* ── 結算 ───────────────────────────────────────────────────── */
 console.log("");
 if (failed) {

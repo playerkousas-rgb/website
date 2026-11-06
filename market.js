@@ -5,7 +5,6 @@
    - material: 📚 教材分享（貼 Google Drive／Canva／OneDrive／簡報／圖卡等雲端連結，唔使自己起網站） */
 const SUBMIT_MODES = {
   app: {
-    eyebrow: 'MADE BY YOU',
     title: '分享你的作品',
     intro: '填上作品連結及標籤。提交後會寫入商店資料庫，並同時登記到管理員嘅投稿表＋電郵通知管理員；批核後才會公開上架。',
     tip: '🧰 適合分享你開發或製作嘅童軍網頁小工具、電子進度紀錄、計分器或小遊戲。想分享一般網站或雲端教材？可切換上方「🌐 網站分享」或「📚 教材分享」。',
@@ -30,7 +29,6 @@ const SUBMIT_MODES = {
     ]
   },
   link: {
-    eyebrow: 'WEBSITE SHARE',
     title: '🌐 網站分享',
     intro: '發現對童軍活動、集會、露營或訓練有用嘅網站？唔使自己寫 App，貼條連結就可以推薦畀大家！批核後會公開上架。',
     tip: '💡 門檻極低：唔使係網站擁有者！只要覺得個網站對童軍有用，貼條 Link 加句簡單介紹就分享得。',
@@ -55,7 +53,6 @@ const SUBMIT_MODES = {
     ]
   },
   material: {
-    eyebrow: 'TEACHING MATERIALS',
     title: '📚 教材分享',
     intro: '唔使自己整網站！將你整好或常用嘅 Google Drive 教材、Canva 簡報、PDF 學習圖卡、工作紙或教學影片連結貼上嚟，同全港童軍領袖共享資源。',
     tip: '☁️ 支援各類雲端及網頁連結：Google Drive（請設為「知道連結的任何人可檢視」）、Canva、Google Slides / PPT、OneDrive、Dropbox、YouTube、Notion 等。',
@@ -157,7 +154,6 @@ function submissionSetKind(kind) {
     const el = document.getElementById(id);
     if (el) el.textContent = text;
   };
-  setText('submit-eyebrow', mode.eyebrow);
   setText('submit-title', mode.title);
   setText('submit-intro', mode.intro);
   const tipEl = document.getElementById('submit-tip');

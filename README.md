@@ -51,6 +51,8 @@
 | `migrations/` | 手動執行嘅 SQL 升級（唔會上線，`.vercelignore` 已擋）；投稿相關見 `20260925-submission-contact.sql`；訪客統計見 `20261004-analytics.sql` |
 | `scripts/` | `lint.js`（防增肥＋**圖標標準**守護）＋ `verify-assets.js`（部署清單核對）＋ `make-icons.sh`（一次過出 9 個圖標），零依賴 |
 | `AUDIT.md` | 對照 readme（真理倉）嘅審閱報告：五大鐵律、G11 圖標標準、差距與優先次序 |
+| `DESIGN.md` | ⭐ 設計語言唯一真理（顏色 40/30/20/10、字階 6 級、圓角 2 級、禁止清單）—— 改 UI 之前必讀 |
+| `LICENSE` | MIT（2026-11-06 定案） |
 | `OPTIMIZATION.md` | ⭐ 瘦身紀錄＋防增肥守則 —— **加套件／加圖片之前必讀** |
 
 ## 部署（Vercel）
@@ -62,6 +64,17 @@
 
 > **本地預覽**：`node dev-server.mjs`（預設 http://localhost:8080）。
 > 用咗 `/api/favicon`，所以本地同 Vercel 行為一樣。單測：`node test/favicon.test.js`。
+
+## 設計語言（DESIGN.md）
+
+UI 跟 readme `design-review` 19 條 house rules，唯一真理係 [`DESIGN.md`](DESIGN.md)：
+
+- **一隻 accent**：金色（深色 `#e8c87a`／淺色 `#b3821a`），同 9 個圖標（暖黑底 + 金線徽章）一致。
+- **冇漸層、冇光暈、冇英文 eyebrow**：層次靠字階同留白；`npm run lint` 第 9 條會攔住退步。
+- **顏色配比 40/30/20/10**：底 40／面 30／字＋線 20／金 10。
+- **圓角只 2 級**：卡片 16、控制項 10；間距 4 的倍數。
+
+改 UI 之前：讀 `DESIGN.md` → 改 → `npm run build` → 390／768／1440 親眼望一次（本 repo 冇截圖工具，唔准扮望過）。
 
 ## 管理員點用（網址尾加 `#admin`）
 

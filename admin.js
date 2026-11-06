@@ -738,12 +738,11 @@ function manageHTML() {
 /* ── 總覽 ───────────────────────────────────────────────── */
 function tilesForCat(cat) {
   return cat.apps.map((a) => {
-    const [g1, g2] = tileBg(a.name);
     const inner = appIconHTML(a, "tile");
     return `
     <a class="tile" href="${esc(a.url)}" title="${esc((a.description || "") + (a.visible === false ? "（隱藏中）" : ""))}" target="_blank" rel="noopener">
       ${a.visible === false ? '<span class="lock-tag" style="position:absolute;top:2px;right:2px;z-index:2">🔒</span>' : ""}
-      <div class="tile-icon" style="background:linear-gradient(145deg,${g1},${g2})">${inner}</div>
+      <div class="tile-icon">${inner}</div>
       <div class="tile-name">${esc(a.name)}</div>
       ${(a.tags && a.tags.length) ? `<div class="tile-tags">${a.tags.map((t) => `<span title="${esc(t)}">${esc(scoutTagShort(t))}</span>`).join("")}</div>` : ""}
       ${a.description ? `<div class="tile-desc">${esc(a.description)}</div>` : ""}

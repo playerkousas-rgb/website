@@ -117,13 +117,13 @@
 |---|---|---|
 | `README.md` | ✅ | 36 KB，內容扎實（含已知限制），但缺目錄（P2） |
 | `AGENTS.md` / `SCOPE.md` / `GLOSSARY.md` | ❌ | 冇（本專案無 AI 協作入口）。**建議至少加 `SCOPE.md`**（做乜／唔做乜兩條 bar） |
-| `LICENSE` | ❌ | **未揀授權**（readme 明講：授權係用戶揀，Agent 唔准代揀）→ P0-1 |
+| `LICENSE` | ✅ | MIT（2026-11-06 用戶指定，已落檔） |
 | `docs/`＋`docs/README.md` 索引 | ❌ | 冇；知識全塞 README／OPTIMIZATION.md |
 | ADR（難逆轉決定） | ❌ | 例如「純靜態＋1 個 serverless、零依賴」「icon 鏈路次序」都值得一段 |
 | `.gitignore` / `.vercelignore` | ✅ | 分得好，`test/`、`scripts/` 冇被擋（lint 有守） |
 | `package.json` scripts（check／build） | ✅ | `lint + test + verify-assets` 三閘 |
 | 單測（test/） | ✅ 7 支 | favicon／labels／analytics／market／notify-admin／report／boot-order |
-| CI（`.github/workflows`） | ❌ | 冇 → P0-2 |
+| CI（`.github/workflows`） | ❌ | 用戶決定唔加（P0-2 已 close） |
 | `migrations/` | ✅ 5 支 | 但冇「邊支對應邊個版本／邊個環境已跑」索引（P2） |
 | `PREFLIGHT` / `guard` / `final_check`（真理倉 script） | ❌ | 本 repo 用自家 lint／verify-assets 代替，概念對得上 |
 | 兩軸 review 報告 | ✅ | 就係本檔 §7、§8 |
@@ -134,12 +134,12 @@
 
 ### P0 —— 建議今個禮拜處理
 
-| # | 問題 | 影響 | 建議 | 邊個做 |
-|---|---|---|---|---|
-| P0-1 | **冇 `LICENSE`** | 對外分享／被 fork 時法律狀態不明 | 你揀一個（MIT／CC BY-NC／私有）→ 我幫你落檔＋寫入 README | 你決定，我執行 |
-| P0-2 | **冇 GitHub CI** | 只有 Vercel 部署時才跑測試，PR 階段可以合入壞嘢 | 加 `.github/workflows/check.yml`：`npm ci --ignore-scripts && npm run check`（零依賴，10 秒） | 我可以即刻加 |
-| P0-3 | 4 位 PIN ＋ in-memory 限流 | 暴力破解／多執行個體繞過（README 已披露） | 至少：Vercel Firewall rate-limit `/api/admin-login`；進一步改 6–8 位 PIN 或 Supabase Auth OTP | 你決定 |
-| P0-4 | 四個紀錄冊嘅圖標可能要**改檔名** | 唔改就永遠係舊圖（成因 5） | 見 §2.3 四步 | 喺四個 app repo 做 |
+| # | 問題 | 影響 | 決定 / 狀態 |
+|---|---|---|---|
+| P0-1 | **冇 `LICENSE`** | 對外分享／被 fork 時法律狀態不明 | ✅ **已解決（2026-11-06）**：用戶指定 **MIT**，`LICENSE` 已落檔並寫入 README |
+| P0-2 | 冇 GitHub CI | 只有 Vercel 部署時才跑測試 | ⏸ **用戶決定唔加**（2026-11-06）。現時唯一閘門 = Vercel `buildCommand` → `npm run check` |
+| P0-3 | 4 位 PIN ＋ in-memory 限流 | 暴力破解／多執行個體繞過 | ⏸ **用戶決定「收起來就算」**：本站只係展示櫃、冇敏感資料；後台入口維持 `#admin` 隱藏，唔再加 firewall。風險已知並接受 |
+| P0-4 | 四個紀錄冊嘅圖標可能要**改檔名** | 唔改就永遠係舊圖（成因 5） | 用戶會自行核對「未 UPDATE 嗰兩本」，見 §2.3 四步 |
 
 ### P1 —— 一兩個 sprint 內
 
@@ -198,7 +198,44 @@
 
 ---
 
-## 10. 誠實聲明（做唔到嘅嘢）
+## 10. 設計 pass（2026-11-06，ROUND 1）
+
+用戶要求「UI 更美觀完善」，方向揀咗 **A. 照 house rules 徹底執** ＋ **圖標轉金色**。
+
+### 10.1 做咗乜（可機械驗證）
+
+| 項目 | 之前 | 之後 |
+|---|---|---|
+| 漸層 | `index.html` 19 處 ＋ `market.css` 5 處 ＋ 隨機 tile 漸層底 | **0 處**（lint 第 9 條硬攔） |
+| 光暈／裝飾 blur | hero 脈動光暈 520px、聚光燈光束、5 粒閃星、`sections-blur` 6px blur、drop-shadow | **全部移除**（`backdrop-filter` 保留：嗰個係頂欄可讀性，唔係裝飾） |
+| 英文 eyebrow | `MADE BY YOU`／`SETTINGS`／`SHARE`／`REPORT / FEEDBACK` | **全刪**，改用中文標題＋字級做層次 |
+| 品牌色 | 金＋藍 `#2563eb`＋青 `#0d9488`＋橙 `#d97706`＋`#f59e0b` | **只有金**（深 `#e8c87a`／淺 `#b3821a`）＋語意色 danger/ok/warn |
+| 隨機 tile 底色 | 10 色 palette by name hash | 透明底，真圖標做主角 |
+| 排名編號 | `01 02 03` | `1 2 3` |
+| 字階 | hero 24px vs tile 13.5px（≈1.8×） | hero `clamp(24,5.5vw,32)` vs 12–13.5px（≈2.4×）＋ token `--fs-1…5` |
+| 9 個圖標 | 青藍霓虹 | **金色**（暖黑底 + 金線百合花，同四本紀錄冊同一語言），合計 78 KB |
+| 設計語言文件 | 冇 | **`DESIGN.md`**（色 40/30/20/10、字階 6 級、圓角 2 級、禁止清單、驗收） |
+
+### 10.2 六條 critique（只做得到嘅部分）
+
+| Pass | 結果 |
+|---|---|
+| 1 秒／5 秒 | 第一屏：logo + 「SCOUT APP STORE」+ 副題 + 今期主打卡 → 答得到「呢個係乜」。**未證** 5 秒版本（要人眼） |
+| Squint | 3 嚿 mass：頂欄／今期主打卡／tile 格 —— 層次分明（靜態判斷） |
+| 遮 logo | 遮咗仍然係「童軍工具分類櫃」（副題＋分類 chips＋支部篩選都係本地語言）→ 有 idea |
+| Edges | 文字左邊界只有 1 個 x 位置（`.wrap` 統一 16px）＋格內居中 → 通過 |
+| Phone | 手機 tile 4 欄、`.tile-desc` ≤380px 隱藏、底欄細字唔 overflow（原本已有測試 `boot-order` 同 bnav 覆蓋）；**未親眼望** |
+| Substance | 每個 app 有真名／真連結／真描述；排行榜數字係真實點擊數（<100 唔顯示）→ 冇假數字 |
+
+### 10.3 冇做／做唔到
+
+- **冇 screenshot**：沙盒冇 Chrome，`390／768／1440` 三張圖做唔到；所以**唔評 40/30/20/10 分數**（readme 明文：無圖唔准打分）。
+- 未做手機獨立構圖重排（現時係 responsive 縮放，唔係另寫一套手機佈局）。
+- 未改字體（仍用系統字 stack），未做深色／淺色 token 統一（兩套仍分開寫）。
+
+---
+
+## 11. 誠實聲明（做唔到嘅嘢）
 
 - 冇連 Supabase／四個 app 網域，**未能實測** DB 值同 live favicon 回應。
 - 冇真實瀏覽器截圖能力做 390／768／1440 望圖；只做咗靜態同單測驗證（boot-order 測試會實際執行全部 script）。
