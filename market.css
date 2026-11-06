@@ -56,3 +56,21 @@
 .submit-branch-chip:hover{border-color:var(--accent-text,#8a5a05)}
 .submit-branch-chip.is-active{background:var(--accent,#b3821a);color:var(--on-accent,#12100c);border-color:transparent}
 @media(max-width:560px){.submit-tabs{gap:6px}.submit-tab{font-size:12px;padding:8px 6px}.form-columns{grid-template-columns:1fr}}
+
+/* ── ROUND 2：排行榜改成 App Store「Top Charts」式直立列表 ──
+   （舊版係兩欄密集格，似表格多過似 App Store；而家每行一張卡） */
+.chart-list{display:grid;grid-template-columns:1fr;gap:8px}
+.chart-list .chart-item{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;text-align:left;min-width:0;transform:none;box-shadow:none;transition:background .15s,border-color .15s}
+.chart-list .chart-item:hover{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 34%,var(--border))}
+.chart-list .chart-item:active{transform:scale(.995)}
+.chart-list .chart-rank{width:24px;flex-shrink:0;text-align:center;font-size:17px;font-weight:750;color:var(--muted);font-variant-numeric:tabular-nums}
+.chart-list .chart-item:nth-child(-n+3) .chart-rank{color:var(--accent-text)}
+.chart-list .chart-item .tile-icon{width:52px;height:52px;border-radius:13px;margin:0;flex-shrink:0}
+.chart-list .chart-copy{flex:1;min-width:0}
+.chart-list .chart-copy h3{font-size:15.5px;font-weight:700;margin:0 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chart-list .chart-copy p{font-size:12.5px;color:var(--muted);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chart-list .chart-score{text-align:right;flex-shrink:0}
+.chart-list .chart-score b{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.chart-list .chart-score small{display:block;font-size:10.5px;color:var(--muted)}
+.chart-list .chart-open{display:none}
+@media(min-width:1000px){.chart-list{grid-template-columns:1fr 1fr;gap:8px 12px}}

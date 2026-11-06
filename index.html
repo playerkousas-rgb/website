@@ -245,27 +245,9 @@
     .head-actions .market-submit { padding: 9px 10px; font-size: 12px; }
   }
 
-  /* Search（嗰行右邊分咗個位放「⭐ 我的收藏」，所以外層包多個 flex row） */
+  /* Search（外層 flex row：方便日後加篩選／收藏掣，而家只有搜尋框一支獨秀） */
   .search-row { display: flex; align-items: stretch; gap: 8px; margin-top: 12px; padding-bottom: 4px; }
   .search-wrap { position: relative; flex: 1; min-width: 0; }
-  .fav-jump {
-    flex-shrink: 0; white-space: nowrap; cursor: pointer;
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 14.5px; font-weight: 750; color: var(--muted);
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: 16px; padding: 12px 16px; min-height: 44px;
-    box-shadow: var(--shadow-sm);
-    transition: all .18s var(--ease);
-    touch-action: manipulation; user-select: none; -webkit-user-select: none;
-  }
-  .fav-jump:hover { color: var(--text); border-color: var(--border-strong); }
-  .fav-jump:active { transform: scale(.96); }
-  .fav-jump.on {
-    color: var(--on-accent);
-    background: var(--accent);
-    border-color: transparent;
-  }
-  [data-theme="dark"] .fav-jump.on { color: #0b0d12; }
   .search {
     width: 100%;
     padding: 14px 44px 14px 44px;
@@ -301,10 +283,10 @@
   /* ── ★ 今期主打 Spotlight（外框即本體，不再框中有框） ── */
   .hero {
     position: relative;
-    margin: 16px 0 20px;
-    padding: 18px 16px 18px;
+    margin: 18px 0 10px;
+    padding: 20px 18px;
     overflow: hidden;
-    border-radius: 16px;
+    border-radius: 20px;
     background: var(--bg-card);
     border: 1px solid var(--border);
     animation: heroIn .35s var(--ease) both;
@@ -327,23 +309,22 @@
   }
   .hero-badge {
     display: inline-block;
-    background: var(--accent); color: var(--on-accent);
-    font-weight: 900; font-size: 12px;
-    padding: 6px 14px; border-radius: 999px;
-    margin-bottom: 14px;
-    transform: rotate(-2deg);
+    background: var(--accent-soft); color: var(--accent-text);
+    font-weight: 750; font-size: 11.5px; letter-spacing: .04em;
+    padding: 4px 10px; border-radius: 999px;
+    margin-bottom: 10px;
   }
   .hero-icon-row { display: flex; gap: 16px; align-items: center; }
   .hero-icon {
-    width: 64px; height: 64px; flex-shrink: 0;
-    border-radius: 18px; font-size: 34px;
+    width: 88px; height: 88px; flex-shrink: 0;
+    border-radius: 20px; font-size: 42px;
     display: flex; align-items: center; justify-content: center;
     background: var(--accent);
     overflow: hidden;
   }
   .hero-icon img { width: 100%; height: 100%; object-fit: contain; }
   .hero-body { min-width: 0; }
-  .hero-title { font-size: clamp(24px, 5.5vw, 32px); font-weight: 850; line-height: 1.15; letter-spacing: -.02em; word-break: break-word; }
+  .hero-title { font-size: clamp(23px, 5.2vw, 30px); font-weight: 850; line-height: 1.15; letter-spacing: -.02em; word-break: break-word; }
   .hero-sub { font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
   .hero-meta { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
   .hero-meta span {
@@ -398,41 +379,16 @@
   @media (max-width: 420px) {
     .hero { padding: 16px 12px 14px; border-radius: 18px; }
     .hero-title { font-size: 19px; }
-    .hero-actions { flex-direction: column; }
+    .hero-actions { gap: 8px; }
+    .hero .btn-primary, .hero .btn-secondary { padding: 10px 18px; font-size: 14px; }
   }
 
-  /* Hero 內「App 推送通知」預覽（純 CSS mock：截圖清晰唔會模糊，字隨時改） */
-  /* 已按需求移除：查看全部按鈕＋支部小字標籤 */
+  /* 已按需求移除：查看全部按鈕＋支部小字標籤（ROUND 2 亦刪埋假「推送通知」預覽） */
   #hero-all { display: none !important; }
   .hero-meta { display: none !important; }
-  .hero-preview { margin-top: 14px; }
-  .hero-preview[hidden] { display: none; }
-  .pv-note {
-    display: flex; align-items: center; gap: 12px; text-align: left;
-    padding: 12px 14px; border-radius: 16px;
-    background: color-mix(in srgb, var(--bg) 45%, var(--bg-elevated));
-    border: 1px solid var(--border-strong);
-    box-shadow: var(--shadow-sm);
-  }
-  .pv-ico {
-    width: 42px; height: 42px; flex-shrink: 0; border-radius: 11px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px; overflow: hidden;
-    background: var(--accent);
-  }
-  .pv-ico img { width: 32px; height: 32px; object-fit: contain; }
-  .pv-tx { min-width: 0; flex: 1; }
-  .pv-tx b { font-size: 13px; font-weight: 800; display: block; margin-bottom: 1px; }
-  .pv-tx span {
-    font-size: 12.5px; color: var(--muted); line-height: 1.45;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
   /* 收埋狀態：淨係剩一條「今期主打 · App 名」細條，撳一下就還原 */
   .hero.collapsed { margin: 14px 0 16px; padding: 10px 12px; }
   .hero.collapsed .hero-meta,
-  .hero.collapsed .hero-preview,
   .hero.collapsed .hero-actions { display: none !important; }
   .hero.collapsed .hero-card-tools {
     top: 50%; right: 8px; transform: translateY(-50%);
@@ -691,54 +647,6 @@
     .tile-desc { display: none; } /* 細屏隱藏描述，圖標更大空間 */
   }
 
-  /* ── Tile 3 按鈕 (心 星 分享) ── */
-  /* 3 粒掣加埋要窄過一格 tile（手機 4 欄一格得 ~76px），
-     否則會凸出格仔疊住隔籬、細屏仲會睇唔清 —— 所以 gap／padding 都收窄。 */
-  .tile-bar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    margin-top: 6px;
-    width: 100%;
-  }
-  .tile-btn {
-    position: static;
-    background: transparent;
-    border: none;
-    outline: none;
-    cursor: pointer;
-    padding: 4px 4px;
-    border-radius: 8px;
-    color: var(--muted);
-    opacity: 0.7;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.15s var(--ease), color 0.15s, background 0.15s, opacity 0.15s;
-    touch-action: manipulation;
-  }
-  .tile-btn:hover {
-    opacity: 1;
-    background: var(--accent-soft);
-    color: var(--text);
-    transform: scale(1.18);
-  }
-  .tile-btn:active {
-    transform: scale(0.92);
-  }
-  .like-heart.on {
-    opacity: 1;
-    color: #ef4444;
-  }
-  .fav-star.on {
-    opacity: 1;
-    color: var(--accent);
-  }
-  .btn-share:hover {
-    color: var(--accent-2);
-  }
-
   /* Share Option Grid */
   .share-option {
     display: flex;
@@ -912,22 +820,32 @@
   .empty b { display: block; color: var(--text); font-size: 15px; margin-bottom: 4px; }
   .empty p { font-size: 13.5px; }
 
+  /* 貨架載入中：霸位形狀要同真卡一樣，載完唔會跳位 */
   .skeleton {
-    display: grid; gap: 14px 8px;
-    grid-template-columns: repeat(4, 1fr);
-    margin-top: 22px;
+    display: grid; grid-auto-flow: column;
+    grid-auto-columns: minmax(238px, 82%);
+    gap: 12px; margin-top: 8px;
+    overflow: hidden;
   }
-  @media (min-width: 560px) { .skeleton { grid-template-columns: repeat(6, 1fr); } }
-  .sk-tile {
-    display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 6px;
+  @media (min-width: 700px) {
+    .skeleton { grid-auto-flow: row; grid-template-columns: repeat(2, 1fr); }
   }
-  .sk-icon, .sk-line {
+  @media (min-width: 1000px) {
+    .skeleton { grid-template-columns: repeat(3, 1fr); }
+  }
+  .sk-card {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px; border-radius: var(--radius);
+    background: var(--bg-card); border: 1px solid var(--border);
+  }
+  .sk-sq, .sk-line {
     background: color-mix(in srgb, var(--muted) 16%, transparent);
-    animation: shimmer 1.2s ease-in-out infinite;
-    border-radius: 16px;
+    animation: shimmer 1.4s ease-in-out infinite;
   }
-  .sk-icon { width: 60px; height: 60px; }
-  .sk-line { height: 10px; width: 70%; border-radius: 6px; }
+  .sk-sq { width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0; }
+  .sk-lines { display: flex; flex-direction: column; gap: 7px; flex: 1; }
+  .sk-line { height: 10px; border-radius: 5px; width: 78%; }
+  .sk-line.short { width: 46%; }
   @keyframes shimmer {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
@@ -1327,10 +1245,6 @@
     width: 20px; height: 20px; border-radius: 6px; object-fit: contain;
     vertical-align: -5px;
   }
-  /* 公開版分類標題：冇 emoji 就用 Logo */
-  .sec-ico-logo {
-    width: 18px; height: 18px; border-radius: 5px; object-fit: contain;
-  }
 
   /* 管理：支部標籤（藥丸＋勾選框，選中一眼分明） */
   .tag-check-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1480,10 +1394,7 @@
        迫落第二行。以前標題欄可以縮到 0，掣就被擠出螢幕右邊，睇唔到又撳唔到。 */
     .head-titles { flex: 1 1 150px; min-width: 150px; }
 
-    /* 搜尋行嘅「我的收藏」跟着收細（搜尋框維持 14px padding，高度自然對齊） */
     .search-row { gap: 6px; }
-    .fav-jump { padding: 8px 10px; font-size: 12.5px; font-weight: 750; border-radius: 14px; }
-    .fav-jump .chip-ico { margin-right: 3px; }
 
     /* 分類 chips：放唔低就**轉行**（base 已開 flex-wrap）；
        得返一行橫捲嘅時候，「小工具」之後幾個永遠睇唔到。 */
@@ -1506,12 +1417,6 @@
     .page-btn { font-size: 13px; font-weight: 750; padding: 5px 10px; min-height: 30px; }
     .page-btn[data-page="__prev"], .page-btn[data-page="__next"] { display: none; }
 
-    /* 每個項目下面 3 粒掣（收藏／支持／分享）：4 欄格仔一格得 ~76px，
-       但 3 粒掣本身要 ~100px —— 會凸出 tile 疊住隔籬、又難撳。呢度收窄到放得落。 */
-    .tile-bar { gap: 2px; margin-top: 4px; }
-    .tile-btn { padding: 4px 3px; }
-    .tile-btn svg { width: 15px; height: 15px; }
-
     /* tile 內嘅支部小標籤：一個字，行高收埋 */
     .tile-tags { gap: 2px; margin-top: 2px; }
     .tile-tags span { font-size: 10px; padding: 1px 5px; }
@@ -1530,6 +1435,156 @@
        唔好再靠 overflow:hidden 切走 QR／edit 兩粒掣 */
     .bottom-credit-line .ig-sub { display: none !important; }
   }
+
+  /* ══════════════════════════════════════════════════════════════
+     ROUND 2 · App Store 版面（貨架 + 大卡 + 詳情 sheet）
+     規則：實色、單一金 accent、icon 做主角、冇漸層／光暈（見 DESIGN.md）
+     ══════════════════════════════════════════════════════════════ */
+
+  /* 頂欄：標題大一級，動作掣收做安靜嘅 ghost（只有「提交作品」用 accent） */
+  .head-titles h1 { font-size: clamp(19px, 4.6vw, 23px); letter-spacing: -.03em; }
+  .head-sub { font-size: 12.5px; letter-spacing: 0; }
+  .market-submit.head-submit {
+    background: transparent; color: var(--accent-text);
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 8px 13px; font-size: 12.5px; font-weight: 700;
+  }
+  .market-submit.head-submit:hover { border-color: var(--border-strong); background: var(--accent-soft); }
+  .market-submit.head-submit[onclick*="'app'"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+
+  /* 貨架 ------------------------------------------------------- */
+  .shelf-sec { margin-top: 26px; }
+  .shelf-sec .sec-head { margin-bottom: 10px; padding: 0; gap: 9px; }
+  .sec-head h2 { font-size: var(--fs-3); font-weight: 800; letter-spacing: -.02em; }
+  .sec-head .num {
+    font-size: 11.5px; font-weight: 700; color: var(--muted);
+    background: transparent; border: 0; padding: 0; margin-left: 0;
+  }
+  .cat-ico { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; color: var(--accent); flex-shrink: 0; }
+  .cat-ico svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .cat-ico-emoji { font-size: 16px; line-height: 1; }
+  .sec-more {
+    margin-left: auto; border: 0; background: none;
+    color: var(--accent-text); font-size: 13px; font-weight: 750;
+    padding: 6px 2px; cursor: pointer; white-space: nowrap;
+  }
+  .sec-more:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  .shelf {
+    display: grid; grid-auto-flow: column;
+    grid-auto-columns: minmax(238px, 82%);
+    gap: 10px; overflow-x: auto; overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity; padding: 2px 1px 6px;
+    scrollbar-width: none; -ms-overflow-style: none;
+  }
+  .shelf::-webkit-scrollbar { display: none; }
+  @media (min-width: 700px) {
+    .shelf { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; padding-bottom: 0; }
+  }
+  @media (min-width: 1000px) {
+    .shelf { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+
+  .card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px; min-width: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    scroll-snap-align: start;
+    transition: border-color .15s, background .15s, transform .15s var(--ease);
+  }
+  .card:hover { border-color: var(--border-strong); background: var(--bg-card-hover); transform: translateY(-1px); }
+  .card:active { transform: scale(.985); }
+  .card-icon {
+    width: 60px; height: 60px; flex-shrink: 0; border-radius: 15px;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+    font-size: 34px; line-height: 1;   /* emoji 圖示都夠大，唔會縮到一粒豆 */
+  }
+  .card-icon img { width: 60px; height: 60px; object-fit: cover; border-radius: 15px; }
+  .card-copy { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  .card .tile-name {
+    font-size: 14.5px; font-weight: 750; line-height: 1.28; text-align: left;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card-desc {
+    font-size: 12.5px; color: var(--muted); line-height: 1.4; text-align: left;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card-go { color: var(--muted); font-size: 18px; line-height: 1; flex-shrink: 0; }
+
+  /* 分類 chip：未揀＝安靜文字（唔再一排白邊藥丸），揀中＝實金。 */
+  .chips .chip {
+    background: transparent; border-color: transparent; box-shadow: none;
+    color: var(--muted); font-weight: 700; padding: 9px 12px;
+  }
+  .chips .chip:hover { background: var(--bg-card); border-color: var(--border); color: var(--text); }
+  .chips .chip.on { background: var(--accent); border-color: transparent; color: var(--on-accent); }
+  [data-theme="dark"] .chips .chip.on { color: #0b0d12; }
+
+  /* 詳情 sheet -------------------------------------------------- */
+  body.sheet-open { overflow: hidden; }
+  .sheet { position: fixed; inset: 0; z-index: 88; display: flex; align-items: flex-end; justify-content: center; }
+  .sheet[hidden] { display: none; }
+  .sheet-backdrop { position: absolute; inset: 0; background: rgba(6, 6, 8, .58); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+  .sheet-panel {
+    position: relative; z-index: 1; width: min(560px, 100%);
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: 22px 22px 0 0;
+    padding: 22px 18px calc(18px + var(--safe-b));
+    animation: sheetIn .22s var(--ease) both;
+    outline: none;
+  }
+  @media (min-width: 620px) {
+    .sheet { align-items: center; }
+    .sheet-panel { border-radius: 20px; box-shadow: 0 24px 60px rgba(0, 0, 0, .35); }
+  }
+  @keyframes sheetIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .sheet-panel { animation: none; } }
+  .sheet-x {
+    position: absolute; top: 10px; right: 10px;
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 1px solid var(--border); background: var(--bg-card);
+    color: var(--muted); font-size: 19px; line-height: 1; cursor: pointer;
+  }
+  .sheet-top { display: flex; align-items: center; gap: 14px; padding-right: 40px; }
+  .sheet-icon {
+    width: 76px; height: 76px; flex-shrink: 0; border-radius: 18px; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 42px; line-height: 1;
+  }
+  .sheet-icon img { width: 76px; height: 76px; object-fit: cover; border-radius: 18px; }
+  .sheet-titles { min-width: 0; }
+  .sheet-titles h2 {
+    font-size: 20px; font-weight: 850; line-height: 1.2; letter-spacing: -.02em;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .sheet-sub { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .sheet-desc { margin: 16px 0 0; font-size: 14px; line-height: 1.6; color: var(--text); }
+  .sheet-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+  .sheet-tag {
+    font-size: 12px; font-weight: 650; color: var(--accent-text);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    border-radius: 999px; padding: 4px 10px;
+  }
+  .sheet-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+  .sheet-stat { font-size: 12.5px; color: var(--muted); }
+  .sheet-actions { display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px; margin-top: 20px; align-items: stretch; }
+  .sheet-open { border-radius: var(--radius-sm); padding: 12px 18px; font-size: 15px; font-weight: 800; border: 0; cursor: pointer; }
+  .sheet-mini {
+    border: 1px solid var(--border); background: var(--bg-card); color: var(--text);
+    border-radius: var(--radius-sm); padding: 0 12px; font-size: 12.5px; font-weight: 700;
+    cursor: pointer; white-space: nowrap;
+  }
+  .sheet-mini:hover { border-color: var(--border-strong); background: var(--bg-card-hover); }
+  .sheet-mini.on { color: var(--on-accent); background: var(--accent); border-color: transparent; }
+  @media (max-width: 430px) {
+    .sheet-actions { grid-template-columns: 1fr 1fr; }
+    .sheet-open { grid-column: 1 / -1; }
+    .sheet-icon { width: 64px; height: 64px; }
+    .sheet-icon img { width: 64px; height: 64px; }
+  }
+
 </style>
 <link rel="stylesheet" href="market.css" />
 </head>
@@ -1589,17 +1644,6 @@
         </div>
       </div>
       <div class="hero-meta" id="hero-meta" hidden></div>
-      <div class="hero-preview" id="hero-preview" aria-hidden="true">
-        <div class="pv-note">
-          <div class="pv-ico" id="pv-ico">🔔</div>
-          <div class="pv-tx">
-            <!-- 標題／內文／圖示都由 renderSpotlight() 用今期推廣項目嘅資料填：
-                 內文 = 該項目嘅「介紹」（見 spotlightPreviewMsg）；下面係未載入前嘅預設字 -->
-            <b id="pv-title">通告圖書館</b>
-            <span id="pv-msg">📢 有新通告：本週活動安排已更新，記得查看！</span>
-          </div>
-        </div>
-      </div>
       <div class="hero-actions">
         <button class="btn-primary" id="hero-open" type="button">立即開啟</button>
         <button class="btn-secondary" id="hero-all" type="button">查看全部</button>
@@ -1609,14 +1653,9 @@
 
   <div id="sections">
     <div class="skeleton" id="skeleton" aria-hidden="true">
-      <div class="sk-tile"><div class="sk-icon"></div><div class="sk-line"></div></div>
-      <div class="sk-tile"><div class="sk-icon"></div><div class="sk-line"></div></div>
-      <div class="sk-tile"><div class="sk-icon"></div><div class="sk-line"></div></div>
-      <div class="sk-tile"><div class="sk-icon"></div><div class="sk-line"></div></div>
-      <div class="sk-tile"><div class="sk-icon"></div><div class="sk-line"></div></div>
-      <div class="sk-tile"><div class="sk-icon"></div><div class="sk-line"></div></div>
-      <div class="sk-tile"><div class="sk-icon"></div><div class="sk-line"></div></div>
-      <div class="sk-tile"><div class="sk-icon"></div><div class="sk-line"></div></div>
+      <div class="sk-card"><span class="sk-sq"></span><span class="sk-lines"><span class="sk-line"></span><span class="sk-line short"></span></span></div>
+      <div class="sk-card"><span class="sk-sq"></span><span class="sk-lines"><span class="sk-line"></span><span class="sk-line short"></span></span></div>
+      <div class="sk-card"><span class="sk-sq"></span><span class="sk-lines"><span class="sk-line"></span><span class="sk-line short"></span></span></div>
     </div>
   </div>
   <div class="empty" id="empty">
@@ -1672,6 +1711,31 @@
       <button class="btn-secondary" type="button" onclick="document.getElementById('theme-btn').click();" style="width:100%;">
         🌙 切換主題 (深色 / 淺色)
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- App 詳情 sheet（App Store 式）：撳卡先睇詳情，再撳「開啟」。
+     收藏／讚好／分享全部收喺呢度，主畫面貨架可以保持安靜。 -->
+<div class="sheet" id="app-sheet" hidden>
+  <div class="sheet-backdrop" onclick="closeAppSheet()"></div>
+  <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-name" tabindex="-1">
+    <button class="sheet-x" type="button" aria-label="關閉" onclick="closeAppSheet()">×</button>
+    <div class="sheet-top">
+      <div class="sheet-icon" id="sheet-icon" aria-hidden="true"></div>
+      <div class="sheet-titles">
+        <h2 id="sheet-name"></h2>
+        <div class="sheet-sub" id="sheet-sub"></div>
+      </div>
+    </div>
+    <p class="sheet-desc" id="sheet-desc"></p>
+    <div class="sheet-tags" id="sheet-tags" hidden></div>
+    <div class="sheet-stats" id="sheet-stats" hidden></div>
+    <div class="sheet-actions">
+      <button class="btn-primary sheet-open" id="sheet-open" type="button">開啟</button>
+      <button class="sheet-mini" id="sheet-fav" type="button" aria-pressed="false">☆ 收藏</button>
+      <button class="sheet-mini" id="sheet-heart" type="button" aria-pressed="false">♡ 讚好</button>
+      <button class="sheet-mini" id="sheet-share" type="button">↗ 分享</button>
     </div>
   </div>
 </div>
@@ -1986,21 +2050,7 @@ const SPOTLIGHT = {
   showStars: true,           // 展開後顯示「⭐ N 人收藏」「❤️ N 人讚好」—— 滿 100 先顯示
                              //（同排行榜一樣，主打多數係新推出，晒 3、5 個好難睇）
                              // ⚠️ 點擊數（🔥）一樣刻意唔顯示
-  preview: {
-    enabled: true,                                  // Hero 入面嘅「推送通知」預覽卡
-    // 通知預覽卡嘅文字：★ 默認跟今期推廣項目自己嘅「介紹」（後台填嘅描述），
-    // 下面呢句淨係「項目冇填介紹」時嘅後備，唔會再所有推廣都出同一句。
-    msg: "📢 有新通告：本週活動安排已更新，記得查看！"
-  }
 };
-
-// 通知預覽卡文案：有「介紹」就用介紹，冇先用 SPOTLIGHT.preview.msg 後備。
-// （以前係寫死一句，推廣邊個項目都係同一句「本週活動安排已更新」，睇落好假。）
-function spotlightPreviewMsg(app) {
-  const desc = String((app && app.description) || "").trim();
-  if (desc) return desc;
-  return (SPOTLIGHT.preview && SPOTLIGHT.preview.msg) || "";
-}
 
 const heroEl = document.getElementById("hero-spotlight");
 let _sectionsBlurred = false;
@@ -2096,23 +2146,6 @@ function renderSpotlight() {
       metaEl.appendChild(s);
     });
     metaEl.hidden = !bits.length;          // 全部冇數據 → 成行隱藏
-  }
-
-  // 推送通知預覽：標題／圖示／內文全部跟住今期推廣項目
-  // （內文 = 該項目嘅「介紹」，冇填先出後備句 —— 見 spotlightPreviewMsg()）
-  const pvEl = document.getElementById("hero-preview");
-  if (pvEl) {
-    if (SPOTLIGHT.preview && SPOTLIGHT.preview.enabled) {
-      pvEl.hidden = false;
-      const pvt = document.getElementById("pv-title");
-      if (pvt) pvt.textContent = a.name;
-      const pvm = document.getElementById("pv-msg");
-      if (pvm) pvm.textContent = spotlightPreviewMsg(a);
-      const pvi = document.getElementById("pv-ico");
-      if (pvi) pvi.innerHTML = appIconHTML(a, "tile");
-    } else {
-      pvEl.hidden = true;
-    }
   }
 
   // 下面 Grid 真有內容先 Blur（防止「Blur 咗但完全冇內容」）；

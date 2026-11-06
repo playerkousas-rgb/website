@@ -48,14 +48,189 @@ function toggleHeart(id) {
   if (typeof trackHeart === "function") trackHeart(id, had ? -1 : 1);
 }
 function openApp(app) {
-  trackClick(app._id);
+  if (typeof trackClick === "function") trackClick(app._id);
   window.location.href = app.url;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   App 詳情 sheet（App Store 式 bottom sheet）
+   撳卡唔再即刻跳走：先睇詳情 → 再撳「開啟」。
+   收藏／讚好／分享全部收埋喺呢度，主畫面（貨架）可以保持安靜。
+   ════════════════════════════════════════════════════════════════ */
+let _sheetApp = null;
+let _sheetEscBound = false;
+let _sheetTrigger = null;   // 閂 sheet 之後，focus 要返去撳佢嗰張卡（鍵盤／讀屏用）
+
+function syncSheetButtons() {
+  const app = _sheetApp;
+  if (!app) return;
+  const favBtn = document.getElementById("sheet-fav");
+  const heartBtn = document.getElementById("sheet-heart");
+  const favOn = isFavorite(app._id), heartOn = isHearted(app._id);
+  if (favBtn) {
+    favBtn.classList.toggle("on", favOn);
+    favBtn.setAttribute("aria-pressed", favOn ? "true" : "false");
+    favBtn.innerHTML = `${favOn ? "★" : "☆"} 收藏`;
+  }
+  if (heartBtn) {
+    heartBtn.classList.toggle("on", heartOn);
+    heartBtn.setAttribute("aria-pressed", heartOn ? "true" : "false");
+    heartBtn.innerHTML = `${heartOn ? "♥" : "♡"} 讚好`;
+  }
+}
+
+function openAppSheet(idx) {
+  const app = REG[idx];
+  if (!app) return;
+  const sheet = document.getElementById("app-sheet");
+  if (!sheet) { openApp(app); return; } // markup 未載入 → 退化做直接開，唔會撳咗冇反應
+  _sheetApp = app;
+  _sheetTrigger = document.activeElement;
+
+  const iconEl = document.getElementById("sheet-icon");
+  if (iconEl) iconEl.innerHTML = appIconHTML(app, "sheet");
+  const nameEl = document.getElementById("sheet-name");
+  if (nameEl) nameEl.textContent = app.name || "";
+  const subEl = document.getElementById("sheet-sub");
+  if (subEl) subEl.textContent = app.cat || "";
+  const descEl = document.getElementById("sheet-desc");
+  if (descEl) {
+    descEl.textContent = app.description || app.note || "未有簡介。";
+    descEl.hidden = false;
+  }
+  const tagsEl = document.getElementById("sheet-tags");
+  if (tagsEl) {
+    const tags = app.tags || [];
+    tagsEl.innerHTML = tags.map((t) => `<span class="sheet-tag">${esc(t)}</span>`).join("");
+    tagsEl.hidden = !tags.length;
+  }
+  const statsEl = document.getElementById("sheet-stats");
+  if (statsEl) {
+    const bits = [];
+    if (app.clicks >= 100) bits.push(`🔥 ${Number(app.clicks).toLocaleString()} 次開啟`);
+    if (app.stars >= 100) bits.push(`⭐ ${Number(app.stars).toLocaleString()} 收藏`);
+    if (app.hearts >= 100) bits.push(`❤️ ${Number(app.hearts).toLocaleString()} 讚好`);
+    statsEl.innerHTML = bits.map((b) => `<span class="sheet-stat">${b}</span>`).join("");
+    statsEl.hidden = !bits.length;
+  }
+
+  const openBtn = document.getElementById("sheet-open");
+  if (openBtn) openBtn.onclick = () => {
+    if (typeof trackClick === "function") trackClick(app._id);
+    window.location.href = app.url;
+  };
+  const favBtn = document.getElementById("sheet-fav");
+  if (favBtn) {
+    favBtn.dataset.id = app._id || "";
+    favBtn.onclick = () => { toggleFav(favBtn); syncSheetButtons(); };
+  }
+  const heartBtn = document.getElementById("sheet-heart");
+  if (heartBtn) {
+    heartBtn.dataset.id = app._id || "";
+    heartBtn.onclick = () => { toggleHeartBtn(heartBtn); syncSheetButtons(); };
+  }
+  const shareBtn = document.getElementById("sheet-share");
+  if (shareBtn) shareBtn.onclick = () => openShareModal(app._id);
+  syncSheetButtons();
+
+  sheet.hidden = false;
+  document.body.classList.add("sheet-open");
+  const panel = sheet.querySelector(".sheet-panel");
+  if (panel) panel.focus?.();
+
+  if (!_sheetEscBound) {
+    _sheetEscBound = true;
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !document.getElementById("app-sheet")?.hidden) closeAppSheet();
+    });
+  }
+}
+
+function closeAppSheet() {
+  const sheet = document.getElementById("app-sheet");
+  if (!sheet || sheet.hidden) return;
+  sheet.hidden = true;
+  document.body.classList.remove("sheet-open");
+  _sheetApp = null;
+  if (_sheetTrigger && typeof _sheetTrigger.focus === "function") {
+    try { _sheetTrigger.focus({ preventScroll: true }); } catch { _sheetTrigger.focus(); }
+  }
+  _sheetTrigger = null;
 }
 
 function iconHTML(app) {
   // 唔再為每粒 app 隨機上漸層底色（readme design-review：無漸層、accent 只落一處）。
   // icon 自己就係主角：真圖標 + 留白，比「十種顏色嘅圓角方塊」安靜得多。
   return `<div class="tile-icon">${appIconHTML(app, "tile")}</div>`;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ROUND 2 · App Store 版面
+   ── 貨架（shelf）＋ 大卡 ＋ 詳情 sheet ＋ 統一線稿分類圖標
+   規則見 DESIGN.md：冇漸層、冇光暈、一隻金 accent、icon 做主角。
+   ════════════════════════════════════════════════════════════════ */
+
+/* 分類小圖標：後台仍然可以揀 emoji，但常見嘅會換成同一套 24px 線稿，
+   令每條貨架嘅開頭一致（以前係 🧭🎮🧰🃏 乜都有，睇落好雜）。
+   未對應到嘅 emoji 照用返後台設定，唔會亂咁改人嘅選擇。 */
+const CAT_ICON_MAP = {
+  "🧭": "compass", "🎮": "game", "🕹️": "game", "🧰": "tools", "🛠️": "tools",
+  "🃏": "cards", "📽️": "slides", "🎬": "slides", "🔗": "link", "🌐": "globe",
+  "📚": "book", "📖": "book", "📝": "note", "🎨": "art", "🔔": "bell",
+  "🗺️": "map", "⛺": "camp", "🏆": "trophy", "🧪": "lab", "⚙️": "gear",
+  "🎯": "target", "📊": "chart", "⏱️": "clock", "🧮": "calc"
+};
+const CAT_PATHS = {
+  compass: '<circle cx="12" cy="12" r="9"/><polygon points="15.4 8.6 13.3 13.3 8.6 15.4 10.7 10.7"/>',
+  game: '<rect x="2.5" y="8" width="19" height="9.5" rx="4.5"/><path d="M7 11.2v3M5.5 12.7h3"/><circle cx="16.5" cy="12" r="1"/><circle cx="18.6" cy="14" r="1"/>',
+  tools: '<rect x="3" y="8" width="18" height="12" rx="2.5"/><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/>',
+  cards: '<rect x="3" y="5" width="11" height="15" rx="2"/><path d="M17 7.5l2 14.2"/><path d="M9 9.5h2.2M9 13h3"/>',
+  slides: '<rect x="2.5" y="5" width="19" height="12.5" rx="2"/><path d="M12 17.5V21M8.5 21h7"/><path d="M6.5 9.5h6M6.5 13h4"/>',
+  link: '<path d="M10 13a4 4 0 0 0 5.7 0l2.6-2.6a4 4 0 0 0-5.7-5.7L11.4 6"/><path d="M14 11a4 4 0 0 0-5.7 0l-2.6 2.6a4 4 0 0 0 5.7 5.7L12.6 18"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"/>',
+  book: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H19v3H6.5A2.5 2.5 0 0 1 4 20.5z"/>',
+  note: '<path d="M5 3.5h9l5 5V21H5z"/><path d="M14 3.5v5h5M8 13h8M8 17h5"/>',
+  art: '<path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-1 2-2s-.7-2 .6-2H18a3 3 0 0 0 3-3c0-6-4-9-9-9z"/><circle cx="8.5" cy="10" r="1"/><circle cx="12" cy="7.5" r="1"/><circle cx="15.5" cy="10" r="1"/>',
+  bell: '<path d="M18 15V10a6 6 0 1 0-12 0v5l-1.8 3h15.6z"/><path d="M10 21h4"/>',
+  map: '<path d="M9 4l6 2.5 5-2v14l-5 2-6-2.5-5 2v-14z"/><path d="M9 4v14M15 6.5v14"/>',
+  camp: '<path d="M12 4l8.5 15.5h-17z"/><path d="M12 9.5l4 10M12 9.5l-4 10"/>',
+  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 5.5H5.5A2.5 2.5 0 0 0 8 10M16 5.5h2.5A2.5 2.5 0 0 1 16 10"/><path d="M12 13v4M9 20h6"/>',
+  lab: '<path d="M9.5 3v6L4.5 18a2 2 0 0 0 1.7 3h11.6a2 2 0 0 0 1.7-3L14.5 9V3"/><path d="M8 3h8M7 14h10"/>',
+  gear: '<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.2 5.2l2.1 2.1M16.7 16.7l2.1 2.1M18.8 5.2l-2.1 2.1M7.3 16.7l-2.1 2.1"/>',
+  target: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>',
+  chart: '<path d="M4 20V4"/><path d="M4 20h16"/><rect x="7" y="12" width="3" height="5" rx="1"/><rect x="12" y="8" width="3" height="9" rx="1"/><rect x="17" y="5" width="3" height="12" rx="1"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5.3l3.4 2"/>',
+  calc: '<rect x="4.5" y="2.5" width="15" height="19" rx="2.5"/><path d="M8 7h8"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01M8.5 15h.01M12 15h.01M15.5 15h.01M8.5 18.5h.01M12 18.5h.01M15.5 18.5h.01"/>',
+  grid: '<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>'
+};
+function catIconHTML(emoji, name) {
+  const key = CAT_ICON_MAP[String(emoji || "").trim()] || (emoji ? null : "grid");
+  if (key && CAT_PATHS[key]) {
+    return `<span class="cat-ico" aria-hidden="true"><svg viewBox="0 0 24 24">${CAT_PATHS[key]}</svg></span>`;
+  }
+  // 後台自己揀嘅 emoji 冇線稿版本 → 照用（唔好亂改人嘅選擇）
+  if (emoji) return `<span class="cat-ico cat-ico-emoji" aria-hidden="true">${esc(emoji)}</span>`;
+  return `<span class="cat-ico" aria-hidden="true"><svg viewBox="0 0 24 24">${CAT_PATHS.grid}</svg></span>`;
+}
+
+/* 貨架卡：icon 左、名＋描述右（App Store「編輯精選」橫向卡）。
+   一粒卡只做一件事：撳落去開詳情 sheet；收藏／讚好／分享搬入 sheet。 */
+function cardHTML(idx, delay) {
+  const app = REG[idx];
+  const d = Math.min(delay || 0, 12) * 30;
+  const desc = String(app.description || app.note || "").trim();
+  // 冇描述就唔好留個空 span（會偷偷撐高卡，每張卡高矮唔一）
+  const descHTML = desc ? `<span class="card-desc">${esc(desc)}</span>` : "";
+  return `
+  <a class="card" href="${esc(app.url)}" data-idx="${idx}" data-id="${esc(app._id || "")}"
+     style="animation-delay:${d}ms" aria-label="${esc(app.name)}：開啟詳情">
+    <span class="card-icon">${appIconHTML(app, "card")}</span>
+    <span class="card-copy">
+      <span class="tile-name">${esc(app.name)}</span>
+      ${descHTML}
+    </span>
+    <span class="card-go" aria-hidden="true">›</span>
+  </a>`;
 }
 
 // ── 公開版面狀態 ─────────────────────────────────────────────
@@ -215,33 +390,6 @@ function switchPage(id) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// ── Tile ─────────────────────────────────────────────────────
-function tileHTML(idx, delay) {
-  const app = REG[idx];
-  const d = Math.min(delay || 0, 12) * 30;
-  const starred = isFavorite(app._id);
-  const hearted = isHearted(app._id);
-  return `
-  <a class="tile" href="${esc(app.url)}" title="${esc(app.description || app.name)}"
-     data-idx="${idx}" data-id="${esc(app._id || "")}" style="animation-delay:${d}ms">
-    ${app.github ? `<span class="gh-badge" title="GitHub repo" onclick="event.preventDefault(); event.stopPropagation(); window.open('${esc(app.github)}','_blank')">GH</span>` : ""}
-    ${iconHTML(app)}
-    <div class="tile-name">${esc(app.name)}</div>
-    ${app.description ? `<div class="tile-desc">${esc(app.description)}</div>` : ""}
-    <div class="tile-bar">
-      <button type="button" class="tile-btn btn-star fav-star ${starred ? "on" : ""}" title="收藏" aria-label="收藏" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); toggleFav(this)">
-        <svg class="star-ico" width="16" height="16" viewBox="0 0 24 24" fill="${starred ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      </button>
-      <button type="button" class="tile-btn btn-heart like-heart ${hearted ? "on" : ""}" title="讚好" aria-label="讚好" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); toggleHeartBtn(this)">
-        <svg class="heart-ico" width="16" height="16" viewBox="0 0 24 24" fill="${hearted ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-      </button>
-      <button type="button" class="tile-btn btn-share" title="分享" aria-label="分享" data-id="${esc(app._id || "")}" onclick="event.preventDefault(); event.stopPropagation(); openShareModal('${esc(app._id || "")}')">
-        <svg class="share-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-      </button>
-    </div>
-  </a>`;
-}
-
 function toggleFav(el) {
   const id = el.dataset.id;
   if (!id) return;
@@ -272,15 +420,22 @@ function sectionHTML(title, icon, apps, id) {
   if (!apps.length) return "";
   const start = REG.length;
   apps.forEach((a) => REG.push(a));
-  const tiles = apps.map((_, i) => tileHTML(start + i, i)).join("");
+  const cards = apps.map((_, i) => cardHTML(start + i, i)).join("");
+  // 分類貨架先有「全部」；「我的收藏」唔需要。
+  // 得 1–2 個就唔出（貨架本身都睇得晒，多粒掣反而嘈）。
+  const more = /^cat-\d+$/.test(String(id)) && apps.length > 2
+    ? `<button type="button" class="sec-more" onclick="jumpTo('${esc(id)}')" ` +
+      `aria-label="睇晒「${esc(title)}」全部 ${apps.length} 個">全部 <span aria-hidden="true">›</span></button>`
+    : "";
   return `
-  <section id="${id}">
+  <section id="${id}" class="shelf-sec">
     <div class="sec-head">
-      ${icon ? `<span class="sec-ico">${icon}</span>` : `<img class="sec-ico-logo" src="${SITE_LOGO}" alt="" />`}
+      ${catIconHTML(icon, title)}
       <h2>${esc(title)}</h2>
       <span class="num">${apps.length}</span>
+      ${more}
     </div>
-    <div class="grid">${tiles}</div>
+    <div class="shelf">${cards}</div>
   </section>`;
 }
 
@@ -485,7 +640,7 @@ function render() {
   }
 
   // Build chip bar — 純文字（emoji 圖示阻位，被刻意抽走）；
-  // 「我的收藏」唔再係 chip，搬咗去搜尋欄嗰行（#fav-jump）。
+  // 「我的收藏」唔再係 chip，入口喺底部常駐列（data-bnav="fav"）。
   // 手機版用短名（全部／進度紀錄…），桌面版用全名。
   const chipBtn = (id, full, short) =>
     `<button type="button" class="chip ${activeChip === id ? "on" : ""}" data-chip="${esc(id)}" ` +
@@ -493,14 +648,6 @@ function render() {
   chipsEl.innerHTML =
     chipBtn("all", "全部", "全部") +
     catIdx.map(({ c, i }) => chipBtn("cat-" + i, c.name, catShort(c.name))).join("");
-
-  // 搜尋欄隔籬嘅「⭐ 我的收藏」掣：收藏視圖時高亮
-  const favJump = document.getElementById("fav-jump");
-  if (favJump) {
-    const on = activeChip === "fav";
-    favJump.classList.toggle("on", on);
-    favJump.setAttribute("aria-pressed", on ? "true" : "false");
-  }
 
   renderTagRow();
   renderSortRow();
@@ -559,15 +706,18 @@ async function main() {
   }
 }
 
-// 公開版面 click 委派（tile 開啟／GH badge）
+// 公開版面 click 委派：撳卡 → 開詳情 sheet（唔再一下就跳走，App Store 式）
+// 舊 tile（.tile）仍然支援：排行榜以外嘅舊 markup／後台預覽會用到。
 sectionsEl.addEventListener("click", (e) => {
   const gh = e.target.closest(".gh-badge");
   if (gh) return; // GH 已經自帶 window.open
-  const a = e.target.closest(".tile");
-  if (!a) return;
+  const hit = e.target.closest(".card, .tile");
+  if (!hit) return;
   e.preventDefault();
-  const idx = Number(a.dataset.idx);
-  if (REG[idx]) openApp(REG[idx]);
+  const idx = Number(hit.dataset.idx);
+  if (!REG[idx]) return;
+  if (hit.classList.contains("tile") && !hit.classList.contains("card")) openApp(REG[idx]);
+  else openAppSheet(idx);
 });
 searchEl.addEventListener("input", () => { activeChip = "all"; render(); });
 searchClear.addEventListener("click", () => { searchEl.value = ""; searchEl.focus(); activeChip = "all"; render(); });
