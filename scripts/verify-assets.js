@@ -33,13 +33,14 @@ const DEPLOY = [
   "icons/favicon-32.png",
   "icons/favicon.ico",
   "icons/og-image.png",
-  "icons/ig-qr.png"
+  "icons/ig-qr.png",
+  "DESIGN.md"
 ];
 /* 純開發用（.vercelignore 擋走，或者 Vercel build 用完即棄） */
 const DEV_ONLY = [
   "package.json", "package-lock.json", "vercel.json",
   ".vercelignore", ".gitignore",
-  "README.md", "OPTIMIZATION.md", "AUDIT.md", "DESIGN.md", "LICENSE",
+  "README.md", "OPTIMIZATION.md", "AUDIT.md", "LICENSE",
   "dev-server.mjs",
   "scripts/lint.js", "scripts/verify-assets.js", "scripts/make-icons.sh",
   "migrations/20260924-market.sql", "migrations/20260924-hearts.sql", "migrations/20260925-submission-contact.sql", "migrations/20261004-analytics.sql", "migrations/20261022-share-modes.sql",
