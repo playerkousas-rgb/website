@@ -15,7 +15,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png?v=20261106" />
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=20261106" />
 <!-- 主題色／PWA 啟動畫面跟預設深色主題對齊（boot script 之後會按用戶主題再更新） -->
-<meta name="theme-color" content="#0b0d12" />
+<meta name="theme-color" content="#1f2430" />
 <!-- 分享預覽（WhatsApp／Signal／FB）：og:image 必須絕對網址，用相對路徑 = 冇圖 -->
 <meta property="og:type" content="website" />
 <meta property="og:title" content="SCOUT APP STORE" />
@@ -26,7 +26,7 @@
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="SCOUT APP STORE — 好工具，讓童軍生活更精彩。" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="apple-mobile-web-app-background-color" content="#0b0d12" />
+<meta name="apple-mobile-web-app-background-color" content="#1f2430" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -45,7 +45,7 @@
     } catch (e) {}
     document.documentElement.dataset.theme = t;
     var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.content = t === "dark" ? "#0b0d12" : "#faf6ec";
+    if (m) m.content = t === "dark" ? "#1f2430" : "#faf6ec";
   })();
 </script>
 <style>
@@ -118,14 +118,14 @@
   }
   [data-theme="dark"] {
     color-scheme: dark;
-    --bg: #12141c;
-    --bg-elevated: #1b1f2a;
-    --bg-card: #1d2231;
-    --bg-card-hover: #262d40;
+    --bg: #1f2430;
+    --bg-elevated: #272d3b;
+    --bg-card: #2b3141;
+    --bg-card-hover: #363d50;
     --text: #f1f5f9;
-    --muted: #94a3b8;
-    --border: rgba(255, 255, 255, .08);
-    --border-strong: rgba(255, 255, 255, .14);
+    --muted: #aab6c8;
+    --border: rgba(255, 255, 255, .11);
+    --border-strong: rgba(255, 255, 255, .18);
     --accent: #e8c87a;
     --accent-2: #e8c87a;
     --accent-soft: rgba(232, 200, 122, .14);
@@ -148,9 +148,9 @@
     --ok-soft: rgba(52, 211, 153, .12);
     --warn: #fbbf24;
     --warn-soft: rgba(251, 191, 36, .14);
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .35);
-    --shadow: 0 2px 8px rgba(0, 0, 0, .35), 0 10px 28px rgba(0, 0, 0, .35);
-    --shadow-hover: 0 10px 32px rgba(0, 0, 0, .5);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .30);
+    --shadow: 0 2px 8px rgba(0, 0, 0, .30), 0 10px 28px rgba(0, 0, 0, .30);
+    --shadow-hover: 0 10px 32px rgba(0, 0, 0, .42);
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1364,7 +1364,7 @@
     background: #fff; box-shadow: 0 2px 5px rgba(15, 23, 42, .3);
     transition: transform .18s var(--ease);
   }
-  [data-theme="dark"] .switch { background: #3a4150; }
+  [data-theme="dark"] .switch { background: #454e60; }
   input:checked + .switch { background: var(--ok); }
   input:checked + .switch::after { transform: translateX(18px); }
   input:focus-visible + .switch { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -2035,7 +2035,7 @@ function applyTheme(t) {
   localStorage.setItem("theme", t);
   const meta = document.querySelector('meta[name="theme-color"]:not([media])')
     || document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = t === "dark" ? "#0b0d12" : "#faf6ec";
+  if (meta) meta.content = t === "dark" ? "#1f2430" : "#faf6ec";
 }
 // 預設跟系統（用戶撳過 🌙 之後就用返佢自己揀嘅）
 const _savedTheme = (() => { try { return localStorage.getItem("theme"); } catch { return null; } })();

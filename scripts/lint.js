@@ -193,8 +193,30 @@ try {
     if (!hasAny(sz)) iconProblems.push(`manifest 缺 any ${sz}`);
     if (!hasMask(sz)) iconProblems.push(`manifest 缺 maskable ${sz}`);
   }
-  if (mf.theme_color !== "#0b0d12" || mf.background_color !== "#0b0d12") {
-    warn("manifest theme_color／background_color 同圖標主色（#0b0d12）唔一致");
+  // 深色主題底色：三個地方（CSS --bg、<meta theme-color>、manifest）必須一致，
+  // 否則 Android 狀態欄／PWA 啟動畫面會同頁面唔同色，一開就見到「換色跳一下」。
+  const darkBlock = (() => {
+    const i = html.indexOf('[data-theme="dark"] {');
+    return i < 0 ? "" : html.slice(i, html.indexOf("}", i));
+  })();
+  const darkBg = (darkBlock.match(/--bg:\s*(#[0-9a-fA-F]{6})/) || [])[1];
+  if (!darkBg) bad("index.html 深色主題搵唔到 --bg（#rrggbb）");
+  else {
+    const metaBg = (html.match(/<meta name="theme-color" content="([^"]+)"/) || [])[1];
+    const metaApple = (html.match(/<meta name="apple-mobile-web-app-background-color" content="([^"]+)"/) || [])[1];
+    for (const [label, got] of [
+      ["manifest theme_color", mf.theme_color],
+      ["manifest background_color", mf.background_color],
+      ["<meta theme-color>", metaBg],
+      ["<meta apple-mobile-web-app-background-color>", metaApple],
+    ]) {
+      if (got !== darkBg) bad(`${label}（${got}）同深色主題 --bg（${darkBg}）唔一致`);
+    }
+    if (!new RegExp('--bg:\\s*' + darkBg + ';', "i").test(darkBlock)) bad("深色 --bg token 格式唔對");
+    if (!new RegExp('t === "dark" \\? "#[0-9a-fA-F]{6}"').test(html)) warn("index.html 主題切換冇更新 theme-color meta");
+    if (mf.theme_color === darkBg && metaBg === darkBg && metaApple === darkBg) {
+      ok(`深色底色三處一致（--bg／meta／manifest 都係 ${darkBg}）`);
+    }
   }
 } catch (e) { iconProblems.push("manifest.webmanifest 解析唔到：" + e.message); }
 
