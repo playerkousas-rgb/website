@@ -42,8 +42,20 @@ const SCOUT_ADMIN_CONFIG = {
 const LS_KEY = "showcase-admin-demo";
 let _sb = null;
 
+/* 圖標 cache-busting 版本號
+   ─────────────────────────────────────────────────────────────
+   點解要：外部 app 換咗 favicon，但我哋睇到嘅係舊圖，成因有幾層快取
+   （Vercel CDN 7 日、Google s2 幾日、app 站自己 icons/*  一年 immutable、
+   瀏覽器 HTTP cache）。呢個版本號會加做 `?v=` 落所有 icon 網址，
+   一改就等於換咗條 URL，所有快取層即刻當新資源。
+   幾時改：① 見到某 app 換咗 logo 但商店仲係舊圖 → 後台撳「🔄 重新抓取圖標」
+           ② 我哋自己換 icons/*.png → 改呢個字串（順手配合 vercel.json immutable）
+   ⚠️ 唔好靠「原圖覆蓋同一檔名」：見 readme docs/33 §9.5。 */
+let ICON_VER = "20261106";
+const iconVer = () => encodeURIComponent(ICON_VER);
+
 // 全站 Logo（項目／分類冇揀 icon 時嘅預設圖示）
-const SITE_LOGO = "/icons/icon-192.png";
+const SITE_LOGO = "/icons/icon-192.png?v=" + iconVer();
 
 // HTML escape（共用，公開 / 後台 / store 都用）
 function esc(s) {
@@ -53,26 +65,39 @@ function esc(s) {
 }
 
 // 攞外部 App 嘅圖示（64px）候選 chain，逐個試，失敗行落下一個：
-//   1) 有 GitHub repo 網址（github 欄或 url 欄）→ repo 主人嘅 GitHub 頭像
-//      （有辨識度，又唔使個站有 favicon）；
-//   2) 我哋自己 /api/favicon —— 用 Chrome 分頁標籤嗰個原理：伺服器端攞該站 HTML
+//   1) 我哋自己 /api/favicon —— 用 Chrome 分頁標籤嗰個原理：伺服器端攞該站 HTML
 //      讀 <link rel="icon">（瀏覽器受 CORS 限制讀唔到別站 HTML，所以要放伺服器做），
-//      冇 link 就試 /favicon.ico；
+//      冇 link 就試 manifest icon 同 /favicon.ico；
+//   2) GitHub repo 主人頭像 —— 該站完全冇 favicon 時嘅後備（有辨識度）；
 //   3) Google s2 —— 備援（自己 API 未部署／被封／本地純靜態跑嗰陣）；
 //   4) 全站 Logo。
+// ⚠️ 次序（2026-11-06 改）：**app 自己嘅 favicon 一定排第一**。
+//    舊版 GitHub 頭像排第一，結果任何填咗 github 欄嘅 app 都永遠顯示
+//    帳號頭像，app 換咗 logo 都見唔到新圖（=「圖標冇換」其中一個主因）。
+//    每一條 URL 都加 `?v=` cache-busting，繞過 CDN／Google／瀏覽器舊快取。
 function faviconCandidates(app) {
+  const v = iconVer();
   const out = [];
+  // 只由「app 自己嘅網址」取 host。冇 url 只有 github 欄時，
+  // 唔可以攞 github.com 做 host（咁只會攞到 GitHub 自己個 favicon，
+  // 唔係 repo 主人嘅頭像）；呢種情況直接行 GitHub 頭像。
+  let host = null;
+  if (app.url) { try { host = new URL(app.url).hostname; } catch { host = null; } }
+  if (host) out.push("/api/favicon?host=" + encodeURIComponent(host) + "&v=" + v);
   const repo = String(app.github || app.url || "").match(/github\.com\/([^/?#]+)/i);
   if (repo) out.push("https://github.com/" + repo[1] + ".png?size=64");
-  const raw = app.url || app.github || "";
-  let host = null;
-  if (raw) { try { host = new URL(raw).hostname; } catch { host = null; } }
-  if (host) {
-    out.push("/api/favicon?host=" + encodeURIComponent(host));
-    out.push("https://www.google.com/s2/favicons?domain=" + host + "&sz=64");
-  }
+  if (host) out.push("https://www.google.com/s2/favicons?domain=" + host + "&sz=64&v=" + v);
   out.push(SITE_LOGO);
   return out;
+}
+
+/* 強制全站重新抓外部圖標：把 ICON_VER 換成時間戳，所有 icon URL 即時變新 URL。
+   公開版會重新 render；後台撳「🔄 重新抓取圖標」就係行呢個。 */
+function refreshAppIcons() {
+  ICON_VER = String(Date.now());
+  try { if (typeof render === "function") render(); } catch { /* 唔喺公開版頁面就跳過 */ }
+  try { if (typeof renderAdmin === "function" && typeof ADMIN !== "undefined" && ADMIN.sites) renderAdmin(); } catch { /* 同上 */ }
+  return ICON_VER;
 }
 
 // <img> onerror：沿 data-favchain 行去下一個候選

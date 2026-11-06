@@ -13,14 +13,30 @@ const html = read("index.html");
 
 // ── 1) 純函數：支部一個字／分類短名 ──────────────────────────
 const base = {
+  URL,
   window: {}, document: { documentElement: { dataset: {} } },
   localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
   console
 };
 base.globalThis = base;
 vm.createContext(base);
-vm.runInContext(storeSrc + "\n;this.__api = { esc, scoutTagShort, catShort, SCOUT_TAGS };", base);
-const { esc, scoutTagShort, catShort, SCOUT_TAGS } = base.__api;
+vm.runInContext(storeSrc + "\n;this.__api = { esc, scoutTagShort, catShort, SCOUT_TAGS, faviconCandidates, resolveIconSource, iconVer };", base);
+const { esc, scoutTagShort, catShort, SCOUT_TAGS, faviconCandidates, resolveIconSource } = base.__api;
+
+/* ── 圖標鏈路（2026-11-06「圖標冇換」修正）────────────────────
+   舊版 GitHub 頭像排第一 → 填咗 github 欄嘅 app 永遠顯示帳號頭像，
+   app 換咗 logo 都見唔到。而家一定係「app 自己個站嘅 favicon」排第一。 */
+const chain = faviconCandidates({ name: "樂行童軍紀錄冊", url: "https://roverbook.vercel.app/", github: "https://github.com/playerkousas-rgb/roverbook" });
+assert.ok(chain[0].startsWith("/api/favicon?host=roverbook.vercel.app"), "app 自己嘅 favicon 一定要排第一，而家係：" + chain[0]);
+assert.match(chain[0], /[?&]v=/, "圖標 URL 一定要有 ?v= cache-busting");
+assert.ok(chain.some((u) => u.includes("github.com/playerkousas-rgb.png")), "站台冇 icon 時仍要有 GitHub 頭像做後備");
+assert.ok(chain.some((u) => u.includes("google.com/s2/favicons")), "仍要有 Google s2 備援");
+assert.ok(chain[chain.length - 1].startsWith("/icons/icon-192.png?v="), "最後一定要係全站 Logo（帶 ?v= 版本）");
+const noUrl = faviconCandidates({ name: "x", github: "https://github.com/playerkousas-rgb/hkcamping" });
+assert.ok(noUrl[0].includes("github.com/playerkousas-rgb.png"), "冇 url 只有 github 時，頭像就係第一粒");
+assert.strictEqual(noUrl[noUrl.length - 1].startsWith("/icons/icon-192.png"), true);
+assert.strictEqual(resolveIconSource({ iconSource: "favicon" }), "favicon", "App 自帶 Logo = favicon 模式");
+assert.strictEqual(resolveIconSource({ icon: "https://x.test/a.png" }), "upload", "舊資料 https icon 當上傳圖");
 
 assert.deepStrictEqual(Array.from(SCOUT_TAGS), ["小童軍", "幼童軍", "童軍", "深資童軍", "樂行童軍"], "支部仍係五個全名（無「領袖」）");
 assert.strictEqual(SCOUT_TAGS.includes("領袖"), false, "唔應該有「領袖」選項");

@@ -96,9 +96,14 @@ function guessType(u, upstreamType) {
 }
 
 // 下載一個 icon 候選，成功回傳 {buf, type}，失敗回傳 null
-async function fetchIconBuf(url, ms) {
+const NO_CACHE = { "cache-control": "no-cache", pragma: "no-cache" };
+
+async function fetchIconBuf(url, ms, force) {
   try {
-    const res = await fetchWithTimeout(url, ms, { accept: "image/*,*/*;q=0.8" });
+    const res = await fetchWithTimeout(
+      url, ms,
+      Object.assign({ accept: "image/*,*/*;q=0.8" }, force ? NO_CACHE : {})
+    );
     if (!res.ok) return null;
     const buf = Buffer.from(await res.arrayBuffer());
     if (!buf.length || buf.length > IMG_BYTES) return null;
@@ -109,7 +114,7 @@ async function fetchIconBuf(url, ms) {
 // 由 PWA manifest 抽出 icon 候選。
 // 好多 Vercel 站（例如「出門玩」MINI GAME）唔寫 <link rel="icon">、亦冇 /favicon.ico，
 // 真 logo 只放喺 manifest 嘅 icons 入面 —— 呢個就係為咗讀佢而設。
-async function manifestIconCandidates(html, baseUrl, left) {
+async function manifestIconCandidates(html, baseUrl, left, force) {
   // 先搵 <link rel="manifest" href="...">（最準），冇就用常見預設位置
   let manifestUrl = null;
   const re = /<link\b[^>]*>/gi;
@@ -133,7 +138,7 @@ async function manifestIconCandidates(html, baseUrl, left) {
     if (ms < 500) break;
     let text = null;
     try {
-      const res = await fetchWithTimeout(url, ms, { accept: "application/manifest+json,application/json" });
+      const res = await fetchWithTimeout(url, ms, Object.assign({ accept: "application/manifest+json,application/json" }, force ? NO_CACHE : {}));
       if (!res.ok) continue;
       text = (await res.text()).slice(0, 256 * 1024);
     } catch { continue; }
@@ -170,9 +175,13 @@ async function manifestIconCandidates(html, baseUrl, left) {
 }
 
 /* ── 核心：畀個域名，回傳最啱嘅 icon ─────────────────────── */
-async function resolveFavicon(host) {
+/* opts.force = true（?refresh=1 或 ?v=時間戳）：連上游都要 no-cache，
+   唔好被對方 CDN／中間 proxy 嘅舊 HTML／舊圖陰到。 */
+async function resolveFavicon(host, opts) {
   host = safeHost(host);
   if (!host) throw new Error("bad host");
+  const force = !!(opts && opts.force);
+  const noCache = force ? { "cache-control": "no-cache", pragma: "no-cache" } : undefined;
   const start = Date.now();
   const left = (cap) => Math.min(cap, TOTAL_BUDGET - (Date.now() - start));
 
@@ -183,7 +192,7 @@ async function resolveFavicon(host) {
     const ms = left(4000);
     if (ms < 700) break;
     try {
-      const res = await fetchWithTimeout(base, ms);
+      const res = await fetchWithTimeout(base, ms, noCache);
       if (!res.ok) continue;
       html = (await res.text()).slice(0, HTML_BYTES);
       htmlUrl = res.url || base;
@@ -200,18 +209,18 @@ async function resolveFavicon(host) {
     seen.add(cand.url);
     const ms = left(2500);
     if (ms < 500) break;
-    const got = await fetchIconBuf(cand.url, ms);
+    const got = await fetchIconBuf(cand.url, ms, force);
     if (got) return { buf: got.buf, type: got.type, via: "link" };
   }
 
   // 3) 冇 link 或 link 全部失敗 → 試 PWA manifest 嘅 icon
   if (left(1000) >= 600) {
-    for (const cand of await manifestIconCandidates(html, htmlUrl, left)) {
+    for (const cand of await manifestIconCandidates(html, htmlUrl, left, force)) {
       if (seen.has(cand.url)) continue;
       seen.add(cand.url);
       const ms = left(2500);
       if (ms < 500) break;
-      const got = await fetchIconBuf(cand.url, ms);
+      const got = await fetchIconBuf(cand.url, ms, force);
       if (got) return { buf: got.buf, type: got.type, via: "manifest" };
     }
   }
@@ -222,7 +231,7 @@ async function resolveFavicon(host) {
     if (ms >= 500) {
       const u = new URL("favicon.ico", htmlUrl).href;
       if (!seen.has(u)) {
-        const got = await fetchIconBuf(u, ms);
+        const got = await fetchIconBuf(u, ms, force);
         if (got) return { buf: got.buf, type: got.type, via: "favicon.ico" };
       }
     }
@@ -239,19 +248,50 @@ module.exports = async function faviconHandler(req, res) {
   }
   const host = safeHost(u.searchParams.get("host"));
   if (!host) return res.status(400).send("bad host");
+
+  /* 快取策略（2026-11-06 改）：
+     · ?v=<任何值> 或 ?refresh=1 —— 前端「換咗 logo 但仲見舊圖」時用：
+       連上游一齊 no-cache，回應亦 no-store，即刻見新圖。
+     · 平時：瀏覽器 1 日、Vercel edge 1 日（舊版 7 日，一個換 icon 要等
+       成個星期先反映，就係「圖標冇換」嘅其中一個原因）。 */
+  const force = u.searchParams.has("v") || u.searchParams.get("refresh") === "1";
+
+  // ?debug=1：唔回圖，回 JSON（邊個 URL 揀咗、經由邊條路徑攞到）方便查「點解係舊圖」
+  if (u.searchParams.get("debug") === "1") {
+    try {
+      const { type, via } = await resolveFavicon(host, { force: true });
+      return res
+        .status(200)
+        .setHeader("Content-Type", "application/json; charset=utf-8")
+        .setHeader("Cache-Control", "no-store")
+        .send(JSON.stringify({ host, ok: true, via, type, checkedAt: new Date().toISOString() }));
+    } catch (e) {
+      return res
+        .status(404)
+        .setHeader("Content-Type", "application/json; charset=utf-8")
+        .setHeader("Cache-Control", "no-store")
+        .send(JSON.stringify({ host, ok: false, error: String(e && e.message || e) }));
+    }
+  }
+
   try {
-    const { buf, type, via } = await resolveFavicon(host);
+    const { buf, type, via } = await resolveFavicon(host, { force });
     res
       .status(200)
       .setHeader("Content-Type", type)
       .setHeader("Access-Control-Allow-Origin", "*")
-      // 瀏覽器快 1 日；Vercel edge cache 快 7 日（favicon 基本唔會變）
-      .setHeader("Cache-Control", "public, max-age=3600, s-maxage=604800, stale-while-revalidate=604800")
+      .setHeader(
+        "Cache-Control",
+        force
+          ? "no-store, max-age=0"
+          : "public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400"
+      )
       .setHeader("X-Favicon-Via", via)
       .send(buf);
   } catch {
     res.status(404)
       .setHeader("Access-Control-Allow-Origin", "*")
+      .setHeader("Cache-Control", "no-store") // 失敗唔好快取，下次再試
       .send("no favicon"); // 前端 <img> onerror 會行落后备 chain
   }
 };

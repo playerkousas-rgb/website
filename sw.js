@@ -27,7 +27,12 @@
 //      v37 = 圖示統一：⭐ 收藏／❤️ 讚好（底欄「收藏」由 ❤️ 改 ⭐，APP 卡片收藏掣改星星）
 //            ＋後台「📊 統計」加 ⭐ 收藏數／❤️ 讚好數（Demo 模式都睇到）
 //      v38 = 新增「🌐 網站分享」及「📚 教材分享」獨立入口與表單（支援雲端連結、匿名分享、支部快選）
-const CACHE = 'scout-tools-v38';
+//      v39 = 修「圖標冇換」：外部 app icon 加 ?v= cache-busting（store.js）、
+//            /api/favicon 支援 ?refresh=1/?debug=1、edge 快取由 7 日縮到 1 日；
+//            本站圖標補齊 9 個檔（favicon.ico/16/32/apple-touch/maskable/og-image）
+//      v40 = 設計統一（readme design-review house rules）：去漸層／去光暈／去英文
+//            eyebrow／單一金色 accent（同 9 個圖標一致）＋ DESIGN.md 設計語言
+const CACHE = 'scout-tools-v40';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

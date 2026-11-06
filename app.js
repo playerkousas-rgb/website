@@ -6,25 +6,6 @@
    ════════════════════════════════════════════════════════════════ */
 
 // ── 圖標背景配色（按名稱 hash 穩定取色）──────────────────────
-const PALETTE = [
-  ["#dbeafe", "#93c5fd"], ["#fee2e2", "#fca5a5"], ["#dcfce7", "#86efac"],
-  ["#fef9c3", "#fde047"], ["#fae8ff", "#e879f9"], ["#e0f2fe", "#7dd3fc"],
-  ["#ffedd5", "#fdba74"], ["#f3e8ff", "#c4b5fd"], ["#ccfbf1", "#5eead4"],
-  ["#fce7f3", "#f9a8d4"]
-];
-const PALETTE_DARK = [
-  ["#1e3a5f", "#2563eb"], ["#4c1d1d", "#ef4444"], ["#14532d", "#22c55e"],
-  ["#422006", "#eab308"], ["#4a044e", "#d946ef"], ["#0c4a6e", "#0ea5e9"],
-  ["#431407", "#f97316"], ["#2e1065", "#8b5cf6"], ["#134e4a", "#14b8a6"],
-  ["#500724", "#ec4899"]
-];
-function tileBg(name) {
-  let h = 0;
-  for (const c of String(name || "")) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  const dark = document.documentElement.dataset.theme === "dark";
-  const pal = dark ? PALETTE_DARK : PALETTE;
-  return pal[h % pal.length];
-}
 // esc() 喺 store.js 內定義（global），呢度直接用
 
 // ── 我的收藏（⭐ 每人自己嘅收藏清單，存瀏覽器）──────────────
@@ -72,9 +53,9 @@ function openApp(app) {
 }
 
 function iconHTML(app) {
-  // App Store 式：每粒 icon 用名稱 hash 穩定取色嘅圓角漸變底
-  const [g1, g2] = tileBg(app.name);
-  return `<div class="tile-icon" style="background:linear-gradient(145deg,${g1},${g2})">${appIconHTML(app, "tile")}</div>`;
+  // 唔再為每粒 app 隨機上漸層底色（readme design-review：無漸層、accent 只落一處）。
+  // icon 自己就係主角：真圖標 + 留白，比「十種顏色嘅圓角方塊」安靜得多。
+  return `<div class="tile-icon">${appIconHTML(app, "tile")}</div>`;
 }
 
 // ── 公開版面狀態 ─────────────────────────────────────────────
@@ -126,7 +107,7 @@ function chartHTML(apps) {
       : value >= CHART_SCORE_MIN
         ? `<div class="chart-score"><b>${value.toLocaleString()}</b><small>${m.unit}</small></div>`
         : '';
-    return `<a class="chart-item tile" href="${esc(a.url)}" data-idx="${idx}" data-id="${esc(a._id)}"><span class="chart-rank">${String(i+1).padStart(2,'0')}</span>${iconHTML(a)}<div class="chart-copy"><h3>${esc(a.name)}</h3><p>${esc(a.description || '')}</p></div>${scoreHTML}<span class="chart-open">開啟 ↗</span></a>`;
+    return `<a class="chart-item tile" href="${esc(a.url)}" data-idx="${idx}" data-id="${esc(a._id)}"><span class="chart-rank">${i+1}</span>${iconHTML(a)}<div class="chart-copy"><h3>${esc(a.name)}</h3><p>${esc(a.description || '')}</p></div>${scoreHTML}<span class="chart-open">開啟 ↗</span></a>`;
   }).join('')}</div></section>`;
 }
 // 適用支部篩選：可以**同時揀幾個**（OR —— 揀「小＋幼」= 兩個支部嘅嘢都俾我睇）

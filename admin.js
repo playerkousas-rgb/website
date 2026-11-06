@@ -75,6 +75,16 @@ const ADMIN = {
     renderAdmin();
   },
 
+  /* 🔄 重新抓取圖標 —— 外部 app 換咗 logo 但商店仲顯示舊圖時用。
+     做法：把 icon 網址嘅 `?v=` 換成時間戳（新 URL = 所有快取層當新資源），
+     再重新 render。唔會改 DB，唔會影響任何人嘅資料。 */
+  refreshIcons() {
+    const v = typeof refreshAppIcons === "function" ? refreshAppIcons() : null;
+    if (v) {
+      alert("已重新抓取圖標（版本 " + v + "）。\n\n如果仲係舊圖，即係對方個站自己未換／仲喺佢自己嘅快取：\n· 開 https://<app 網域>/icons/icon-192.png?v=" + v + " 睇下係唔係新圖\n· app 站嘅 /icons/* 通常 immutable 一年 → 要改檔名（icon-192-v2.png）先算真正換咗");
+    }
+  },
+
   async loadAnalytics() {
     const panel = document.getElementById("analytics-panel");
     if (!panel || !this.authed) return;
@@ -728,12 +738,11 @@ function manageHTML() {
 /* ── 總覽 ───────────────────────────────────────────────── */
 function tilesForCat(cat) {
   return cat.apps.map((a) => {
-    const [g1, g2] = tileBg(a.name);
     const inner = appIconHTML(a, "tile");
     return `
     <a class="tile" href="${esc(a.url)}" title="${esc((a.description || "") + (a.visible === false ? "（隱藏中）" : ""))}" target="_blank" rel="noopener">
       ${a.visible === false ? '<span class="lock-tag" style="position:absolute;top:2px;right:2px;z-index:2">🔒</span>' : ""}
-      <div class="tile-icon" style="background:linear-gradient(145deg,${g1},${g2})">${inner}</div>
+      <div class="tile-icon">${inner}</div>
       <div class="tile-name">${esc(a.name)}</div>
       ${(a.tags && a.tags.length) ? `<div class="tile-tags">${a.tags.map((t) => `<span title="${esc(t)}">${esc(scoutTagShort(t))}</span>`).join("")}</div>` : ""}
       ${a.description ? `<div class="tile-desc">${esc(a.description)}</div>` : ""}
@@ -895,6 +904,7 @@ function renderAdmin() {
       <button type="button" class="mini-btn" onclick="ADMIN.doExport()">📤 備份</button>
       <button type="button" class="mini-btn" onclick="ADMIN.doRestore()" title="上傳 backup 完整覆蓋">♻️ 還原</button>
       <button type="button" class="mini-btn" onclick="ADMIN.doQR()">🔳 QR</button>
+      <button type="button" class="mini-btn" onclick="ADMIN.refreshIcons()" title="外部 app 換咗 logo 但商店仲顯示舊圖？撳呢個即刻重新抓（會繞過 CDN／Google／瀏覽器快取）">🔄 重新抓取圖標</button>
       <button type="button" class="mini-btn danger" onclick="ADMIN.resetAll()" title="清空所有並建立預設模板">⚠️ 一鍵重設</button>
       <span class="spacer"></span>
       <button type="button" class="mini-btn primary full" onclick="ADMIN.close()">✅ 完成</button>
