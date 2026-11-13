@@ -10,10 +10,10 @@
      （配合 vercel.json 對 /icons/* 落 immutable 一年）。
      ⚠️ 號碼要同 store.js 嘅 ICON_VER 一致。 -->
 <link rel="manifest" href="/manifest.webmanifest" />
-<link rel="icon" href="/icons/favicon.ico" sizes="any" />
+<link rel="icon" type="image/x-icon" href="/icons/favicon.ico" sizes="any" />
 <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png?v=20261106" />
 <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png?v=20261106" />
-<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=20261106" />
+<link rel="apple-touch-icon" type="image/png" sizes="180x180" href="/icons/apple-touch-icon.png?v=20261106" />
 <!-- 主題色／PWA 啟動畫面跟預設深色主題對齊（boot script 之後會按用戶主題再更新） -->
 <meta name="theme-color" content="#1f2430" />
 <!-- 分享預覽（WhatsApp／Signal／FB）：og:image 必須絕對網址，用相對路徑 = 冇圖 -->
@@ -669,10 +669,32 @@
   .tile:hover .tile-icon { transform: translateY(-2px); }
   .tile-icon img {
     width: 58px; height: 58px; object-fit: contain; border-radius: 14px;
+    /* 細圖（favicon 48px 以下）放大時，用高質素插值而唔係最近鄰，
+       否則邊緣會一格格「化開」。配合 api/favicon 嘅大圖優先，雙重保險。 */
+    image-rendering: auto;
   }
   @media (min-width: 560px) {
     .tile-icon img { width: 66px; height: 66px; }
   }
+  /* 細圖降級：外部連結只得 <64px 嘅 favicon 時，唔放大糊圖，改用字母牌。
+     用該項目嘅分類色做底，同站內色系一致；一眼認得，唔會似壞圖。 */
+  .icon-letter {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 100%;
+    border-radius: inherit;
+    background: color-mix(in srgb, var(--cat, var(--accent)) 26%, var(--bg-card));
+    color: var(--text);
+    font-weight: 800; font-size: 1.5em; line-height: 1;
+    user-select: none;
+  }
+  .tile-icon .icon-letter { border-radius: 16px; }
+  .card-icon .icon-letter { border-radius: 13px; font-size: 1.25em; }
+  .row-ico + .icon-letter,
+  .icon-letter.row-ico {
+    width: 20px; height: 20px; border-radius: 6px;
+    font-size: 11px; display: inline-flex; vertical-align: -5px;
+  }
+
   .tile-name {
     font-size: var(--fs-2); font-weight: 600; color: var(--text); line-height: 1.3;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
@@ -1581,7 +1603,8 @@
     background: color-mix(in srgb, var(--cat, var(--accent)) 14%, var(--bg-card));
     padding: 4px;
   }
-  .card-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 13px; }
+  /* 2026-11：cover → contain。cover 會裁邊，細圖被裁完再放大更易化開。 */
+  .card-icon img { width: 100%; height: 100%; object-fit: contain; border-radius: 13px; }
   .card-copy { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
   .card .tile-name {
     font-size: 14.5px; font-weight: 750; line-height: 1.28; text-align: left;
@@ -1637,7 +1660,7 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 42px; line-height: 1;
   }
-  .sheet-icon img { width: 76px; height: 76px; object-fit: cover; border-radius: 18px; }
+  .sheet-icon img { width: 76px; height: 76px; object-fit: contain; border-radius: 18px; }
   .sheet-titles { min-width: 0; }
   .sheet-titles h2 {
     font-size: 20px; font-weight: 850; line-height: 1.2; letter-spacing: -.02em;

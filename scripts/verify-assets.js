@@ -40,12 +40,12 @@ const DEPLOY = [
 const DEV_ONLY = [
   "package.json", "package-lock.json", "vercel.json",
   ".vercelignore", ".gitignore",
-  "README.md", "OPTIMIZATION.md", "AUDIT.md", "LICENSE",
+  "README.md", "OPTIMIZATION.md", "AUDIT.md", "ICON-STANDARD.md", "LICENSE",
   "dev-server.mjs",
-  "scripts/lint.js", "scripts/verify-assets.js", "scripts/make-icons.sh",
+  "scripts/lint.js", "scripts/verify-assets.js", "scripts/make-icons.sh", "scripts/check-icon-set.mjs",
   "migrations/20260924-market.sql", "migrations/20260924-hearts.sql", "migrations/20260925-submission-contact.sql", "migrations/20261004-analytics.sql", "migrations/20261022-share-modes.sql",
   "test/market.test.js", "test/notify-admin.test.js", "test/report.test.js",
-  "test/favicon.test.js", "test/labels.test.js", "test/boot-order.test.js",
+  "test/favicon.test.js", "test/icon-fallback.test.js", "test/labels.test.js", "test/boot-order.test.js",
   "test/analytics.test.js"
 ];
 

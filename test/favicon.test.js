@@ -4,7 +4,7 @@ const assert = require("node:assert");
 
 // ── mock 網站世界 ─────────────────────────────────────────────
 const SITES = {
-  // 正常站：有多個 icon link，應該揀 32x32 PNG（分數最高）
+  // 正常站：有多個 icon link，應該揀 180px apple-touch-icon（大圖優先）
   "multi.test": {
     paths: {
       "/": {
@@ -126,8 +126,8 @@ const { resolveFavicon, safeHost, iconCandidates } = require("../api/favicon.js"
   // 1) 多 icon → 揀 32x32 PNG
   let r = await resolveFavicon("multi.test");
   assert.equal(r.via, "link"); assert.equal(r.type, "image/png");
-  assert.equal(r.buf.toString(), "PNG32DATA");
-  console.log("✓ 多個 <link rel=icon> → 揀分數最高嘅 32x32 PNG");
+  assert.equal(r.buf.toString(), "APPLEPNG");
+  console.log("✓ 多個 <link rel=icon> → 揀最大嘅 180px（唔再攞 32px 小圖）");
 
   // 2) 冇 link → /favicon.ico
   r = await resolveFavicon("icoonly.test");
@@ -183,8 +183,32 @@ const { resolveFavicon, safeHost, iconCandidates } = require("../api/favicon.js"
     '<link rel="icon" sizes="32x32" href="/b.png" type="image/png">' +
     '<link rel="apple-touch-icon" sizes="180x180" href="/c.png">',
     "https://x.test/");
-  assert.equal(cands[0].url, "https://x.test/b.png");
-  console.log("✓ 候選按「PNG + 32–128px」分數排序");
+  // 180px apple-touch-icon 有尺寸分，應該贏 32px（大圖優先）
+  assert.equal(cands[0].url, "https://x.test/c.png");
+  console.log("✓ 候選按分數排序（大圖優先）");
+
+  // 8b) 大圖一定要贏細圖 —— 呢個係「圖標化開」嘅根因修正（2026-11）
+  //     舊版 32px 有 +6、512 只得 +3，結果攞細圖放大顯示 → 蒙。
+  const big = iconCandidates(
+    '<link rel="icon" sizes="16x16" href="/f16.png" type="image/png">' +
+    '<link rel="icon" sizes="32x32" href="/f32.png" type="image/png">' +
+    '<link rel="icon" sizes="48x48" href="/f48.png" type="image/png">' +
+    '<link rel="apple-touch-icon" sizes="180x180" href="/touch.png" type="image/png">',
+    "https://x.test/");
+  assert.equal(big[0].url, "https://x.test/touch.png", "180px 大圖要排第一");
+  assert.ok(big.findIndex((c) => c.url.endsWith("/f48.png")) < big.findIndex((c) => c.url.endsWith("/f16.png")),
+    "48px 要排在 16px 之前");
+  console.log("✓ 大圖優先：180/192/512 排最前，16/32px 小圖排後面");
+
+  // 8c) apple-touch-icon 冇寫 sizes（超常見）→ 當 180px，唔可以輸畀 32px
+  //     ROVERBOOK 真實情況就係咁樣，結果網站攞咗 32px 小圖放大顯示 → 蒙。
+  const noSizes = iconCandidates(
+    '<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">' +
+    '<link rel="apple-touch-icon" href="/touch.png">',
+    "https://x.test/");
+  assert.equal(noSizes[0].url, "https://x.test/touch.png",
+    "冇 sizes 嘅 apple-touch-icon 都要排第一（當 180px）");
+  console.log("✓ apple-touch-icon 冇寫 sizes → 當 180px，唔會輸畀 32px 小圖");
 
   // 9) Vercel handler（mock req/res）
   const mod = require("../api/favicon.js");
@@ -199,6 +223,9 @@ const { resolveFavicon, safeHost, iconCandidates } = require("../api/favicon.js"
   assert.equal(res.code, 200);
   assert.equal(res.headers["Content-Type"], "image/png");
   assert.equal(res.headers["Access-Control-Allow-Origin"], "*");
+  // 診斷標頭：回傳圖嘅真實尺寸（前端／管理員睇得到呢個 app 有冇細圖問題）
+  assert.ok("X-Favicon-Size" in res.headers, "要有 X-Favicon-Size 診斷標頭");
+  assert.ok("X-Favicon-Small" in res.headers, "要有 X-Favicon-Small 診斷標頭");
   // 預設：edge 只快 1 日（舊版 7 日 → 換 icon 要等成個星期，係「圖標冇換」成因之一）
   assert.match(res.headers["Cache-Control"], /s-maxage=86400/);
   assert.doesNotMatch(res.headers["Cache-Control"], /604800/);
