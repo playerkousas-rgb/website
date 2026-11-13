@@ -31,10 +31,14 @@ assert.ok(chain[0].startsWith("/api/favicon?host=roverbook.vercel.app"), "app �
 assert.match(chain[0], /[?&]v=/, "圖標 URL 一定要有 ?v= cache-busting");
 assert.ok(chain.some((u) => u.includes("github.com/playerkousas-rgb.png")), "站台冇 icon 時仍要有 GitHub 頭像做後備");
 assert.ok(chain.some((u) => u.includes("google.com/s2/favicons")), "仍要有 Google s2 備援");
-assert.ok(chain[chain.length - 1].startsWith("/icons/icon-192.png?v="), "最後一定要係全站 Logo（帶 ?v= 版本）");
+/* 2026-11-12 改：最後唔再用全站 Logo，改用哨兵 ""（→ 字母牌）。
+   理由：外部連結全部攞唔到靚圖時，顯示本站 Logo 會令人誤會
+         「呢個連結係本站自己嘅嘢」。自家 app 有 512，永遠行唔到呢步。 */
+assert.strictEqual(chain[chain.length - 1], "", "最後要用哨兵（空字串）代表字母牌");
+assert.ok(!chain.includes(undefined), "chain 唔可以有 undefined");
 const noUrl = faviconCandidates({ name: "x", github: "https://github.com/playerkousas-rgb/hkcamping" });
 assert.ok(noUrl[0].includes("github.com/playerkousas-rgb.png"), "冇 url 只有 github 時，頭像就係第一粒");
-assert.strictEqual(noUrl[noUrl.length - 1].startsWith("/icons/icon-192.png"), true);
+assert.strictEqual(noUrl[noUrl.length - 1], "", "冇 url 時最後都係哨兵");
 assert.strictEqual(resolveIconSource({ iconSource: "favicon" }), "favicon", "App 自帶 Logo = favicon 模式");
 assert.strictEqual(resolveIconSource({ icon: "https://x.test/a.png" }), "upload", "舊資料 https icon 當上傳圖");
 

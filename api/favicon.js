@@ -66,17 +66,38 @@ function iconCandidates(html, baseUrl) {
     let u;
     try { u = new URL(href, baseUrl); } catch { continue; }
     if (u.protocol !== "http:" && u.protocol !== "https:") continue;
-    const type = (attr(tag, "type") || "").toLowerCase();
-    const sizes = (attr(tag, "sizes") || "").match(/(\d{1,4})\s*x\s*(\d{1,4})/);
-    const px = sizes ? Math.max(+sizes[1], +sizes[2]) : null;
+    /* type 可能冇寫（例：<link rel="apple-touch-icon" href="/touch.png">），
+       由副檔名補返 —— 否則明明係 180px PNG 都會被當成「未知格式」。 */
+    let type = (attr(tag, "type") || "").toLowerCase();
+    if (!type) {
+      const path = u.pathname.toLowerCase();
+      if (path.endsWith(".png")) type = "image/png";
+      else if (path.endsWith(".svg")) type = "image/svg+xml";
+      else if (path.endsWith(".ico")) type = "image/x-icon";
+      else if (path.endsWith(".webp")) type = "image/webp";
+    }
+    const sizesAttr = attr(tag, "sizes") || "";
+    const sizes = sizesAttr.match(/(\d{1,4})\s*x\s*(\d{1,4})/);
+    let px = sizes ? Math.max(+sizes[1], +sizes[2]) : null;
+    /* <link rel="apple-touch-icon" href="..."> 唔寫 sizes 係極常見寫法，
+       Apple 官方規格就係 180×180 —— 唔當佢做「未知尺寸」而排到最後，
+       否則明明有 180px 大圖都會輸畀 32px 小圖。 */
+    if (px == null && rel.some((t) => t.startsWith("apple-touch-icon"))) px = 180;
     // 格式分：PNG 最穩陣（<img> 永遠啱），SVG 次之，ICO／未知最後
     let score = 3;
     if (type.includes("png")) score = 10;
     else if (type.includes("svg")) score = 5;
-    // 尺寸分：32–128px 最啱我哋 64px tile（含 2x 屏）
-    if (px == null) score += 1;
-    else if (px >= 32 && px <= 128) score += 6;
-    else if (px >= 16) score += 3;
+    /* 尺寸分（2026-11 改）：**越大越好**。
+       舊版 32–128px 得 +6、≥256px 只得 +3，結果 app 明明有 512 大圖，
+       我哋偏偏攞個 48px 小圖返嚟，再放大到 68px 顯示 → 一定蒙。
+       （用戶實測：同一批 app，用 favicon-48 嗰個特別化開）
+       而家按「至少夠 2× tile（>136px）」畀最高分，細圖仍然可用但排後面。 */
+    if (px == null) score += 1;                 // sizes 冇寫 → 靠後
+    else if (px >= 256) score += 12;            // 512 / 1024：縮細最清
+    else if (px >= 136) score += 10;            // 180 / 192：2× tile 夠用
+    else if (px >= 96) score += 7;
+    else if (px >= 32) score += 4;              // 32–95：只夠 1× tile
+    else if (px >= 16) score += 2;
     else score += 1;
     out.push({ url: u.href, score });
   }
@@ -161,10 +182,13 @@ async function manifestIconCandidates(html, baseUrl, left, force) {
       if (type.includes("png")) score = 11;
       else if (type.includes("svg")) score = 8;
       // PWA icon 通常 192/512；尺寸夠大縮去 64px 先至清晰
+      /* 尺寸分（2026-11 改）：manifest 嘅 192／512 係最靚嘅來源，
+         之前只 +3，輸畀 link 入面嘅 32px 小圖。而家 512 → +12。 */
       const px = (String(ic.sizes || "").match(/(\d{1,4})\s*x\s*(\d{1,4})/) || [])[1];
-      if (px && +px >= 128) score += 3;
-      else if (px && +px >= 48) score += 2;
-      else if (ic.sizes === "any") score += 2;
+      if (px && +px >= 256) score += 12;
+      else if (px && +px >= 136) score += 10;
+      else if (px && +px >= 48) score += 4;
+      else if (ic.sizes === "any") score += 6;
       out.push({ url: u.href, score, via: "manifest" });
     }
     if (out.length) return out.sort((a, b) => b.score - a.score).slice(0, 4);
@@ -203,26 +227,27 @@ async function resolveFavicon(host, opts) {
 
   const seen = new Set();
 
-  // 2) 先試 <link rel="icon"> 候選（Chrome 分頁標籤嗰個原理）
-  for (const cand of iconCandidates(html, htmlUrl)) {
+  /* 2) 合併「link」同「manifest」兩組候選，按分數統一排序再逐個試。
+     ⚠️ 舊版係「link 行完就 return」，所以永遠唔會試 manifest 嘅 512 大圖，
+        最後攞個 48px 小圖放大到 68px 顯示 → 一定蒙。
+        而家兩邊一齊排，512／192 大圖自然排最前。 */
+  const linkCands = iconCandidates(html, htmlUrl).map((c) => ({ ...c, via: "link" }));
+  let manifestCands = [];
+  if (left(1000) >= 600) {
+    try {
+      manifestCands = (await manifestIconCandidates(html, htmlUrl, left, force)).map((c) => ({ ...c, via: "manifest" }));
+    } catch { manifestCands = []; }
+  }
+  const merged = [...linkCands, ...manifestCands]
+    .sort((a, b) => (b.score || 0) - (a.score || 0));
+
+  for (const cand of merged) {
     if (seen.has(cand.url)) continue;
     seen.add(cand.url);
     const ms = left(2500);
     if (ms < 500) break;
     const got = await fetchIconBuf(cand.url, ms, force);
-    if (got) return { buf: got.buf, type: got.type, via: "link" };
-  }
-
-  // 3) 冇 link 或 link 全部失敗 → 試 PWA manifest 嘅 icon
-  if (left(1000) >= 600) {
-    for (const cand of await manifestIconCandidates(html, htmlUrl, left, force)) {
-      if (seen.has(cand.url)) continue;
-      seen.add(cand.url);
-      const ms = left(2500);
-      if (ms < 500) break;
-      const got = await fetchIconBuf(cand.url, ms, force);
-      if (got) return { buf: got.buf, type: got.type, via: "manifest" };
-    }
+    if (got) return { buf: got.buf, type: got.type, via: cand.via, url: cand.url };
   }
 
   // 4) 最後回退該站根目錄 /favicon.ico
@@ -237,6 +262,14 @@ async function resolveFavicon(host, opts) {
     }
   }
   throw new Error("no favicon");
+}
+
+/* ── 由 PNG 標頭讀尺寸（唔使解碼整張圖） ───────────────────── */
+function pngSize(buf) {
+  if (!buf || buf.length < 24) return null;
+  // PNG signature 之後第一個 chunk 一定係 IHDR
+  if (buf[0] !== 0x89 || buf.toString("ascii", 1, 4) !== "PNG") return null;
+  return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
 }
 
 /* ── Vercel handler ──────────────────────────────────────── */
@@ -276,9 +309,16 @@ module.exports = async function faviconHandler(req, res) {
 
   try {
     const { buf, type, via } = await resolveFavicon(host, { force });
+    /* 診斷用：回傳圖嘅真實尺寸。前端見到 X-Favicon-Small=1
+       就知呢個 app 只提供細圖（<64px），放大顯示一定蒙，
+       可以引導站主補一張 192／512。 */
+    const dim = type === "image/png" ? pngSize(buf) : null;
+    const small = !!(dim && Math.max(dim.w, dim.h) < 64);
     res
       .status(200)
       .setHeader("Content-Type", type)
+      .setHeader("X-Favicon-Size", dim ? `${dim.w}x${dim.h}` : "unknown")
+      .setHeader("X-Favicon-Small", small ? "1" : "0")
       .setHeader("Access-Control-Allow-Origin", "*")
       .setHeader(
         "Cache-Control",

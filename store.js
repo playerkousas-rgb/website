@@ -256,9 +256,18 @@ function faviconCandidates(app) {
   if (app.url) { try { host = new URL(app.url).hostname; } catch { host = null; } }
   if (host) out.push("/api/favicon?host=" + encodeURIComponent(host) + "&v=" + v);
   const repo = String(app.github || app.url || "").match(/github\.com\/([^/?#]+)/i);
-  if (repo) out.push("https://github.com/" + repo[1] + ".png?size=64");
-  if (host) out.push("https://www.google.com/s2/favicons?domain=" + host + "&sz=64&v=" + v);
-  out.push(SITE_LOGO);
+  /* GitHub 頭像：size=460 係 GitHub 支援嘅最大值，
+     唔好用 64 —— 68px tile 喺 2× 螢幕要 136px，64 一定化開。 */
+  if (repo) out.push("https://github.com/" + repo[1] + ".png?size=460");
+  /* Google s2：官方支援 sz 1–256。之前寫死 64，等於外部站有 512 都只攞到 64px。
+     改用 256（s2 上限），細圖放大嘅情況大幅減少。
+     ⚠️ 外部連結我哋控制唔到 figcaption，只能盡量攞最大；
+        真係連 256 都冇（老站得 16px）就先放大再出（見 favImgOnLargest）。 */
+  if (host) out.push("https://www.google.com/s2/favicons?domain=" + host + "&sz=256&v=" + v);
+  /* 最後用哨兵 ""（唔係全站 Logo）：
+     外部連結全部攞唔到靚圖時，顯示「字母牌」比顯示本站 Logo 好 ——
+     後者會令人以為個連結係本站自己嘅嘢。自家 app 有 512，永遠行唔到呢步。 */
+  out.push("");
   return out;
 }
 
@@ -272,12 +281,98 @@ function refreshAppIcons() {
 }
 
 // <img> onerror：沿 data-favchain 行去下一個候選
+function favChainOf(img) {
+  try { return JSON.parse(img.dataset.favchain || "[]"); } catch { return []; }
+}
+
+// 試下一個候選；碰到哨兵 "" 或者已經到尾 → 回傳 false（交畀字母牌）
+function favTryNext(img) {
+  const chain = favChainOf(img);
+  let i = Number(img.dataset.fi || 0);
+  while (i + 1 < chain.length) {
+    i += 1;
+    if (chain[i]) { // 非哨兵
+      img.dataset.fi = String(i);
+      img.src = chain[i];
+      return true;
+    }
+  }
+  return false;
+}
+
 function favImgOnErr(img) {
-  let chain = [];
-  try { chain = JSON.parse(img.dataset.favchain || "[]"); } catch { chain = []; }
-  const i = Number(img.dataset.fi || 0);
-  if (i + 1 < chain.length) { img.dataset.fi = String(i + 1); img.src = chain[i + 1]; }
-  else img.onerror = null; // 最後一個（全站 Logo）都失敗 → 停止重試
+  if (!favTryNext(img)) {
+    img.onerror = null;
+    iconLetterFallback(img);   // 全部候選都失敗 → 字母牌
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   細圖降級（2026-11）
+
+   背景：外部連結（唔係自家 app）我哋控制唔到佢交咩圖。
+         有啲老站／第三方網站真係只得 16×16 favicon。
+         硬將 16px 放大到 68px，出到嚟就係一嚿糊 —— 比冇圖更難睇。
+
+   做法：圖片載入完成後量佢嘅天然尺寸（naturalWidth）。
+         · ≥ 64px  → 正常顯示（可能輕微放大，可接受）
+         · < 64px  → 唔顯示糊圖，改用「字母牌」：
+                     分類色底 + 該項目名稱第一個字
+                     一眼認得，又唔會似壞圖
+
+   自家 app 有 512（真理倉 docs/33 已統一要求），永遠唔會跌落呢條路。
+   ──────────────────────────────────────────────────────────── */
+const MIN_ICON_PX = 64;
+
+function iconLetterFallback(img) {
+  // 已經降級過就唔再處理（防止 render 重入）
+  if (img.dataset.lettered === "1") return;
+  img.dataset.lettered = "1";
+
+  const holder = img.parentElement;
+  if (!holder) return;
+
+  // 由最近嘅 .tile / .card / row 容器搵項目名稱
+  const scope = holder.closest("[data-app-name], .tile, .card, .admin-app-row");
+  const name = (img.dataset.appName
+    || (scope && scope.dataset && scope.dataset.appName)
+    || (scope && (scope.querySelector(".tile-name, .card-copy .tile-name, b") || {}).textContent)
+    || "").trim();
+
+  // 取第一個「有意思」嘅字：跳過空白、括號、標點、emoji
+  const first = Array.from(name).find((ch) => /[\p{L}\p{N}]/u.test(ch)) || "?";
+
+  const span = document.createElement("span");
+  span.className = "icon-letter";
+  span.textContent = first.toUpperCase();
+  span.setAttribute("aria-hidden", "true");
+  img.replaceWith(span);
+}
+
+// 圖片載入後檢查尺寸（onload 掛喺 render 出嚟嘅 <img> 上）
+function favImgOnLoad(img) {
+  // naturalWidth 係 0 表示未真正解碼（或者係 SVG 冇固有尺寸）→ 唔判斷
+  const px = img.naturalWidth || 0;
+  if (!px || px >= MIN_ICON_PX) {
+    img.dataset.sized = "ok";
+    return;
+  }
+  /* 太細。唔好即刻換字母牌 —— 下一個候選（GitHub 460、s2 256）
+     可能係大圖。先試落去，全部細圖 / 失敗先至用字母牌。
+
+     ⚠️ 防迴圈：如果所有候選都細，favTryNext 會逐個試到哨兵為止，
+        試完之後 favchain 已經冇新候選，所以最多行 N 次（N = chain 長度）。
+        再加一個硬上限，防止 image cache 同步觸發 onload 造成遞歸過深。 */
+  img.dataset.loadTries = String(Number(img.dataset.loadTries || 0) + 1);
+  if (Number(img.dataset.loadTries) > 6) {
+    img.onload = null;
+    iconLetterFallback(img);
+    return;
+  }
+  if (!favTryNext(img)) {
+    img.onload = null;
+    iconLetterFallback(img);
+  }
 }
 
 // 渲染 item 嘅圖示 HTML（公開 tile / 後台列表 / 總覽預覽 共用）
@@ -298,11 +393,12 @@ function appIconHTML(app, size) {
   // emoji 圖示都升級做線稿（"🧭" → compass，"i:compass" → compass）；
   // 對應唔到就用通用方格 —— 公開版唔會再見到大粒 emoji 當 app 圖標
   if (src === "emoji") return svgIcon(app.icon);
-  if (src === "upload") return `<img${cls} src="${esc(app.icon)}" alt=""${lazy} onerror="${fallback}" />`;
+  const nameAttr = ` data-app-name="${esc(app.name || "")}"`;
+  if (src === "upload") return `<img${cls} src="${esc(app.icon)}" alt=""${lazy}${nameAttr} onload="favImgOnLoad(this)" onerror="${fallback}" />`;
   if (src === "favicon") {
     // chain：(GitHub 頭像) → 自己 /api/favicon → Google s2 → 全站 Logo
     const chain = faviconCandidates(app);
-    return `<img${cls} src="${esc(chain[0])}" alt=""${lazy} data-favchain="${esc(JSON.stringify(chain))}" onerror="favImgOnErr(this)" />`;
+    return `<img${cls} src="${esc(chain[0])}" alt=""${lazy}${nameAttr} data-favchain="${esc(JSON.stringify(chain))}" onload="favImgOnLoad(this)" onerror="favImgOnErr(this)" />`;
   }
   // "none" → 直接用全站 Logo
   return `<img${cls} src="${SITE_LOGO}" alt=""${lazy} />`;

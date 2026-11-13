@@ -169,13 +169,17 @@ if (iconBytes > 260 * 1024) iconProblems.push(`9 個圖標合計 ${(iconBytes / 
 
 // head：5 條 link（ico / 16 / 32 / apple-touch / manifest）
 const needLinks = [
-  ['rel="icon" href="/icons/favicon.ico"', "favicon.ico"],
+  // 2026-11：加咗 type="image/x-icon"（更明確），用 regex 兼容兩種寫法
+  [/rel="icon"[^>]*href="\/icons\/favicon\.ico"/, "favicon.ico"],
   ['sizes="16x16"', "16×16 PNG"],
   ['sizes="32x32"', "32×32 PNG"],
   ['rel="apple-touch-icon"', "apple-touch-icon 180"],
   ['rel="manifest"', "manifest"]
 ];
-for (const [needle, name] of needLinks) if (!html.includes(needle)) iconProblems.push(`index.html head 缺 ${name}`);
+for (const [needle, name] of needLinks) {
+  const hit = needle instanceof RegExp ? needle.test(html) : html.includes(needle);
+  if (!hit) iconProblems.push(`index.html head 缺 ${name}`);
+}
 // head：4 條 og meta（og:image 必須絕對網址）
 const ogImage = (html.match(/<meta property="og:image" content="([^"]+)"/) || [])[1];
 if (!ogImage) iconProblems.push("index.html 缺 og:image（貼連結冇預覽）");
