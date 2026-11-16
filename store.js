@@ -690,6 +690,19 @@ function makeDefaultSite() {
   };
 }
 
+/* ── 深層連結代號（slug）──────────────────────────────────────
+   /?app=<slug> 用。規則同 migrations/20261116-app-slug.sql 嘅 CHECK 一致：
+   細楷 a–z、0–9、-；2–40 字；唔可以 - 開頭／結尾。
+   留空 = null（前端 fallback 用 apps.id，一樣穩定，只係 QR 密啲）。 */
+const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,38}[a-z0-9]$/;
+function isValidSlug(v) {
+  return SLUG_RE.test(String(v == null ? "" : v).trim());
+}
+function normalizeSlug(v) {
+  const s = String(v == null ? "" : v).trim().toLowerCase();
+  return s && isValidSlug(s) ? s : null;
+}
+
 function rowsToApp(r) {
   const tags = Array.isArray(r.tags)
     ? r.tags
@@ -697,6 +710,8 @@ function rowsToApp(r) {
   return {
     name: r.name,
     url: r.url,
+    // 深層連結代號（/?app=<slug>）；未跑 migration／未填 → null，前端 fallback 用 _id
+    slug: r.slug || null,
     description: r.description || null,
     icon: r.icon || null,
     iconSource: r.icon_source || r.iconSource || null,
@@ -844,6 +859,7 @@ function normalizeApp(a, i, catName, page) {
   return {
     name: a.name,
     url: a.url,
+    slug: normalizeSlug(a.slug),
     description: a.description || null,
     icon: a.icon || null,
     iconSource: a.iconSource || null,
@@ -876,6 +892,7 @@ function appPayload(app) {
   return {
     name: app.name,
     url: app.url,
+    slug: normalizeSlug(app.slug),
     description: app.description || null,
     icon: app.icon || null,
     icon_source: app.iconSource || null,
@@ -891,14 +908,18 @@ function appPayload(app) {
 
 /* 選擇性欄位：用戶未跑 README 嘅 migration 時，呢啲欄喺 DB 仲未存在。
    寫入失敗就逐個甩走再試，唔會整冧儲存（沿用原本 icon_source 嘅做法）。 */
-const OPTIONAL_APP_COLS = ["icon_source", "featured", "stars", "hearts"];
+const OPTIONAL_APP_COLS = ["icon_source", "featured", "stars", "hearts", "slug"];
 
 async function writeAppRow(sb, payload, id) {
   const drop = [...OPTIONAL_APP_COLS];
   let p = { ...payload };
   let res = id ? await sb.from("apps").update(p).eq("id", id) : await sb.from("apps").insert(p);
   while (res.error && drop.length) {
-    const bad = drop.find((k) => new RegExp(k.replace("_", "_?"), "i").test(res.error.message || ""));
+    const msg = res.error.message || "";
+    // slug 撞（unique index）或者格式唔啱，係「值有問題」而唔係「欄位未存在」：
+    // 一定要將錯誤抛返上後台（否則會被當成 optional 欄靜靜甩走，用戶以為存咗）
+    if (/duplicate key|unique constraint|apps_slug/i.test(msg)) break;
+    const bad = drop.find((k) => new RegExp(k.replace("_", "_?"), "i").test(msg));
     if (!bad) break;
     drop.splice(drop.indexOf(bad), 1);
     delete p[bad];
