@@ -2280,7 +2280,9 @@ const heroOpenBtn = document.getElementById("hero-open");
 if (heroOpenBtn) heroOpenBtn.addEventListener("click", () => {
   const f = (typeof getFeaturedApp === "function" && typeof SITES !== "undefined" && SITES)
     ? getFeaturedApp(SITES) : null;
-  if (f && f.app.url) { trackClick(f.app._id); window.open(f.app.url, "_blank", "noopener"); }
+  // 今期主打 = 開該 App 嘅詳情（同其他卡一致），唔再直接跳子站。
+  // 唔喺度 trackClick：開啟數由 sheet「開啟」掣計，一次開啟先算一次 click。
+  if (f && f.app && typeof openAppSheetByApp === "function") openAppSheetByApp(f.app);
   else { revealSections(); sectionsEl.scrollIntoView({ behavior: "smooth", block: "start" }); }
 });
 const heroAllBtn = document.getElementById("hero-all");
@@ -2317,12 +2319,15 @@ function showToast(msg) {
   }, 1800);
 }
 async function shareApp(app) {
-  const data = { title: app.name, text: (app.name || "") + " — " + (app.description || ""), url: app.url };
+  // 分享出去嘅永遠係 APP STORE 深層連結（/?app=<slug>），唔係子站網址 ——
+  // 子站將來開準入白名單，直接派子站直連會令收 link 嘅人撞卡。
+  const url = (typeof appDeepLink === "function") ? appDeepLink(app) : app.url;
+  const data = { title: app.name, text: (app.name || "") + " — " + (app.description || ""), url };
   if (navigator.share) {
     try { await navigator.share(data); return; } catch (e) { if (e && e.name === "AbortError") return; }
   }
-  try { await navigator.clipboard.writeText(app.url); showToast("連結已複製"); }
-  catch (e) { showToast(app.url); }
+  try { await navigator.clipboard.writeText(url); showToast("連結已複製"); }
+  catch (e) { showToast(url); }
 }
 const heroShareBtn = document.getElementById("hero-share");
 if (heroShareBtn) heroShareBtn.addEventListener("click", () => {

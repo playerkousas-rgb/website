@@ -167,6 +167,12 @@ const ADMIN = {
     const name = val("f-name");
     const url = val("f-url");
     if (!name || !url || !category || !page) { alert("名稱、URL、分頁、分類都係必填"); return; }
+    // 深層連結代號（可選）：有填就一定要合格式 —— 唔可以靜靜幫用戶改咗佢
+    const slugRaw = val("f-slug").toLowerCase();
+    if (slugRaw && typeof isValidSlug === "function" && !isValidSlug(slugRaw)) {
+      alert("深層連結代號只准細楷 a–z、0–9、-（2–40 字），而且唔可以 - 開頭／結尾");
+      return;
+    }
     const tags = SCOUT_TAGS.filter((t) => {
       const el = document.getElementById("tag-" + t);
       return el && el.checked;
@@ -186,6 +192,7 @@ const ADMIN = {
     try {
       adminSaveApp({
         name, url, page, category, tags,
+        slug: slugRaw || null,
         description: val("f-desc"), icon, iconSource,
         github: val("f-gh"), note: val("f-note"),
         visible: visEl ? visEl.checked : true,
@@ -522,6 +529,11 @@ function formHTML() {
       <input id="f-name" placeholder="名稱 *" value="${esc(f.name || "")}" autocomplete="off" />
       <input id="f-url" placeholder="連結 URL *（https://…）" value="${esc(f.url || "")}" inputmode="url" autocomplete="off" />
     </div>
+    <div class="admin-lbl">深層連結代號（slug，可選）</div>
+    <input id="f-slug" placeholder="例如 hm20c（細楷 a-z、0-9、-）" value="${esc(f.slug || "")}" autocomplete="off" spellcheck="false" />
+    <div class="admin-hint">${svgIcon("info")} 分享／複製／QR 會用
+      <b>https://scoutappstore.vercel.app/?app=</b>＋呢個代號。細楷 a–z、0–9、-（2–40 字，唔可以 - 開頭／結尾）。
+      <b>上架後唔好改</b>（改咗，之前派出去嘅 QR／連結就開唔到）；留空會用系統 id（一樣得，只係 QR 密啲）。</div>
     <div class="admin-row">
       <select id="f-page">
         ${pages.map((p) => `<option value="${esc(p.id)}" ${p.id === selPage ? "selected" : ""}>${esc(p.label)}${p.enabled ? "" : "（關閉中）"}</option>`).join("")}

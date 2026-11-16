@@ -49,7 +49,106 @@ function toggleHeart(id) {
 }
 function openApp(app) {
   if (typeof trackClick === "function") trackClick(app._id);
+  // ⚠️ 呢兩行（同 sheet「開啟」掣）係唯一真正「送用戶入子站」嘅位置。
+  // 保留真實 Referer —— 唔准加 noreferrer／noopener（子站靠 Referer 認入口）。
   window.location.href = app.url;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   深層連結（?app=<slug>）—— 分享／QR／複製／卡片 href 一律指返 APP STORE
+   原因：子站將來開「準入白名單」（只認指定入口）。若分享出去嘅係子站
+   直連，收 link 嘅人（WhatsApp／舊 QR／書籤）就會撞白名單卡。
+   所以 APP STORE 係唯一派發點：派出去嘅永遠係「APP 詳情」，
+   用戶喺詳情撳「開啟」入子站，Referer 天然就係 APP STORE。
+
+   契約：
+     · https://scoutappstore.vercel.app/?app=<key> → 開該 App 詳情 sheet
+     · key = apps.slug（細楷 ASCII）；未填 → fallback apps._id
+     · 對唔到／visible=false／分頁關閉 → 靜靜返首頁 + toast，唔白屏、唔跳子站
+   ════════════════════════════════════════════════════════════════ */
+const STORE_ORIGIN = "https://scoutappstore.vercel.app";
+const DEEPLINK_PARAM = "app";
+
+// slug 優先，未填就 fallback _id —— 保證永遠有 link，唔會出現 undefined
+function appSlug(app) {
+  if (!app) return "";
+  return String(app.slug || app._id || "").trim();
+}
+
+// 所有分享出口（面板／複製／QR／五個平台／Web Share／卡片 href）都用呢一個
+function appDeepLink(app) {
+  const key = appSlug(app);
+  return key ? `${STORE_ORIGIN}/?${DEEPLINK_PARAM}=${encodeURIComponent(key)}` : `${STORE_ORIGIN}/`;
+}
+
+// 網址欄同步：開詳情 → ?app=<slug>；閂詳情 → 還原。
+// 用 replaceState（唔加 history entry）：用戶喺網址欄複製到嘅就係可分享連結，
+// 而「上一頁」唔會要逐個 sheet 退返。
+function setSheetUrl(app) {
+  try {
+    if (typeof location === "undefined" || location.protocol === "file:") return;
+    if (typeof isAdminRoute === "function" && isAdminRoute()) return; // 後台 #admin 唔加 query
+    const u = new URL(location.href);
+    if (app) u.searchParams.set(DEEPLINK_PARAM, appSlug(app));
+    else u.searchParams.delete(DEEPLINK_PARAM);
+    history.replaceState(null, "", u.pathname + u.search + u.hash);
+  } catch { /* 舊瀏覽器／sandbox：網址欄唔同步，但功能照用 */ }
+}
+
+/* 由 slug 或 id 搵 App。只掃「開放中」嘅分頁同 visible !== false 嘅項目 ——
+   visible=false 一律當唔存在（呢個係前端過濾，唔係安全邊界，見 SG11）。 */
+function findAppByDeepKey(key) {
+  const k = String(key || "").trim().toLowerCase();
+  if (!k) return null;
+  for (const p of (SITES && SITES.pages) || []) {
+    if (p.enabled === false) continue;
+    for (const c of p.categories || []) {
+      for (const a of c.apps || []) {
+        if (a.visible === false) continue;
+        const slug = String(a.slug || "").toLowerCase();
+        const id = String(a._id || "").toLowerCase();
+        if ((slug && slug === k) || (id && id === k)) return { app: a, page: p, cat: c };
+      }
+    }
+  }
+  return null;
+}
+
+/* 進站時處理 ?app=：切去該 App 所在分頁、清篩選、開詳情 sheet。
+   對唔到就清走 query + toast，停喺首頁（唔准白屏、唔准報錯頁）。
+   ?from=<portal> 只作備註，刻意完全忽略（唔記、唔存、唔影響行為）。 */
+function handleDeepLink() {
+  try {
+    if (typeof location === "undefined") return;
+    let key = "";
+    try { key = new URLSearchParams(location.search).get(DEEPLINK_PARAM) || ""; } catch { return; }
+    key = key.trim();
+    if (!key) return;
+
+    const hit = findAppByDeepKey(key);
+    if (!hit) {
+      setSheetUrl(null);
+      if (typeof showToast === "function") showToast("搵唔到呢個 App");
+      return;
+    }
+
+    // 令嗰隻 App 一定喺畫面：離開專區佔位、切分頁、清搜尋／支部／分類篩選
+    bnavSection = "discover";
+    ACTIVE_PAGE = hit.page.id;
+    activeChip = "all";
+    tagFilter = [];
+    if (typeof persistTagFilter === "function") persistTagFilter();
+    if (searchEl) searchEl.value = "";
+    try { localStorage.setItem(ACTIVE_PAGE_KEY, hit.page.id); } catch {}
+    render();
+
+    const idx = REG.findIndex((a) => String(a._id) === String(hit.app._id));
+    if (idx >= 0) openAppSheet(idx);
+    else openAppSheetByApp(hit.app); // 篩選／排序令佢唔喺 REG 都要開到
+  } catch (e) {
+    // 深層連結出事唔可以拖死成頁：靜靜留喺首頁
+    setSheetUrl(null);
+  }
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -81,6 +180,14 @@ function syncSheetButtons() {
 
 function openAppSheet(idx) {
   const app = REG[idx];
+  if (!app) return;
+  openAppSheetByApp(app);
+}
+
+/* 用「App 物件」直接開詳情 —— 卡片／排行榜用 REG 索引，而
+   「今期主打」同 ?app= 深層連結嘅 App 唔一定喺 REG（可能喺另一個分頁、
+   或者被篩選走），所以一定要有呢條路。 */
+function openAppSheetByApp(app) {
   if (!app) return;
   const sheet = document.getElementById("app-sheet");
   if (!sheet) { openApp(app); return; } // markup 未載入 → 退化做直接開，唔會撳咗冇反應
@@ -135,6 +242,7 @@ function openAppSheet(idx) {
 
   sheet.hidden = false;
   document.body.classList.add("sheet-open");
+  setSheetUrl(app); // 網址欄寫返 ?app=<slug>：複製網址即係可分享連結
   const panel = sheet.querySelector(".sheet-panel");
   if (panel) panel.focus?.();
 
@@ -151,6 +259,7 @@ function closeAppSheet() {
   if (!sheet || sheet.hidden) return;
   sheet.hidden = true;
   document.body.classList.remove("sheet-open");
+  setSheetUrl(null); // 閂詳情 → 網址欄還原（唔會將 ?app= 留喺首頁）
   _sheetApp = null;
   if (_sheetTrigger && typeof _sheetTrigger.focus === "function") {
     try { _sheetTrigger.focus({ preventScroll: true }); } catch { _sheetTrigger.focus(); }
@@ -187,7 +296,7 @@ function cardHTML(idx, delay) {
   // 冇描述就唔好留個空 span（會偷偷撐高卡，每張卡高矮唔一）
   const descHTML = desc ? `<span class="card-desc">${esc(desc)}</span>` : "";
   return `
-  <a class="card" href="${esc(app.url)}" data-idx="${idx}" data-id="${esc(app._id || "")}"
+  <a class="card" href="${esc(appDeepLink(app))}" data-idx="${idx}" data-id="${esc(app._id || "")}"
      style="animation-delay:${d}ms" aria-label="${esc(app.name)}：開啟詳情">
     <span class="card-icon">${appIconHTML(app, "card")}</span>
     <span class="card-copy">
@@ -247,7 +356,7 @@ function chartHTML(apps) {
       : value >= CHART_SCORE_MIN
         ? `<div class="chart-score"><b>${value.toLocaleString()}</b><small>${m.unit}</small></div>`
         : '';
-    return `<a class="chart-item tile" href="${esc(a.url)}" data-idx="${idx}" data-id="${esc(a._id)}"><span class="chart-rank">${i+1}</span>${iconHTML(a)}<div class="chart-copy"><h3>${esc(a.name)}</h3><p>${esc(a.description || '')}</p></div>${scoreHTML}<span class="chart-open">開啟</span></a>`;
+    return `<a class="chart-item tile" href="${esc(appDeepLink(a))}" data-idx="${idx}" data-id="${esc(a._id)}"><span class="chart-rank">${i+1}</span>${iconHTML(a)}<div class="chart-copy"><h3>${esc(a.name)}</h3><p>${esc(a.description || '')}</p></div>${scoreHTML}<span class="chart-open">詳情</span></a>`;
   }).join('')}</div></section>`;
 }
 // 適用支部篩選：可以**同時揀幾個**（OR —— 揀「小＋幼」= 兩個支部嘅嘢都俾我睇）
@@ -667,6 +776,9 @@ async function main() {
     const total = pages.reduce((n, p) => n + p.categories.reduce((m, c) => m + c.apps.filter((a) => a.visible !== false).length, 0), 0);
     if (footCount) footCount.textContent = `${sites.name || "SCOUT APP STORE"} · 共 ${total} 個項目 · ${pages.length} 個分頁`;
     render();
+    // 深層連結（?app=<slug>）：要等 SITES + render 完成先處理，
+    // 所以放喺 render() 之後 —— 唔會白屏，亦唔會開錯分頁。
+    handleDeepLink();
   } catch (e) {
     sectionsEl.innerHTML = "";
     emptyEl.style.display = "block";
@@ -683,11 +795,14 @@ sectionsEl.addEventListener("click", (e) => {
   if (gh) return; // GH 已經自帶 window.open
   const hit = e.target.closest(".card, .tile");
   if (!hit) return;
+  // 中鍵／⌘／Ctrl／Shift = 用戶想「喺新分頁開」：唔好 preventDefault，
+  // 交返瀏覽器跟 href（href 已經係 APP STORE 深層連結，唔會跳出 APP STORE）。
+  if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
   e.preventDefault();
   const idx = Number(hit.dataset.idx);
   if (!REG[idx]) return;
-  if (hit.classList.contains("tile") && !hit.classList.contains("card")) openApp(REG[idx]);
-  else openAppSheet(idx);
+  // 卡片同排行榜（.chart-item.tile）一律開詳情；子站只會經 sheet「開啟」入
+  openAppSheet(idx);
 });
 searchEl.addEventListener("input", () => { activeChip = "all"; render(); });
 searchClear.addEventListener("click", () => { searchEl.value = ""; searchEl.focus(); activeChip = "all"; render(); });
@@ -720,11 +835,11 @@ function openShareModal(id) {
   const descEl = document.getElementById("share-modal-desc");
   if (descEl) descEl.textContent = app.description || "SCOUT APP STORE 實用工具";
   const urlEl = document.getElementById("share-modal-url");
-  if (urlEl) urlEl.value = app.url;
+  if (urlEl) urlEl.value = appDeepLink(app);
   
   const qrImg = document.getElementById("share-modal-qr");
   if (qrImg) {
-    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(app.url)}`;
+    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(appDeepLink(app))}`;
   }
   modal.hidden = false;
 }
@@ -736,16 +851,16 @@ function closeShareModal() {
 
 function copyShareUrl() {
   if (!_currentShareApp) return;
-  navigator.clipboard.writeText(_currentShareApp.url).then(() => {
+  navigator.clipboard.writeText(appDeepLink(_currentShareApp)).then(() => {
     if (typeof showToast === "function") showToast("連結已複製");
   }).catch(() => {
-    if (typeof showToast === "function") showToast(_currentShareApp.url);
+    if (typeof showToast === "function") showToast(appDeepLink(_currentShareApp));
   });
 }
 
 function shareTo(platform) {
   if (!_currentShareApp) return;
-  const url = encodeURIComponent(_currentShareApp.url);
+  const url = encodeURIComponent(appDeepLink(_currentShareApp));
   const text = encodeURIComponent((_currentShareApp.name || "") + " — " + (_currentShareApp.description || ""));
   
   if (platform === "whatsapp") {
