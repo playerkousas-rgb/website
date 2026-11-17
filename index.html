@@ -321,6 +321,55 @@
   .search-clear.show { display: inline-flex; }
   .search-clear:hover { background: var(--accent-soft); color: var(--accent-text); }
 
+  /* ── 置頂公告（細條：預設一行，撳一下展開詳情） ── */
+  .announce {
+    display: flex; gap: 10px; align-items: flex-start;
+    margin: 14px 0 0; padding: 10px 12px;
+    border-radius: var(--radius);
+    background: var(--bg-card);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    box-shadow: var(--shadow-sm);
+  }
+  .announce[hidden] { display: none; }
+  .announce-ico {
+    width: 32px; height: 32px; flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    background: var(--accent-soft); color: var(--accent-text);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .announce-body { flex: 1; min-width: 0; }
+  .announce-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .announce-badge {
+    background: var(--accent-soft); color: var(--accent-text);
+    font-weight: 750; font-size: 11px;
+    padding: 3px 8px; border-radius: 999px; flex-shrink: 0;
+  }
+  .announce-title { font-size: var(--fs-2); font-weight: 800; line-height: 1.4; min-width: 0; }
+  .announce.collapsed .announce-title {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .announce-date { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .announce-text { font-size: var(--fs-1); color: var(--muted); line-height: 1.6; margin: 6px 0 0; }
+  .announce.collapsed .announce-text { display: none; }
+  .announce-toggle {
+    width: 32px; height: 32px; flex-shrink: 0;
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    background: var(--bg-card); color: var(--accent-text);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 14px;
+    touch-action: manipulation;
+    transition: transform .12s, background .15s;
+  }
+  .announce-toggle:hover { background: var(--accent-soft); transform: scale(1.06); }
+  .announce-toggle:active { transform: scale(.94); }
+  .announce.collapsed { cursor: pointer; }
+  @media (max-width: 420px) {
+    .announce { padding: 8px 10px; }
+    .announce-date { display: none; }
+  }
+
   /* ── ★ 今期主打 Spotlight（外框即本體，不再框中有框） ── */
   .hero {
     position: relative;
@@ -1729,6 +1778,21 @@
     </header>
   </div>
 
+  <!-- 置頂公告（細條：內容由下方 ANNOUNCEMENT 設定控制）
+       預設 hidden：boot 行完 renderAnnouncement() 先顯示，唔會閃出舊內容。 -->
+  <section class="announce collapsed" id="pinned-announce" aria-label="置頂公告" hidden>
+    <div class="announce-ico" aria-hidden="true"><span data-icon="bell"></span></div>
+    <div class="announce-body">
+      <div class="announce-head">
+        <span class="announce-badge" id="announce-badge">置頂公告</span>
+        <span class="announce-title" id="announce-title"></span>
+        <span class="announce-date" id="announce-date"></span>
+      </div>
+      <p class="announce-text" id="announce-text"></p>
+    </div>
+    <button class="announce-toggle" id="announce-toggle" type="button" aria-label="展開公告" aria-expanded="false" title="展開"><span data-icon="chevronDown"></span></button>
+  </section>
+
   <nav class="page-nav" id="page-nav" aria-label="分頁" hidden></nav>
   <div class="tag-row" id="tag-row" hidden></div>
   <div class="tag-row sort-row" id="sort-row" hidden></div>
@@ -2149,6 +2213,74 @@ if ("serviceWorker" in navigator) {
 }
 
 /* ════════════════════════════════════════════════════════════════
+   置頂公告（細條）
+   ────────────────────────────────────────────────────────────────
+   ★ 軟性提示：書架位置有限，少人用嘅 App 要落架騰位；鼓勵用戶讚好／收藏鍾意嘅 App。
+     改文案只改下面 ANNOUNCEMENT 呢個物件，唔使改其他 code。
+   · enabled: false → 成條公告永久收埋
+   · 改咗文案之後，記得改 id（例如加日期／序號），
+     用戶之前「展開／收埋」嘅記認會跟新 id 重置，唔會繼續收埋新公告
+   · 公告唔跟後台資料，唔使等 Supabase 載入先顯示；後台（#admin）唔顯示
+   ════════════════════════════════════════════════════════════════ */
+const ANNOUNCEMENT = {
+  enabled: true,
+  id: "shelf-love-your-apps-20261117",
+  badge: "置頂公告",
+  title: "書架位置有限，鍾意嘅 App 記得讚好／收藏",
+  date: "2026-11-17",
+  body: "書架位置有限，我哋會不時整理一下，將比較少人用嘅 App 落架，留返啲位畀其他新工具上架。如果你鍾意某個 App，記得撳吓讚好、加入收藏，話畀我哋知佢值得留低，等佢可以繼續留喺書架上陪住大家。",
+  collapsedByDefault: true,  // 默認收起：淨返一行標題，撳一下先展開詳情
+};
+
+const announceEl = document.getElementById("pinned-announce");
+const ANNOUNCE_COLLAPSE_KEY = "announce-collapsed-" + ANNOUNCEMENT.id;
+let _announceCollapsed = ANNOUNCEMENT.collapsedByDefault !== false;
+try {
+  const _ac = localStorage.getItem(ANNOUNCE_COLLAPSE_KEY);
+  if (_ac === "1") _announceCollapsed = true;
+  else if (_ac === "0") _announceCollapsed = false;
+} catch {}
+function syncAnnounceToggle() {
+  const btn = document.getElementById("announce-toggle");
+  if (!btn) return;
+  btn.innerHTML = svgIcon(_announceCollapsed ? "chevronRight" : "chevronDown");
+  btn.title = _announceCollapsed ? "展開" : "收埋";
+  btn.setAttribute("aria-label", _announceCollapsed ? "展開公告" : "收埋公告");
+  btn.setAttribute("aria-expanded", _announceCollapsed ? "false" : "true");
+}
+function setAnnounceCollapsed(on) {
+  _announceCollapsed = !!on;
+  if (announceEl) announceEl.classList.toggle("collapsed", _announceCollapsed);
+  syncAnnounceToggle();
+  try { localStorage.setItem(ANNOUNCE_COLLAPSE_KEY, _announceCollapsed ? "1" : "0"); } catch {}
+}
+function renderAnnouncement() {
+  if (!announceEl) return;
+  if (!ANNOUNCEMENT.enabled || isAdminRoute()) { announceEl.hidden = true; return; }
+  const setText = (id, txt) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = txt == null ? "" : String(txt);
+  };
+  setText("announce-badge", ANNOUNCEMENT.badge);
+  setText("announce-title", ANNOUNCEMENT.title);
+  setText("announce-date", ANNOUNCEMENT.date);
+  setText("announce-text", ANNOUNCEMENT.body);
+  announceEl.hidden = false;
+  announceEl.classList.toggle("collapsed", _announceCollapsed);
+  syncAnnounceToggle();
+}
+const announceToggleBtn = document.getElementById("announce-toggle");
+if (announceToggleBtn) announceToggleBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  setAnnounceCollapsed(!_announceCollapsed);
+});
+if (announceEl) announceEl.addEventListener("click", (e) => {
+  if (!announceEl.classList.contains("collapsed")) return;
+  if (e.target.closest("button")) return;
+  setAnnounceCollapsed(false);
+});
+
+/* ════════════════════════════════════════════════════════════════
    今期主打 Spotlight
    ────────────────────────────────────────────────────────────────
    ★ 推廣邊個 App 由後台決定：#admin → 管理 → 項目列嘅「📣 今期推廣」。
@@ -2383,10 +2515,12 @@ window.addEventListener("scroll", () => {
 function goRoute() {
   if (isAdminRoute()) {
     document.getElementById("admin-panel").hidden = false;
+    renderAnnouncement();
     renderSpotlight();
     ADMIN.init();
   } else {
     document.getElementById("admin-panel").hidden = true;
+    renderAnnouncement();
     renderSpotlight();
     main();
   }
