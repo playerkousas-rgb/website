@@ -69,16 +69,26 @@ assert.ok(!/noreferrer/.test(appCode), "app.js 任何真正執行嘅位置都唔
 // 首頁「今期主打」唔可以再 window.open 子站
 assert.ok(!/window\.open\(f\.app\.url/.test(read("index.html")), "今期主打唔可以再 window.open 子站網址");
 
-// 資料層：slug 讀寫 + 未跑 migration 都唔會炸（optional 欄位）
+// 資料層：slug 讀寫 + 備份還原保留 slug + 未跑 migration 都唔會炸（optional 欄位）
 const storeJs = read("store.js");
 assert.ok(/slug: r\.slug \|\| null/.test(storeJs), "rowsToApp 要將 slug 帶出嚟");
+assert.ok(/slug: normalizeSlug\(a\.slug\)/.test(storeJs.slice(storeJs.indexOf("function restoreFromBackup"))),
+  "restoreFromBackup 一定要保留 slug（否則後台備份還原會清走全部深層連結代號）");
 assert.ok(/OPTIONAL_APP_COLS = \[[^\]]*"slug"/.test(storeJs), "slug 要加入 OPTIONAL_APP_COLS（未跑 migration 都儲存得到）");
 
-// migration 一定要有：欄位 + 格式 CHECK + unique
-const mig = read("migrations/20261116-app-slug.sql");
-assert.ok(/add column if not exists slug text/.test(mig), "migration 要加 slug 欄");
-assert.ok(/unique index if not exists apps_slug_key/.test(mig), "migration 要加 unique index");
-assert.ok(/apps_slug_fmt/.test(mig), "migration 要有格式 CHECK");
+// 後台自主管理：列表睇到 ?app= 代號、有一撳複製分享連結掣
+const adminJs = read("admin.js");
+assert.ok(/\?app=\$\{esc\(a\.slug\)\}/.test(adminJs), "後台列表要顯示 ?app=<slug>");
+assert.ok(/data-act="item-copy"/.test(adminJs), "後台列表要有一撳複製深層連結掣");
+
+// migration 一定要有：欄位 + 格式 CHECK + unique（Vercel 上傳會 .vercelignore 擋走 migrations/，同 market.test.js 做法）
+const migPath = path.join(ROOT, "migrations/20261116-app-slug.sql");
+if (fs.existsSync(migPath)) {
+  const mig = fs.readFileSync(migPath, "utf8");
+  assert.ok(/add column if not exists slug text/.test(mig), "migration 要加 slug 欄");
+  assert.ok(/unique index if not exists apps_slug_key/.test(mig), "migration 要加 unique index");
+  assert.ok(/apps_slug_fmt/.test(mig), "migration 要有格式 CHECK");
+}
 
 /* ── 動態：真跑一次 boot，再用 ?app= 開機 ───────────────────── */
 const scripts = [];

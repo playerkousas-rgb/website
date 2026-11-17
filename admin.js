@@ -165,8 +165,14 @@ const ADMIN = {
     const category = catSel && catSel.value === "__new__"
       ? val("f-cat-new") : (catSel ? catSel.value : this.form.category);
     const name = val("f-name");
-    const url = val("f-url");
+    let url = val("f-url");
     if (!name || !url || !category || !page) { alert("名稱、URL、分頁、分類都係必填"); return; }
+    // 漏寫 https://（例如直接貼 xxx.vercel.app）自動補上，避免撳「開啟」變站內 404
+    if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) url = "https://" + url;
+    try {
+      const u = new URL(url);
+      if (u.protocol !== "https:" && u.protocol !== "http:") throw new Error("bad protocol");
+    } catch { alert("連結 URL 格式唔啱，請輸入完整 https:// 網址"); return; }
     // 深層連結代號（可選）：有填就一定要合格式 —— 唔可以靜靜幫用戶改咗佢
     const slugRaw = val("f-slug").toLowerCase();
     if (slugRaw && typeof isValidSlug === "function" && !isValidSlug(slugRaw)) {
@@ -201,7 +207,16 @@ const ADMIN = {
       }, this.editId).then(() => {
         this.editId = null; this.form = {};
         return this.refresh();
-      }).catch((e) => alert("保存失敗：" + e.message));
+      }).catch((e) => {
+        const msg = String((e && e.message) || e || "");
+        if (/duplicate key|unique constraint|apps_slug_key/i.test(msg)) {
+          alert(`保存失敗：代號「${slugRaw}」已經有另一個項目用緊，請換過第二個（或先編輯／刪除重複項目）。`);
+        } else if (/apps_slug_fmt/i.test(msg)) {
+          alert("保存失敗：深層連結代號只准細楷 a–z、0–9、-（2–40 字），唔可以 - 開頭／結尾。");
+        } else {
+          alert("保存失敗：" + msg);
+        }
+      });
     } catch (e) { alert("保存失敗：" + e.message); }
   },
 
@@ -345,6 +360,21 @@ const ADMIN = {
     const target = location.origin + location.pathname;
     window.open("https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=" + encodeURIComponent(target), "_blank");
   },
+  copyLink(id) {
+    const a = this.findApp(id);
+    if (!a) return;
+    const link = (typeof appDeepLink === "function")
+      ? appDeepLink(a)
+      : "https://scoutappstore.vercel.app/?app=" + encodeURIComponent(a.slug || a._id || "");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link).then(() => {
+        if (typeof showToast === "function") showToast("已複製：" + link);
+        else alert("已複製深層連結：\n" + link);
+      }).catch(() => prompt("複製呢條深層連結：", link));
+    } else {
+      prompt("複製呢條深層連結：", link);
+    }
+  },
   close() { history.replaceState(null, "", location.pathname + location.search); location.reload(); },
 
   // ── 委派動作 ─────────────────────────────
@@ -360,6 +390,7 @@ const ADMIN = {
     else if (act === "cat-icon") { this.setCatIcon(p, n); }
     else if (act === "cat-del") { this.deleteCat(p, n); }
     else if (act === "cat-move") { this.moveCat(p, n, Number(d)); }
+    else if (act === "item-copy") { this.copyLink(id); }
     else if (act === "item-edit") { this.edit(id); }
     else if (act === "item-hide") { this.toggleVisible(id); }
     else if (act === "item-feature") { this.setFeatured(id, d !== "0"); }
@@ -671,6 +702,9 @@ function onIconFilePick(input) {
 function itemRowHTML(a) {
   // 同公開版一樣：一個字代表一個支部（tooltip 留全名）
   const tags = a.tags && a.tags.length ? a.tags.map((t) => `<span class="mini-tag" title="${esc(t)}">${esc(scoutTagShort(t))}</span>`).join("") : "";
+  const slugBadge = a.slug
+    ? `<span class="mini-tag" title="深層連結：https://scoutappstore.vercel.app/?app=${esc(a.slug)}">?app=${esc(a.slug)}</span>`
+    : "";
   const icon = appIconHTML(a, "row");
   return `
   <div class="admin-app-row${a.featured ? " featured" : ""}">
@@ -678,9 +712,11 @@ function itemRowHTML(a) {
     <b>${esc(a.name)}</b>
     ${a.featured ? `<span class="feat-tag">${svgIcon("sparkle")} 今期推廣中</span>` : ""}
     ${a.visible === false ? `<span class="lock-tag">${svgIcon("lock")} 隱藏</span>` : ""}
+    ${slugBadge}
     ${tags ? `<span class="mini-tag-row">${tags}</span>` : ""}
-    <span class="u" title="${esc(a.note || "")}">${esc(a.url)}${a.note ? " · " + svgIcon("pin") : ""}${a.clicks ? ` · ${svgIcon("flame")} ${a.clicks} 次` : ""}${a.stars ? ` · ${svgIcon("star")} ${a.stars}` : ""}${a.hearts ? ` · ${svgIcon("heart")} ${a.hearts}` : ""}</span>
+    <span class="u" title="${esc(a.note || "")}">${esc(a.url)}${!a.slug ? " · 未設代號" : ""}${a.note ? " · " + svgIcon("pin") : ""}${a.clicks ? ` · ${svgIcon("flame")} ${a.clicks} 次` : ""}${a.stars ? ` · ${svgIcon("star")} ${a.stars}` : ""}${a.hearts ? ` · ${svgIcon("heart")} ${a.hearts}` : ""}</span>
     <div class="admin-app-actions">
+      <button class="mini-btn" data-act="item-copy" data-id="${a._id}" title="${a.visible === false ? "複製深層連結（注意：目前隱藏中，公開後先開到）" : "複製呢個項目嘅 APP STORE 分享連結"}">${svgIcon("link")} 連結</button>
       <button class="mini-btn${a.featured ? " primary" : ""}" data-act="item-feature" data-id="${a._id}" data-dir="${a.featured ? 0 : 1}" title="${a.featured ? "取消今期推廣" : "設為今期推廣（會喺公開版頂部做大圖推薦）"}">${a.featured ? svgIcon("check") + " 推廣中" : svgIcon("sparkle") + " 今期推廣"}</button>
       <button class="mini-btn iconish" data-act="item-move" data-id="${a._id}" data-dir="-1" title="上移">▲</button>
       <button class="mini-btn iconish" data-act="item-move" data-id="${a._id}" data-dir="1" title="下移">▼</button>

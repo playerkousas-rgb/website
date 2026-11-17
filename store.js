@@ -1347,7 +1347,7 @@ async function restoreFromBackup(backup) {
       for (const a of c.apps) {
         if (!a.name || !a.url) continue;
         let rowPayload = {
-          name: a.name, url: a.url, description: a.description || null,
+          name: a.name, url: a.url, slug: normalizeSlug(a.slug), description: a.description || null,
           icon: a.icon || null, icon_source: a.iconSource || null,
           github: a.github || null, note: a.note || null,
           category: c.name, page: p.id, tags: a.tags || [],

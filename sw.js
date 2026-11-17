@@ -43,7 +43,9 @@
 //            ＋ 舊 emoji 自動對應（EMOJI_TO_ICON）＋ 後台圖標選擇器（存 "i:key"）
 //      v41 = ROUND 2 App Store 版面：分類貨架（橫滑→2/3 欄）＋大卡＋詳情 sheet
 //            ＋統一線稿分類圖標；排行榜改直立列表；今期主打加大的 icon、刪假通知卡
-const CACHE = 'scout-tools-v45';
+//      v46 = 修 Vercel 建置閘門 + 後台自主管理補齊（每行顯示 ?app= 代號、一撳複製連結、
+//            備份還原保留 slug、代號撞名中文提示、URL 漏寫 https:// 自動補齊）
+const CACHE = 'scout-tools-v46';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
