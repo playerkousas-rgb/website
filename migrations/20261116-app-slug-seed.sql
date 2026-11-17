@@ -7,6 +7,7 @@
 -- 設計上「認網域、唔認名字」：
 --   · 只會 update 現有 apps 列，靠 url 的 host 完全相等去配對；
 --   · 只會填 slug is null 嘅列（你後台改過嘅一律唔會被覆蓋）；
+--   · 若同一 host 喺 apps 表有多過一列（重複項目），自動跳過以免撞 unique，留待人手揀定再跑；
 --   · apps 表冇嗰條網域 → 呢條 values 列完全冇作用（no-op），安全；
 --   · 一條都唔會改 apps.url。
 -- 重複執行安全。
@@ -81,15 +82,28 @@ with seed(host, slug) as (values
   ('vsbook-sand.vercel.app'                , 'vsbook'),
   ('vsmeeting.vercel.app'                  , 'vsmeeting'),
   ('zentangle-pattern-generator.vercel.app', 'zentangle-pattern-generator')
+),
+norm as (
+  select id,
+    regexp_replace(
+      lower(split_part(regexp_replace(btrim(url), '^[a-z]+://', '', 'i'), '/', 1)),
+      '^www\.', ''
+    ) as host
+  from public.apps
+),
+unique_host as (
+  select host, (array_agg(id))[1] as id
+  from norm
+  group by host
+  having count(*) = 1
 )
 update public.apps a
 set slug = s.slug
 from seed s
-where a.slug is null
-  and regexp_replace(
-        lower(split_part(regexp_replace(btrim(a.url), '^[a-z]+://', '', 'i'), '/', 1)),
-        '^www\.', ''
-      ) = s.host;
+join unique_host u on u.host = s.host
+where a.id = u.id
+  and a.slug is null
+  and not exists (select 1 from public.apps x where x.slug = s.slug);
 
 commit;
 
