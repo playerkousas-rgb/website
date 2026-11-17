@@ -1,10 +1,11 @@
 /* ════════════════════════════════════════════════════════════════
    test/announcement.test.js
-   置頂公告（細條）單測：政策更新「無人使用嘅 App 會下架」
+   置頂公告（細條）單測：書架位置有限，鼓勵讚好／收藏（軟性版）
 
    守住：
    1) HTML 有 #pinned-announce 細條，喺 topbar 之後、page-nav 之前（置頂）
-   2) ANNOUNCEMENT 設定存在、enabled、文案講明下架政策
+   2) ANNOUNCEMENT 設定存在、enabled、文案用「書架位置有限」軟性講落架，
+      唔准寫到好似監察用戶咁（唔准出現使用數據／打開次數／定期睇之類字眼）
    3) 預設收起（一行），撳掣展開／收埋，狀態記喺 localStorage（跟 id）
    4) 後台（#admin）唔顯示；enabled=false 唔顯示
    5) 公開版唔可以有 emoji 圖示（同 labels.test 一樣嘅硬性規則）
@@ -31,14 +32,18 @@ const heroIdx = html.indexOf('id="hero-spotlight"');
 assert.ok(topbarIdx < announceIdx && announceIdx < pageNavIdx, "公告要喺 topbar 之後、page-nav 之前（置頂，一入站就見到）");
 assert.ok(announceIdx < heroIdx, "公告要喺今期主打上面");
 
-// ── 2) ANNOUNCEMENT 設定：政策文案 ──────────────────────────────
+// ── 2) ANNOUNCEMENT 設定：軟性文案（書架講法，唔透露點樣判斷）────
 assert.ok(/const ANNOUNCEMENT = \{/.test(html), "要有 ANNOUNCEMENT 設定物件（改文案只改呢度）");
 assert.ok(/enabled:\s*true/.test(html), "公告預設開啟");
 assert.ok(/collapsedByDefault:\s*true/.test(html), "公告預設收起（一行細條）");
-assert.ok(html.includes("無人使用嘅 App 會下架"), "標題要講明下架政策");
-assert.ok(html.includes("使用數據") && html.includes("打開次數"), "內文要講明點樣判斷有人用（使用數據）");
-assert.ok(html.includes("舊連結會搵唔到"), "內文要預先話俾用戶知下架後舊連結會搵唔到");
-assert.ok(/id:\s*"policy-unused-takedown-/.test(html), "公告 id 要有版本號（改文案時改 id 先會重置用戶記認）");
+assert.ok(html.includes("書架位置有限"), "標題要用「書架位置有限」軟性講法");
+assert.ok(html.includes("落架") && html.includes("留返啲位"), "內文要講少人用嘅會落架、留位畀新工具");
+assert.ok(html.includes("讚好") && html.includes("收藏"), "內文要鼓勵用戶讚好／收藏鍾意嘅 App");
+assert.ok(html.includes("話畀我哋知佢值得留低"), "目的係等用戶表態，唔係警告");
+for (const banned of ["使用數據", "打開次數", "定期睇", "舊連結會搵唔到", "政策更新", "無人使用嘅 App 會下架"]) {
+  assert.ok(!html.includes(banned), `文案唔准太直接／透露判斷方法：「${banned}」唔應該出現`);
+}
+assert.ok(/id:\s*"shelf-love-your-apps-/.test(html), "公告 id 要有版本號（改文案時改 id 先會重置用戶記認）");
 
 // ── 3) CSS：細條樣式跟 DESIGN token ─────────────────────────────
 const style = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
@@ -75,7 +80,7 @@ function fakeEl(id) {
 function runAnnouncement({ admin = false, enabled = true, stored = null } = {}) {
   const els = {};
   const mem = new Map();
-  if (stored !== null) mem.set("announce-collapsed-policy-unused-takedown-20261117", stored);
+  if (stored !== null) mem.set("announce-collapsed-shelf-love-your-apps-20261117", stored);
   const ctx = {
     document: {
       documentElement: { dataset: { theme: "dark" }, style: { setProperty() {} } },
@@ -144,9 +149,11 @@ function runAnnouncement({ admin = false, enabled = true, stored = null } = {}) 
   const { els } = runAnnouncement();
   assert.strictEqual(els["pinned-announce"].hidden, false, "公開版公告要顯示");
   assert.ok(els["pinned-announce"].classList.contains("collapsed"), "公開版公告預設收起（一行）");
-  assert.strictEqual(els["announce-title"].textContent, "政策更新：無人使用嘅 App 會下架", "標題正確");
-  assert.ok(els["announce-text"].textContent.includes("使用數據"), "內文講明使用數據");
-  assert.ok(els["announce-text"].textContent.includes("下架"), "內文講明下架");
+  assert.strictEqual(els["announce-title"].textContent, "書架位置有限，鍾意嘅 App 記得讚好／收藏", "標題正確（軟性版）");
+  assert.ok(els["announce-text"].textContent.includes("書架位置有限"), "內文用書架講法");
+  assert.ok(els["announce-text"].textContent.includes("落架"), "內文講明少人用嘅會落架");
+  assert.ok(els["announce-text"].textContent.includes("讚好") && els["announce-text"].textContent.includes("收藏"), "內文鼓勵讚好／收藏");
+  assert.ok(!els["announce-text"].textContent.includes("使用數據"), "內文唔准透露點樣判斷");
 }
 // 後台：唔顯示
 {
@@ -169,4 +176,4 @@ function runAnnouncement({ admin = false, enabled = true, stored = null } = {}) 
   assert.ok(els["pinned-announce"].classList.contains("collapsed"), "之前收埋過要記住收埋");
 }
 
-console.log("✅ announcement: 置頂細條位置、政策文案、收起／展開記認、後台隱藏全部通過");
+console.log("✅ announcement: 置頂細條位置、軟性文案（書架／讚好收藏）、收起／展開記認、後台隱藏全部通過");
