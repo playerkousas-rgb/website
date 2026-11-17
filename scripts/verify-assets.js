@@ -47,7 +47,7 @@ const DEV_ONLY = [
   "migrations/20261116-app-slug.sql", "migrations/20261116-app-slug-seed.sql",
   "test/market.test.js", "test/notify-admin.test.js", "test/report.test.js",
   "test/favicon.test.js", "test/icon-fallback.test.js", "test/labels.test.js", "test/boot-order.test.js",
-  "test/analytics.test.js", "test/deeplink.test.js"
+  "test/analytics.test.js", "test/deeplink.test.js", "test/announcement.test.js"
 ];
 
 const kb = (n) => (n / 1024).toFixed(1) + " KB";

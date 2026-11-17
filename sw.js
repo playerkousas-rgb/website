@@ -45,7 +45,8 @@
 //            ＋統一線稿分類圖標；排行榜改直立列表；今期主打加大的 icon、刪假通知卡
 //      v46 = 修 Vercel 建置閘門 + 後台自主管理補齊（每行顯示 ?app= 代號、一撳複製連結、
 //            備份還原保留 slug、代號撞名中文提示、URL 漏寫 https:// 自動補齊）
-const CACHE = 'scout-tools-v46';
+//      v47 = 置頂公告細條（政策更新：無人使用嘅 App 會下架，ANNOUNCEMENT 控制文案）
+const CACHE = 'scout-tools-v47';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
