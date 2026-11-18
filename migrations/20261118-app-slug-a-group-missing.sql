@@ -16,6 +16,11 @@
 --       ④ url 根本唔係 seed 嗰個 host（例如存咗別名）→ fill 唔到，睇尾段「診斷」。
 --   · card 特別處理，原因見下面「§②」。
 --
+-- ✅ **本檔係「可選」** —— 你可以完全唔跑：slug 只係 apps 表一條普通欄位，
+--    喺 APP STORE 後台逐個 App「編輯」→「深層連結代號（slug，可選）」填就得，
+--    保存會即刻經 Supabase 寫入 apps.slug（admin.js L563 個輸入框、L177 格式檢查、
+--    L212 撞 unique 會提示）。本檔只係「想一次過批量填」時嘅捷徑。
+--
 -- ⚠️ 本檔只會 UPDATE `slug`：
 --     唔會改 url／visible／featured／clicks／stars／hearts，唔會掂 RLS，唔會刪任何列。
 -- ⚠️ 填 slug **唔會**令 ?app=<slug> 即刻開得到 —— 前端 findAppByDeepKey() 會跳過

@@ -149,7 +149,9 @@ select slug, count(*) from public.apps where slug is not null group by slug havi
 | `veritas` | ✅ seed L61（`veritas-delta-seven.vercel.app`） | ✅ | 同上 |
 | `card` | ❌ 冇（**刻意**：正式 host 未證實） | ✅ 本輪新增 | 見 7.2：改為按 host 形狀（`card.vercel.app` 或 `card-*.vercel.app`）配對唯一一列，唔寫死猜出嚟嘅網域 |
 
-跑法：`migrations/20261118-app-slug-a-group-missing.sql`（idempotent，只 UPDATE `slug`，唔掂 url／visible／RLS）。
+跑法（**可選**）：正常做法係喺 APP STORE 後台逐個 App「編輯」→「深層連結代號（slug，可選）」填，保存即刻寫入 `apps.slug`
+（`admin.js` L563 輸入框／L177 格式檢查／L212 撞 unique 提示），**唔需要跑 SQL**。
+想一次過批量填先用 `migrations/20261118-app-slug-a-group-missing.sql`（idempotent，只 UPDATE `slug`，唔掂 url／visible／RLS）。
 
 ### 7.2 `card`：冇已證實嘅 production 網域，而且現有預覽網址已被保護
 
