@@ -66,7 +66,9 @@
 ### 其他
 - `sw.js` L46 `CACHE = scout-tools-v45`（+1 版，用戶即刻用新版）
 - `test/deeplink.test.js`（新）＋ `package.json` test 鏈加咗佢
-- `migrations/20261116-app-slug.sql`、`migrations/20261116-app-slug-seed.sql`
+- `migrations/20261116-app-slug.sql`、`migrations/20261116-app-slug-seed.sql`（67 條 host→slug 種子）
+- `migrations/20261118-app-slug-a-group-missing.sql`（補 A 組缺的 4 隻：scoutdesign／skw-radar-hunt2／skw-score／veritas；card 刻意不補，等穩定 production 網域）
+- `migrations/20261118-app-slug-auto.sql`（`apps` INSERT 時 slug 留空 → 自動由 url host 第一段生成；撞名加 `-2`／`-3`；舊 row 不受影響）
 
 ---
 
