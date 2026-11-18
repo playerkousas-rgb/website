@@ -131,3 +131,62 @@ select slug, count(*) from public.apps where slug is not null group by slug havi
 2. **今期主打唔再即時計 click** —— 由 sheet「開啟」計。理由見契約 8。
 3. **`?from=` 完全忽略** —— 想要統計就要另外定（會牽涉新表，唔喺呢步做）。
 4. **`slug` 上架後唔好改** —— 改咗，之前派出去嘅 QR／連結就開唔到（後台已有提示）。
+
+---
+
+## 7. 2026-11-18 實查：A 組 slug／`apps.url` 資料狀態（**未跑 SQL、未真機**）
+
+> 本節記錄**實際查過乜**，唔係推測。工具限制寫明：sandbox 只讀得到
+> Supabase anon REST（RLS 只放 `visible = true` 嘅列）＋ GitHub API，冇 DB 寫入權。
+
+### 7.1 五隻缺 slug 嘅現況（docs/51 §1.1）
+
+| App | 種子有冇 | migration 覆蓋 | 實查結果 |
+|---|---|:--:|---|
+| `scoutdesign` | ✅ seed L49 | ✅ | 種子已對 `scoutdesign.vercel.app`；重跑 seed 就會填 |
+| `skw-radar-hunt2` | ✅ seed L53 | ✅ | 同上 |
+| `skw-score` | ✅ seed L54 | ✅ | 同上 |
+| `veritas` | ✅ seed L61（`veritas-delta-seven.vercel.app`） | ✅ | 同上 |
+| `card` | ❌ 冇（**刻意**：正式 host 未證實） | ✅ 本輪新增 | 見 7.2：改為按 host 形狀（`card.vercel.app` 或 `card-*.vercel.app`）配對唯一一列，唔寫死猜出嚟嘅網域 |
+
+跑法（**可選**）：正常做法係喺 APP STORE 後台逐個 App「編輯」→「深層連結代號（slug，可選）」填，保存即刻寫入 `apps.slug`
+（`admin.js` L563 輸入框／L177 格式檢查／L212 撞 unique 提示），**唔需要跑 SQL**。
+想一次過批量填先用 `migrations/20261118-app-slug-a-group-missing.sql`（idempotent，只 UPDATE `slug`，唔掂 url／visible／RLS）。
+
+### 7.2 `card`：冇已證實嘅 production 網域，而且現有預覽網址已被保護
+
+| 查法 | 結果 |
+|---|---|
+| GitHub `repos/playerkousas-rgb/card` `homepage` | `https://card-git-arena-01a0f5ad-card-playerkousas-rgbs-projects.vercel.app/`（git branch 預覽） |
+| 90 個 repo 嘅 `homepage` 全掃 | **只有 `card` 一隻**帶 `-git-`；其餘 89 個全部係穩定網域 |
+| 直接開該預覽網址 | 回 **Vercel「Log in to Vercel / Protected Deployment」** → 匿名連開都開唔到 |
+| `card-playerkousas-rgbs-projects.vercel.app`（project 別名） | 同樣被保護 |
+| GitHub Deployments（Production 環境） | 只有 `card-<hash>-playerkousas-rgbs-projects.vercel.app`（每次部署都變，唔係穩定別名） |
+
+| Vercel connector（2026-11-18 實試） | `get_authenticated_user` 成功，但 `limited: true`、`list_teams` 回空；`list_projects`／`list_project_domains` 一律 **Access denied** → **冇辦法**用 API 列出 project 別名，要人手喺 Vercel Dashboard 睇 |
+
+**結論**：`card` **冇**已證實嘅穩定 production 網域。建議 ① 暫時唔好為 `card` 落白名單；
+② 喺 Vercel 為 `card` 綁一個穩定 production 網域（同時關掉會擋匿名的 Deployment Protection）
+→ 改 `apps.url` → 再跑一次同一個 migration。填 slug 唔會修好 `apps.url`。
+
+### 7.3 `?app=<slug>` 開唔開得到，其實樽頸喺 `visible`
+
+anon REST 實查（2026-11-18）：`apps` 表匿名讀得到 **28 列**，其中 `page = 'apps'` 只有 **13 隻**
+（`ayp`／`cubsbadge`／`cubsbook`／`gemini`／`scoutbook`／`hkcamping`／`scout-circulars`／
+`scoutbadge`／`roverbadge`／`upgrade`／`roverbook`／`vsbadge`／`vsbook`）。
+
+而 `findAppByDeepKey()`（`app.js` L100）會跳過 `visible === false` —— 所以：
+
+- A 組 35 隻之中，今日**匿名**開得到詳情嘅只有 `ayp`／`hkcamping`／`upgrade`；
+- 其餘（包括 `aircraft-encyclopedia` 同 §1.1 嗰 5 隻）匿名開會見「搵唔到呢個 App」，
+  **原因係資料層（隱藏／未上架），唔係 slug 亦唔係代碼**。要開得到，該列必須 `visible = true`。
+- 呢個唔可以靠改 RLS 解決（`visible = false` 匿名睇唔到係設計，見 docs/50 SG11）。
+
+驗證 SQL 喺 `migrations/20261118-app-slug-a-group-missing.sql` 尾段（診斷 1–6）。
+
+### 7.4 本輪新增嘅自動守衛（本地可重跑，唔使 DB）
+
+| 測試 | 守咩 |
+|---|---|
+| `test/slug-seed.test.js` | 所有 migration 嘅 `(host, slug)`：符合 DB CHECK、一 slug 只指一個 host、host 冇 scheme／path、**冇 `-git-`／preview 網址**、§1.1 五隻全部有覆蓋、`appSlug()` 嘅 `slug \|\| _id` fallback 唔准消失 |
+| `test/a-group-slugs.test.js` | A 組 30 隻 ＋ §1.1 補漏 5 隻，逐個用真 `index.html`／`app.js` 行 `?app=<slug>`，確認開到對應詳情；`?app=notexist` 停首頁＋清 query |
