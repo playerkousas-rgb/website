@@ -90,6 +90,19 @@ if (fs.existsSync(migPath)) {
   assert.ok(/apps_slug_fmt/.test(mig), "migration 要有格式 CHECK");
 }
 
+// 自動 slug trigger migration：INSERT 生效、security definer、只留 a-z0-9-、撞名加尾、唔覆寫人手 slug
+const autoPath = path.join(ROOT, "migrations/20261118-app-slug-auto.sql");
+if (fs.existsSync(autoPath)) {
+  const auto = fs.readFileSync(autoPath, "utf8");
+  assert.ok(/create or replace function public\.apps_auto_slug\(\)/.test(auto), "要有 apps_auto_slug() 函數");
+  assert.ok(/before insert on public\.apps/.test(auto), "trigger 只掛 BEFORE INSERT（舊 row 唔會自己變）");
+  assert.ok(/security definer/.test(auto), "uniqueness 查詢要 bypass RLS（數到隱藏 row）");
+  assert.ok(/new\.slug is not null/.test(auto), "手填 slug 一律唔郁");
+  assert.ok(/apps_auto_slug_trg/.test(auto), "要有 trigger 名（drop+create 重跑安全）");
+  const noComments = auto.split("\n").filter((l) => !l.trim().startsWith("--")).join("\n");
+  assert.ok(!/update\s+public\.apps/i.test(noComments), "migration 唔准 update 現有 apps row");
+}
+
 /* ── 動態：真跑一次 boot，再用 ?app= 開機 ───────────────────── */
 const scripts = [];
 for (const m of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)) {
