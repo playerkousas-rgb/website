@@ -161,6 +161,8 @@ select slug, count(*) from public.apps where slug is not null group by slug havi
 | `card-playerkousas-rgbs-projects.vercel.app`（project 別名） | 同樣被保護 |
 | GitHub Deployments（Production 環境） | 只有 `card-<hash>-playerkousas-rgbs-projects.vercel.app`（每次部署都變，唔係穩定別名） |
 
+| Vercel connector（2026-11-18 實試） | `get_authenticated_user` 成功，但 `limited: true`、`list_teams` 回空；`list_projects`／`list_project_domains` 一律 **Access denied** → **冇辦法**用 API 列出 project 別名，要人手喺 Vercel Dashboard 睇 |
+
 **結論**：`card` **冇**已證實嘅穩定 production 網域。建議 ① 暫時唔好為 `card` 落白名單；
 ② 喺 Vercel 為 `card` 綁一個穩定 production 網域（同時關掉會擋匿名的 Deployment Protection）
 → 改 `apps.url` → 再跑一次同一個 migration。填 slug 唔會修好 `apps.url`。
