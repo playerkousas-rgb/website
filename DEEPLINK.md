@@ -69,6 +69,7 @@
 - `migrations/20261116-app-slug.sql`、`migrations/20261116-app-slug-seed.sql`（67 條 host→slug 種子）
 - `migrations/20261118-app-slug-a-group-missing.sql`（補 A 組缺的 4 隻：scoutdesign／skw-radar-hunt2／skw-score／veritas；card 刻意不補，等穩定 production 網域）
 - `migrations/20261118-app-slug-auto.sql`（`apps` INSERT 時 slug 留空 → 自動由 url host 第一段生成；撞名加 `-2`／`-3`；舊 row 不受影響）
+- `migrations/20261119-retired-apps.sql`＋`test/retired.test.js`（2026-11-19：舊連結對到已下架名單時帶去「已下架」專區，唔再當成故障；`sw.js` v48）
 
 ---
 
@@ -77,12 +78,18 @@
 1. `https://scoutappstore.vercel.app/?app=<key>` → 直接開該 App 詳情 sheet，唔白屏、唔跳子站。
 2. `key` = `apps.slug`（細楷 ASCII）；`slug` 空 → fallback `apps.id`。
 3. 對唔到／`visible=false`／分頁關閉 → 静靜返首頁 + `showToast("搵唔到呢個 App")`。
+   **例外（2026-11-19）**：對到管理員標記過嘅 `public.retired_apps` 代號 → 清 query、
+   展開「已下架」專區、highlight 該項目、`showToast("⋯已下架，唔係故障")`。
+   `visible=false` 本身**唔會**入已下架名單（首要條件係曾經上過架，唔係單單隱藏中）。
 4. 開詳情 → 網址欄 `replaceState` 寫 `?app=<slug>`；閂詳情 → 還原。
 5. `?from=<portal>` 只作備註：**接受但完全忽略**（唔記、唔存、唔影響行為）。
 6. `openApp()` 同 sheet「開啟」保留 `app.url`、保留真實 `Referer`，**唔准**加 `noreferrer`。
 7. `manifest.webmanifest` `start_url`／`scope` = `/`，唔准改。
 8. `bump_clicks`／`bump_stars`／`bump_hearts` 語意不變：一次「開啟」＝一次 click。
    （今期主打改開詳情之後唔再自己 `trackClick`，由 sheet「開啟」計，避免一撳變兩次。）
+9. 已下架名單由管理員喺後台逐個 SET（`migrations/20261119-retired-apps.sql`）；
+   公開版用 `loadRetired()` 讀，未跑 migration → `[]`，契約 3 嘅例外自動唔生效，
+   其餘契約全部照舊。`test/retired.test.js` 鎖住呢條分支。
 
 ---
 

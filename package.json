@@ -7,7 +7,7 @@
     "node": "22.x"
   },
   "scripts": {
-    "test": "node test/favicon.test.js && node test/icon-fallback.test.js && node test/labels.test.js && node test/analytics.test.js && node test/market.test.js && node test/notify-admin.test.js && node test/report.test.js && node test/boot-order.test.js && node test/deeplink.test.js && node test/announcement.test.js && node test/slug-seed.test.js && node test/a-group-slugs.test.js",
+    "test": "node test/favicon.test.js && node test/icon-fallback.test.js && node test/labels.test.js && node test/analytics.test.js && node test/market.test.js && node test/notify-admin.test.js && node test/report.test.js && node test/boot-order.test.js && node test/deeplink.test.js && node test/announcement.test.js && node test/slug-seed.test.js && node test/a-group-slugs.test.js && node test/retired.test.js",
     "lint": "node scripts/lint.js",
     "check": "npm run lint",
     "build": "npm run check && node scripts/verify-assets.js",

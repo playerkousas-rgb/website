@@ -25,6 +25,7 @@ const ADMIN = {
   editId: null,
   form: {},
   sites: null,
+  retired: [],       // 管理員標記過「已下架」嘅名單（public.retired_apps）
   analytics: null,
   _listener: false,
 
@@ -67,6 +68,9 @@ const ADMIN = {
   async refresh() {
     const r = await loadSites();
     this.sites = r.sites;
+    // 未跑 migration 都唔好炸後台：讀唔到就當空名單
+    try { this.retired = (typeof loadRetired === "function") ? await loadRetired() : []; }
+    catch { this.retired = []; }
     renderAdmin();
   },
 
@@ -186,6 +190,13 @@ const ADMIN = {
     tags.push(...val("f-custom-tags").split(/[,，、]/).map(t => t.trim()).filter(t => t && !tags.includes(t)));
     if (tags.length > 8 || tags.some(t => t.length > 20)) { alert("最多 8 個標籤，每個最多 20 字"); return; }
     const visEl = document.getElementById("f-visible");
+    const willBeVisible = visEl ? visEl.checked : true;
+    // 已下架嘅項目喺編輯表單改返「公開顯示」= 重新上架：一定要同步清走
+    // retired_apps 紀錄，唔好留低「書架見到、已下架專區又話已下架」嘅矛盾狀態。
+    // （同一件事喺項目列撳「顯示」已經由 toggleVisible() 處理，呢度補埋表單入口。）
+    const editId = this.editId;
+    const oldApp = editId ? this.findApp(editId) : null;
+    const reListFromRetired = !!(editId && oldApp && willBeVisible && this.isRetired(oldApp));
     // 圖示來源：radio 值優先；冇 radio 嘅就睇舊 icon 內容猜
     const srcRadio = document.querySelector('input[name="f-iconSource"]:checked');
     const iconSource = srcRadio ? srcRadio.value : iconSourceOf(this.form);
@@ -203,8 +214,15 @@ const ADMIN = {
         github: val("f-gh"), note: val("f-note"),
         visible: visEl ? visEl.checked : true,
         // 保留現有嘅「今期推廣」狀態 —— 唔帶呢個欄嘅話，編輯一下就會靜靜地清走佢
-        featured: this.editId ? this.form.featured === true : false
-      }, this.editId).then(() => {
+        featured: editId ? this.form.featured === true : false
+      }, editId).then(async () => {
+        if (reListFromRetired && typeof adminSetRetired === "function") {
+          try { await adminSetRetired(oldApp, false); }
+          catch (e) {
+            alert("已重新上架，但清走「已下架」紀錄失敗，請喺項目列撳多次「重新上架」：" +
+              (e && e.message ? e.message : e));
+          }
+        }
         this.editId = null; this.form = {};
         return this.refresh();
       }).catch((e) => {
@@ -229,14 +247,46 @@ const ADMIN = {
       await this.refresh();
     } catch (e) { alert("刪除失敗：" + e.message); }
   },
+  // 「已下架」只認管理員明確標記過嘅項目，唔認 apps.visible=false
+  isRetired(a) {
+    if (!a || !Array.isArray(this.retired)) return false;
+    const key = String(a.slug || a._id || "").toLowerCase();
+    return this.retired.some((r) => r.appId === a._id || r.deepKey === key);
+  },
   async toggleVisible(id) {
     const a = this.findApp(id);
     if (!a) return;
+    // 已下架嘅項目撳「顯示」= 重新上架：連已下架紀錄一齊清走，
+    // 唔好出現「書架見到、舊連結又話已下架」嘅矛盾狀態。
+    if (a.visible === false && this.isRetired(a)) return this.toggleRetired(id, false);
     try {
       await adminSaveApp({ ...a, visible: a.visible === false }, id);
       if (this.editId === id) { this.editId = null; this.form = {}; }
       await this.refresh();
     } catch (e) { alert("操作失敗：" + e.message); }
+  },
+  /* 管理員 SET「已下架」。
+     首要條件 = 曾經上過架：而家仲喺書架（visible=true）就直接確認；
+     已經隱藏嘅要管理員明確確認「佢係曾經上架，唔係從未公開」先准標記，
+     避免將從未上架嘅隱藏項目錯誤列入公開版「已下架」。 */
+  async toggleRetired(id, forceOn) {
+    const a = this.findApp(id);
+    if (!a) return;
+    const on = forceOn === undefined ? !this.isRetired(a) : !!forceOn;
+    if (on) {
+      if (a.visible === false) {
+        if (!confirm(`「${a.name}」而家係隱藏。\n\n「已下架」只適用於曾經上架嘅項目，唔係單單隱藏中嘅項目。\n確定呢個項目曾經喺公開版上架（唔係從未公開）？`)) return;
+      } else if (!confirm(`標記「${a.name}」為已下架？\n\n會由書架收起，並喺公開版「已下架」列出；舊連結會自動帶去該說明。`)) return;
+    }
+    try {
+      await adminSetRetired(a, on);
+      if (this.editId === id) { this.editId = null; this.form = {}; }
+      await this.refresh();
+    } catch (e) {
+      alert(/retired_apps|permission|policy/i.test(String(e && e.message))
+        ? "操作失敗：請先執行 migrations/20261119-retired-apps.sql，並確認已經登入管理員帳號。"
+        : "操作失敗：" + (e && e.message ? e.message : e));
+    }
   },
   // ── 直連（後台專用）─────────────────────────────
   // 不管項目係咪「已隱藏」／分頁係咪關閉，都直接開該 App 的原始連結 ——
@@ -407,6 +457,7 @@ const ADMIN = {
     else if (act === "item-open") { this.openApp(id); }
     else if (act === "item-edit") { this.edit(id); }
     else if (act === "item-hide") { this.toggleVisible(id); }
+    else if (act === "item-retire") { this.toggleRetired(id); }
     else if (act === "item-feature") { this.setFeatured(id, d !== "0"); }
     else if (act === "item-del") { this.removeItem(id); }
     else if (act === "item-move") { this.moveApp(id, Number(d)); }
@@ -713,8 +764,13 @@ function onIconFilePick(input) {
   };
   fr.readAsDataURL(file);
 }
+// 公開版「已下架」名單只認管理員明確標記（ADMIN.retired），唔認「隱藏」
+function isRetiredRow(a) {
+  return typeof ADMIN !== "undefined" && ADMIN && typeof ADMIN.isRetired === "function" && ADMIN.isRetired(a);
+}
 function itemRowHTML(a) {
   // 同公開版一樣：一個字代表一個支部（tooltip 留全名）
+  const retired = isRetiredRow(a);
   const tags = a.tags && a.tags.length ? a.tags.map((t) => `<span class="mini-tag" title="${esc(t)}">${esc(scoutTagShort(t))}</span>`).join("") : "";
   const slugBadge = a.slug
     ? `<span class="mini-tag" title="深層連結：https://scoutappstore.vercel.app/?app=${esc(a.slug)}">?app=${esc(a.slug)}</span>`
@@ -726,6 +782,7 @@ function itemRowHTML(a) {
     <b>${esc(a.name)}</b>
     ${a.featured ? `<span class="feat-tag">${svgIcon("sparkle")} 今期推廣中</span>` : ""}
     ${a.visible === false ? `<span class="lock-tag">${svgIcon("lock")} 隱藏</span>` : ""}
+    ${retired ? `<span class="retired-tag">${svgIcon("folder")} 已下架</span>` : ""}
     ${slugBadge}
     ${tags ? `<span class="mini-tag-row">${tags}</span>` : ""}
     <span class="u" title="${esc(a.note || "")}">${esc(a.url)}${!a.slug ? " · 未設代號" : ""}${a.note ? " · " + svgIcon("pin") : ""}${a.clicks ? ` · ${svgIcon("flame")} ${a.clicks} 次` : ""}${a.stars ? ` · ${svgIcon("star")} ${a.stars}` : ""}${a.hearts ? ` · ${svgIcon("heart")} ${a.hearts}` : ""}</span>
@@ -737,6 +794,7 @@ function itemRowHTML(a) {
       <button class="mini-btn iconish" data-act="item-move" data-id="${a._id}" data-dir="1" title="下移">▼</button>
       <button class="mini-btn" data-act="item-edit" data-id="${a._id}">編輯</button>
       <button class="mini-btn" data-act="item-hide" data-id="${a._id}">${a.visible === false ? "顯示" : "隱藏"}</button>
+      <button class="mini-btn${retired ? " primary" : ""}" data-act="item-retire" data-id="${a._id}" title="${retired ? "清走已下架紀錄並重新公開顯示" : "標記做已下架（只適用於曾經上架嘅項目）；會由書架收起，舊連結會帶去公開版說明"}">${retired ? svgIcon("upload") + " 重新上架" : svgIcon("folder") + " 標記已下架"}</button>
       <button class="mini-btn danger" data-act="item-del" data-id="${a._id}">刪除</button>
     </div>
   </div>`;
@@ -780,6 +838,32 @@ function pageGroupHTML(p) {
   </div>`;
 }
 
+/* 已下架一覽：管理員一眼睇晒自己標記過嘅項目、一撳還原，唔使逐個分類搵。
+   只列 ADMIN.retired（明確 SET 過），唔會列「隱藏中」嘅項目。 */
+function retiredPanelHTML() {
+  const list = Array.isArray(ADMIN.retired) ? ADMIN.retired : [];
+  if (!list.length) return "";
+  return `
+  <div class="admin-card" style="margin-bottom:12px">
+    <div class="admin-lbl">已下架 · ${list.length} 個（曾經上架、由你標記）</div>
+    <div class="banner" style="background:var(--accent-soft);color:var(--accent-text);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)">
+      公開版「已下架」專區同舊連結解釋都係跟呢份名單；隱藏中嘅項目唔會自動入嚟。想復活就撳「重新上架」。
+    </div>
+    ${list.map((r) => {
+      const a = (ADMIN.sites && typeof ADMIN.findApp === "function") ? ADMIN.findApp(r.appId) : null;
+      return `<div class="admin-app-row">
+        <span style="font-size:18px;line-height:1">${svgIcon("folder")}</span>
+        <b>${esc(r.name)}</b>
+        <span class="retired-tag">已下架</span>
+        ${r.date ? `<span style="font-size:11px;color:var(--muted)">${esc(r.date)}</span>` : ""}
+        <div class="admin-app-actions">
+          ${a ? `<button class="mini-btn primary" data-act="item-retire" data-id="${esc(a._id)}" title="清走已下架紀錄並重新公開顯示">${svgIcon("upload")} 重新上架</button>` : ""}
+        </div>
+      </div>`;
+    }).join("")}
+  </div>`;
+}
+
 function manageHTML() {
   // 後台顯示用：連隱藏咗嘅都要報出嚟（公開版就會自動跳過隱藏項目）
   let feat = null;
@@ -803,6 +887,7 @@ function manageHTML() {
       分類只屬某一個分頁 —— 改/刪分類、加項目都要先揀啱分頁。項目可揀童軍支部標籤（小／幼／童／深／樂），公開版畀用戶多選篩選。<br/>
       ${svgIcon("flame")} 點擊數／${svgIcon("star")} 收藏數／${svgIcon("heart")} 讚好數都係全站累計（公開版每次打開／收藏／讚好會更新），「排行榜」可按呢三項排名（「探索分類」永遠用下面 ▲▼ 排好嘅預設順序）。
     </div>
+    ${retiredPanelHTML()}
     ${ADMIN.sites.pages.map(pageGroupHTML).join("")}
   </div>`;
 }
