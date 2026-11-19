@@ -993,6 +993,97 @@ function getFeaturedApp(sites) {
   return null;
 }
 
+/* ════════════════════════════════════════════════════════════════
+   已下架（retired_apps）
+   ────────────────────────────────────────────────────────────────
+   ★ 唯一真相：管理員喺後台逐個「標記已下架」寫入 public.retired_apps。
+     **唔係**由 apps.visible = false 推斷 —— 隱藏中嘅項目好多係從未上架，
+     「已下架」嘅首要條件係「曾經上過架」。listed_at 記低上架時間做憑據。
+   · 公開版（anon）只讀呢張表嘅代號／名／日期；apps 嘅 RLS 仍然只放
+     visible = true，隱藏列（連 url／內部備註）唔會因為呢個功能而曝光。
+   · 未跑 migrations/20261119-retired-apps.sql → loadRetired() 靜靜返 []，
+     唔會炸公開版，亦唔會誤將隱藏項目當成已下架。
+   ════════════════════════════════════════════════════════════════ */
+const RETIRED_LS_KEY = "showcase-retired-demo";
+
+// 舊 ?app= 代號：slug 優先，未填 fallback 用 _id（同 app.js appSlug() 一致）
+function retiredKey(app) {
+  return String((app && (app.slug || app._id)) || "").trim().toLowerCase();
+}
+function normalizeRetired(r) {
+  const deepKey = String((r && (r.deep_key || r.deepKey || r.app_id || r.appId)) || "").trim().toLowerCase();
+  return {
+    id: (r && r.id) || null,
+    appId: (r && (r.app_id || r.appId)) || null,
+    deepKey,
+    name: String((r && r.name) || "未命名項目").trim(),
+    date: String((r && (r.retired_at || r.date)) || "").slice(0, 10),
+    listedAt: (r && (r.listed_at || r.listedAt)) || null
+  };
+}
+function retiredDemoRows() {
+  try {
+    const a = JSON.parse(localStorage.getItem(RETIRED_LS_KEY));
+    return Array.isArray(a) ? a : [];
+  } catch { return []; }
+}
+async function loadRetired() {
+  const sb = getSB();
+  if (sb) {
+    try {
+      const { data, error } = await sb.from("retired_apps")
+        .select("id,app_id,deep_key,name,listed_at,retired_at")
+        .order("retired_at", { ascending: false });
+      if (error) return [];  // 未跑 migration／RLS 未放行 → 唔好當成有資料
+      return (data || []).map(normalizeRetired).filter((r) => r.deepKey);
+    } catch { return []; }
+  }
+  return retiredDemoRows().map(normalizeRetired).filter((r) => r.deepKey);
+}
+
+/* 管理員 SET：on=true 標記已下架（同時收起書架）；on=false 重新上架。
+   兩步都靠管理員 session 嘅 RLS 寫入，未登入會由後台 catch 出提示。 */
+async function adminSetRetired(app, on) {
+  const key = retiredKey(app);
+  if (!key) throw new Error("呢個項目冇深層連結代號，標記唔到已下架");
+  const sb = getSB();
+  if (sb) {
+    const { error: de } = await sb.from("retired_apps").delete().eq("app_id", app._id);
+    if (de) throw de;
+    if (on) {
+      const row = {
+        app_id: app._id,
+        deep_key: key,
+        name: String(app.name || "未命名項目").slice(0, 120),
+        listed_at: app.created_at || new Date().toISOString(),
+        retired_at: new Date().toISOString()
+      };
+      const { error: ie } = await sb.from("retired_apps").insert(row);
+      if (ie) throw ie;
+    }
+    const { error: ve } = await sb.from("apps").update({ visible: !on }).eq("id", app._id);
+    if (ve) throw ve;
+    return;
+  }
+  // Demo（localStorage）：同一份設定，等管理員未接 DB 都試到成個流程
+  const rows = retiredDemoRows().filter((r) =>
+    r.appId !== app._id && String(r.deepKey || "").toLowerCase() !== key);
+  if (on) {
+    rows.unshift({
+      appId: app._id, deepKey: key, name: String(app.name || "未命名項目"),
+      date: new Date().toISOString().slice(0, 10),
+      listedAt: app.created_at || new Date().toISOString()
+    });
+  }
+  localStorage.setItem(RETIRED_LS_KEY, JSON.stringify(rows));
+  const { sites } = await loadSites();
+  for (const p of sites.pages) for (const c of p.categories) {
+    const a = c.apps.find((x) => x._id === app._id);
+    if (a) a.visible = !on;
+  }
+  localStorage.setItem(LS_KEY, JSON.stringify(sites));
+}
+
 async function adminDeleteApp(id) {
   const sb = getSB();
   if (sb) {

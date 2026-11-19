@@ -46,7 +46,9 @@
 //      v46 = 修 Vercel 建置閘門 + 後台自主管理補齊（每行顯示 ?app= 代號、一撳複製連結、
 //            備份還原保留 slug、代號撞名中文提示、URL 漏寫 https:// 自動補齊）
 //      v47 = 置頂公告細條（書架位置有限，鼓勵讚好／收藏鍾意嘅 App，ANNOUNCEMENT 控制文案）
-const CACHE = 'scout-tools-v47';
+//      v48 = 「已下架」專區（管理員後台逐個 SET，必要條件：曾經上過架）＋
+//            舊 ?app= 連結自動帶去該說明，唔再淨係「搵唔到呢個 App」
+const CACHE = 'scout-tools-v48';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

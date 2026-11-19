@@ -370,6 +370,60 @@
     .announce-date { display: none; }
   }
 
+  /* ── 已下架（細條＋可展開清單；冇管理員標記就唔顯示） ── */
+  .retired {
+    margin: 16px 0 0;
+    border-radius: var(--radius);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+  }
+  .retired[hidden] { display: none; }
+  .retired-head {
+    width: 100%; display: flex; gap: 10px; align-items: center;
+    padding: 10px 12px; border: 0; border-radius: var(--radius);
+    background: transparent; color: var(--text);
+    font: inherit; text-align: left; cursor: pointer;
+    touch-action: manipulation;
+  }
+  .retired-head:hover { background: var(--bg-card-hover); }
+  .retired-head:active { background: var(--accent-soft); }
+  .retired-ico {
+    width: 32px; height: 32px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-sm); font-size: 16px;
+    background: var(--accent-soft); color: var(--accent-text);
+  }
+  .retired-title { font-size: var(--fs-2); font-weight: 800; }
+  .retired-count { font-size: var(--fs-1); color: var(--muted); }
+  .retired-chevron { margin-left: auto; font-size: 16px; color: var(--muted); display: inline-flex; }
+  .retired.expanded .retired-chevron { transform: rotate(180deg); }
+  .retired-body { padding: 0 12px 12px; }
+  .retired-body[hidden] { display: none; }
+  .retired-note { margin: 0 0 10px; font-size: var(--fs-1); color: var(--muted); line-height: 1.6; }
+  .retired-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .retired-item {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    padding: 8px 10px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--bg-elevated);
+  }
+  .retired-item.hit { border-color: var(--accent); background: var(--accent-soft); }
+  .retired-item-ico { font-size: 16px; color: var(--muted); display: inline-flex; }
+  .retired-item-name { font-size: var(--fs-2); font-weight: 700; }
+  .retired-item-badge {
+    margin-left: auto; flex-shrink: 0; font-size: 11px; font-weight: 750;
+    padding: 3px 8px; border-radius: 999px;
+    color: var(--accent-text); background: var(--accent-soft);
+  }
+  .retired-item-date { font-size: 11px; color: var(--muted); }
+  .retired-jump {
+    border: 0; background: transparent; color: var(--muted);
+    font: inherit; font-size: 11px; padding: 0 4px; cursor: pointer;
+    text-decoration: underline; text-underline-offset: 2px;
+  }
+  .retired-jump:hover { color: var(--accent-text); }
+  .retired-jump[hidden] { display: none; }
+
   /* ── ★ 今期主打 Spotlight（外框即本體，不再框中有框） ── */
   .hero {
     position: relative;
@@ -1185,6 +1239,12 @@
     color: var(--warn); background: var(--warn-soft);
     border-radius: 999px; padding: 2px 8px; white-space: nowrap;
   }
+  /* 已下架（管理員標記；同「隱藏」分開，唔好撈亂） */
+  .retired-tag {
+    display: inline-block; font-size: 10.5px; font-weight: 800;
+    color: var(--accent-text); background: var(--accent-soft);
+    border-radius: 999px; padding: 2px 8px; white-space: nowrap;
+  }
   /* 今期推廣 */
   .feat-tag {
     display: inline-block; font-size: 10.5px; font-weight: 800;
@@ -1837,6 +1897,22 @@
     <div class="empty-action" id="empty-action" hidden></div>
   </div>
 
+  <!-- 已下架（名單由管理員喺後台逐個 SET；文案由下方 RETIRED_COPY 控制）
+       預設 hidden：冇任何「已下架」標記就完全唔顯示，
+       唔會將 apps.visible=false（隱藏中／從未上架）誤當成已下架。 -->
+  <section class="retired" id="retired-shelf" aria-label="已下架" hidden>
+    <button class="retired-head" id="retired-toggle" type="button" aria-controls="retired-list" aria-expanded="false">
+      <span class="retired-ico" aria-hidden="true" data-icon="folder"></span>
+      <span class="retired-title" id="retired-title">已下架</span>
+      <span class="retired-count" id="retired-count"></span>
+      <span class="retired-chevron" aria-hidden="true" data-icon="chevronDown"></span>
+    </button>
+    <div class="retired-body" id="retired-list" hidden>
+      <p class="retired-note" id="retired-note"></p>
+      <ul class="retired-items" id="retired-items"></ul>
+    </div>
+  </section>
+
   <!-- 底部資訊 -->
   <footer class="foot-card" aria-label="底部資訊">
     <div class="foot-line">
@@ -2105,6 +2181,7 @@
     <a href="https://www.instagram.com/noscout.system/" target="_blank" rel="noopener"><span class="wide-only">追蹤我哋嘅 Instagram@noscout.system</span><span class="narrow-only">@noscout.system</span></a>
     <button class="ig-qr-btn" id="ig-qr-btn" type="button"><span data-icon="qr"></span> QR</button>
     <span class="ig-sub">童軍工具·教學</span>
+    <button class="retired-jump" id="retired-jump" type="button" hidden>已下架</button>
     <span class="credit-copy">© 2026 Scout System<span class="wide-only"> · App Store Edition</span></span>
     <button class="foot-edit" id="foot-edit" type="button" title="進入後台" aria-label="進入後台">edit</button>
   </div>
@@ -2230,6 +2307,23 @@ const ANNOUNCEMENT = {
   date: "2026-11-17",
   body: "書架位置有限，我哋會不時整理一下，將比較少人用嘅 App 落架，留返啲位畀其他新工具上架。如果你鍾意某個 App，記得撳吓讚好、加入收藏，話畀我哋知佢值得留低，等佢可以繼續留喺書架上陪住大家。",
   collapsedByDefault: true,  // 默認收起：淨返一行標題，撳一下先展開詳情
+};
+
+/* ════════════════════════════════════════════════════════════════
+   已下架專區文案（改文案只改呢度）
+   ────────────────────────────────────────────────────────────────
+   · 名單唔喺呢度 —— 由管理員喺 #admin 逐個標記，存喺
+     migrations/20261119-retired-apps.sql 嘅 public.retired_apps。
+   · 用戶指示：唔使特別寫原因，只要講清楚係已經下架、唔係故障。
+     想知多啲嘅用戶可以睇返上面「書架位置有限」置頂公告。
+   ════════════════════════════════════════════════════════════════ */
+const RETIRED_COPY = {
+  title: "已下架",
+  badge: "已下架",
+  lead: "以下工具已下架，唔係故障，亦唔係壞咗。",
+  hint: "想知多啲可以睇返置頂公告。",
+  toastPrefix: "「",
+  toastSuffix: "」已下架，唔係故障"
 };
 
 const announceEl = document.getElementById("pinned-announce");
@@ -2494,6 +2588,12 @@ if (footEdit) footEdit.addEventListener("click", () => {
   window.scrollTo({ top: 0 });
 });
 
+// 底欄「已下架」捷徑：撳一下展開專區並捲過去（冇標記過任何項目就唔會出現）
+const retiredJumpBtn = document.getElementById("retired-jump");
+if (retiredJumpBtn) retiredJumpBtn.addEventListener("click", () => {
+  if (typeof openRetiredShelf === "function") openRetiredShelf();
+});
+
 // 解除朦朧：搜尋、撳「查看全部」、撳工具區、捲過 hero
 searchEl.addEventListener("focus", revealSections);
 searchEl.addEventListener("input", () => { if (searchEl.value.trim()) revealSections(); });
@@ -2517,6 +2617,7 @@ function goRoute() {
     document.getElementById("admin-panel").hidden = false;
     renderAnnouncement();
     renderSpotlight();
+    renderRetired();   // 後台（#admin）唔顯示公開版「已下架」專區
     ADMIN.init();
   } else {
     document.getElementById("admin-panel").hidden = true;

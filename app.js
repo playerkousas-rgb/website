@@ -114,8 +114,86 @@ function findAppByDeepKey(key) {
   return null;
 }
 
+/* ════════════════════════════════════════════════════════════════
+   已下架（公開版）—— 名單由管理員喺後台逐個 SET，唔係由「隱藏」推斷
+   ────────────────────────────────────────────────────────────────
+   · RETIRED 只裝 public.retired_apps 嘅列；apps.visible=false 一律唔會入嚟
+     （「已下架」首要條件係曾經上過架，唔係單單隱藏中）
+   · 舊 ?app=<slug> 對唔到書架但對到已下架名單 → 展開專區、highlight 該項目、
+     講明唔係故障；唔再淨係彈「搵唔到呢個 App」嚇親舊書籤／QR 用戶
+   ════════════════════════════════════════════════════════════════ */
+let RETIRED = [];
+const RETIRED_EXPAND_KEY = "showcase-retired-expanded";
+
+function findRetiredByKey(key) {
+  const k = String(key || "").trim().toLowerCase();
+  if (!k) return null;
+  return RETIRED.find((r) => r.deepKey === k) || null;
+}
+function retiredCopy(key, fallback) {
+  return (typeof RETIRED_COPY !== "undefined" && RETIRED_COPY && RETIRED_COPY[key]) || fallback;
+}
+function setRetiredExpanded(on) {
+  const sec = document.getElementById("retired-shelf");
+  const body = document.getElementById("retired-list");
+  const btn = document.getElementById("retired-toggle");
+  if (sec) sec.classList.toggle("expanded", !!on);
+  if (body) body.hidden = !on;
+  if (btn) btn.setAttribute("aria-expanded", on ? "true" : "false");
+  try { localStorage.setItem(RETIRED_EXPAND_KEY, on ? "1" : "0"); } catch {}
+}
+function renderRetired(hitKey) {
+  const sec = document.getElementById("retired-shelf");
+  if (!sec) return;
+  if (isAdminRoute() || !RETIRED.length) {
+    sec.hidden = true;
+    const jump = document.getElementById("retired-jump");
+    if (jump) jump.hidden = true;
+    return;
+  }
+  sec.hidden = false;
+  const title = document.getElementById("retired-title");
+  if (title) title.textContent = retiredCopy("title", "已下架");
+  const note = document.getElementById("retired-note");
+  if (note) note.textContent = [retiredCopy("lead", "以下工具已下架，唔係故障，亦唔係壞咗。"),
+    retiredCopy("hint", "")].filter(Boolean).join(" ");
+  const count = document.getElementById("retired-count");
+  if (count) count.textContent = `共 ${RETIRED.length} 個`;
+  const items = document.getElementById("retired-items");
+  if (items) {
+    items.innerHTML = RETIRED.map((r) => `
+      <li class="retired-item${hitKey && r.deepKey === hitKey ? " hit" : ""}" data-key="${esc(r.deepKey)}">
+        <span class="retired-item-ico" aria-hidden="true" data-icon="folder"></span>
+        <span class="retired-item-name">${esc(r.name)}</span>
+        <span class="retired-item-badge">${esc(retiredCopy("badge", "已下架"))}</span>
+        ${r.date ? `<span class="retired-item-date">${esc(r.date)}</span>` : ""}
+      </li>`).join("");
+    if (typeof hydrateIcons === "function") hydrateIcons(items);
+  }
+  const jump = document.getElementById("retired-jump");
+  if (jump) {
+    jump.hidden = false;
+    jump.textContent = `${retiredCopy("title", "已下架")} · ${RETIRED.length}`;
+  }
+}
+// 俾底欄「已下架」捷徑同舊深層連結用：展開、捲過去、順便解除 hero 朦朧
+function openRetiredShelf(hitKey) {
+  const sec = document.getElementById("retired-shelf");
+  if (!sec || sec.hidden) return;
+  if (hitKey) renderRetired(hitKey);
+  setRetiredExpanded(true);
+  if (typeof revealSections === "function") revealSections();
+  if (typeof sec.scrollIntoView === "function") sec.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+const retiredToggleBtn = document.getElementById("retired-toggle");
+if (retiredToggleBtn) retiredToggleBtn.addEventListener("click", () => {
+  const sec = document.getElementById("retired-shelf");
+  setRetiredExpanded(!(sec && sec.classList.contains("expanded")));
+});
+
 /* 進站時處理 ?app=：切去該 App 所在分頁、清篩選、開詳情 sheet。
    對唔到就清走 query + toast，停喺首頁（唔准白屏、唔准報錯頁）。
+   對到「已下架」名單 → 帶去專區解釋（唔係故障），唔當成壞咗。
    ?from=<portal> 只作備註，刻意完全忽略（唔記、唔存、唔影響行為）。 */
 function handleDeepLink() {
   try {
@@ -127,6 +205,17 @@ function handleDeepLink() {
 
     const hit = findAppByDeepKey(key);
     if (!hit) {
+      const gone = findRetiredByKey(key);
+      if (gone) {
+        // 舊書籤／QR 指住曾經上架、但已由管理員標記下架嘅項目：
+        // 清走 query、帶去「已下架」專區，講明唔係故障。
+        setSheetUrl(null);
+        openRetiredShelf(gone.deepKey);
+        if (typeof showToast === "function") {
+          showToast(retiredCopy("toastPrefix", "「") + gone.name + retiredCopy("toastSuffix", "」已下架，唔係故障"));
+        }
+        return;
+      }
       setSheetUrl(null);
       if (typeof showToast === "function") showToast("搵唔到呢個 App");
       return;
@@ -776,8 +865,14 @@ async function main() {
     const total = pages.reduce((n, p) => n + p.categories.reduce((m, c) => m + c.apps.filter((a) => a.visible !== false).length, 0), 0);
     if (footCount) footCount.textContent = `${sites.name || "SCOUT APP STORE"} · 共 ${total} 個項目 · ${pages.length} 個分頁`;
     render();
-    // 深層連結（?app=<slug>）：要等 SITES + render 完成先處理，
-    // 所以放喺 render() 之後 —— 唔會白屏，亦唔會開錯分頁。
+    // 已下架名單（管理員喺後台 SET）；未跑 migration／讀失敗 → 空陣列，唔影響書架。
+    RETIRED = (typeof loadRetired === "function") ? await loadRetired().catch(() => []) : [];
+    renderRetired();
+    try {
+      setRetiredExpanded(localStorage.getItem(RETIRED_EXPAND_KEY) === "1");
+    } catch { setRetiredExpanded(false); }
+    // 深層連結（?app=<slug>）：要等 SITES + render + 已下架名單完成先處理，
+    // 所以放喺最後 —— 唔會白屏，亦唔會開錯分頁／將舊連結誤判做故障。
     handleDeepLink();
   } catch (e) {
     sectionsEl.innerHTML = "";

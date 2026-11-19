@@ -68,7 +68,7 @@ node scripts/check-icon-set.mjs --html
 | `package.json` | 極簡腳本：`npm run check`／`build`／`preview` —— **刻意零 dependencies** |
 | `vercel.json` | 鎖死部署設定（framework null／build `npm run build`／輸出＝根目錄），唔靠 Vercel 自動偵測 |
 | `.vercelignore` / `.gitignore` | 部署／commit 排除清單 —— 防死重上傳 Vercel（**test/、scripts/ 唔准擋**，build 閘門用得到） |
-| `migrations/` | 手動執行嘅 SQL 升級（唔會上線，`.vercelignore` 已擋）；投稿相關見 `20260925-submission-contact.sql`；訪客統計見 `20261004-analytics.sql` |
+| `migrations/` | 手動執行嘅 SQL 升級（唔會上線，`.vercelignore` 已擋）；投稿相關見 `20260925-submission-contact.sql`；訪客統計見 `20261004-analytics.sql`；已下架名單見 `20261119-retired-apps.sql` |
 | `scripts/` | `lint.js`（防增肥＋**圖標標準**守護）＋ `verify-assets.js`（部署清單核對）＋ `make-icons.sh`（一次過出 9 個圖標），零依賴 |
 | `AUDIT.md` | 對照 readme（真理倉）嘅審閱報告：五大鐵律、G11 圖標標準、差距與優先次序 |
 | `DESIGN.md` | ⭐ 設計語言唯一真理（顏色 40/30/20/10、字階 6 級、圓角 2 級、禁止清單）—— 改 UI 之前必讀 |
@@ -108,7 +108,7 @@ UI 跟 readme `design-review` 19 條 house rules，唯一真理係 [`DESIGN.md`]
     - 每個分頁一個 block，右上 **開放/關閉** 開關控制成個分頁
     - 分類列有 ▲▼排序、**改名**、**🎨 emoji**、**刪分類**（連帶刪入面所有項目）
     - 每頁可以「＋ 呢頁加分類」（用 emoji 揀選器揀 icon）
-    - 每頁嘅項目逐行 **📣 今期推廣**／▲▼／編輯／隱藏／刪除
+    - 每頁嘅項目逐行 **📣 今期推廣**／▲▼／編輯／隱藏／**標記已下架**（或「重新上架」）／刪除
 - **👀 總覽** —— 同公開版一樣嘅預覽，檢查公眾見到咩
 
 ### 📣 今期推廣（App Store 式推薦位）
@@ -134,6 +134,41 @@ hero 右上角仲有一粒 **🔗 分享掣**：用 Web Share API 分享該項�
 > 需要 DB 有 `featured` 欄（見下方 SQL）；未加欄位㩒落去會彈出提示同嗰句 SQL。
 > 徽章／按鈕嘅**文案**、`collapsedByDefault`（默認收起）、`showStars`（要不要顯示收藏數）
 > 都改 `index.html` boot script 入面嘅 `SPOTLIGHT` 物件。
+
+### 已下架（曾經上過架先算）
+
+公開版底部有一條「**已下架**」細條，撳一下展開名單；底欄都有捷徑。
+用意係：之前用開某個工具、書籤／QR 仲指住佢嘅用戶，唔好以為網站壞咗 ——
+內文只講「**已下架、唔係故障**」，**唔寫原因**（想知多啲可以睇返置頂公告）。
+
+> ⚠️ **首要條件：曾經上過架。** `apps.visible = false`（隱藏中）**唔等於**已下架 ——
+> 一大批隱藏列係從未公開嘅內容。所以名單**唔會自動由隱藏列推斷**，
+> 只可以由管理員喺後台逐個 SET。每筆紀錄都有 `listed_at`（上架時間）做憑據。
+
+**管理員點 SET**：`#admin` → 🛠 管理 → 項目列 → **「標記已下架」**
+（該項目會即刻由書架收起）；想復活就撳同一個位嘅 **「重新上架」**，
+或者對住已下架項目撳「顯示」，兩者都會清走紀錄並重新公開。
+管理頁頂亦有 **「已下架一覽」**，一眼睇晒自己標記過嘅項目、一撳還原，唔使逐個分類搵。
+就算喺**編輯表單**直接剔返「公開顯示」儲存，系統都會自動清走已下架紀錄，
+唔會出現「書架見到、專區又話已下架」嘅矛盾狀態。
+如果個項目**已經係隱藏**，標記前會多一重確認，要管理員明確確認「佢係曾經上架、
+唔係從未公開」先准標記，避免誤列。
+
+> 想保留舊連結嘅解釋，就**用「標記已下架」而唔好撳「刪除」**：
+> `retired_apps.app_id` 係 `on delete cascade`，刪走 `apps` 嗰列會連已下架紀錄一齊清走。
+
+**舊連結會自動帶去解釋**：`/?app=<slug>` 對唔到書架、但對到已下架名單 →
+清走 query、自動展開專區、highlight 該項目、toast「⋯已下架，唔係故障」；
+打錯 slug／現役 App 嘅行為完全不變（見 `DEEPLINK.md` 契約）。
+
+| 位置 | 內容 |
+|---|---|
+| `migrations/20261119-retired-apps.sql` | 新表 `public.retired_apps`＋RLS（anon 只讀、管理員先寫到）；**只放代號／名／日期**，唔放 url／內部備註，`apps` 原有 RLS 一個字都冇改 |
+| `store.js` | `loadRetired()`／`adminSetRetired()`；未跑 migration 會靜靜返 `[]`，唔會白屏 |
+| `index.html` | 專區 markup／樣式／`RETIRED_COPY`（改文案只改呢度） |
+| `app.js` | `renderRetired()`、`handleDeepLink()` 嘅已下架分支 |
+| `admin.js` | 每列「標記已下架／重新上架」掣＋「曾經上架」確認 |
+| `test/retired.test.js` | 鎖住「隱藏 ≠ 已下架」、舊連結解釋、後台確認守則、migration RLS |
 
 ### 🏆 排行榜（🔥 最多人點擊／⭐ 最多人收藏／❤️ 最受歡迎）
 
