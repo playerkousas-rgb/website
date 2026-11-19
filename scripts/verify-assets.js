@@ -45,9 +45,11 @@ const DEV_ONLY = [
   "scripts/lint.js", "scripts/verify-assets.js", "scripts/make-icons.sh", "scripts/check-icon-set.mjs",
   "migrations/20260924-market.sql", "migrations/20260924-hearts.sql", "migrations/20260925-submission-contact.sql", "migrations/20261004-analytics.sql", "migrations/20261022-share-modes.sql",
   "migrations/20261116-app-slug.sql", "migrations/20261116-app-slug-seed.sql",
+  "migrations/20261118-app-slug-a-group-missing.sql", "migrations/20261118-app-slug-auto.sql",
   "test/market.test.js", "test/notify-admin.test.js", "test/report.test.js",
   "test/favicon.test.js", "test/icon-fallback.test.js", "test/labels.test.js", "test/boot-order.test.js",
-  "test/analytics.test.js", "test/deeplink.test.js", "test/announcement.test.js"
+  "test/analytics.test.js", "test/deeplink.test.js", "test/announcement.test.js",
+  "test/slug-seed.test.js", "test/a-group-slugs.test.js"
 ];
 
 const kb = (n) => (n / 1024).toFixed(1) + " KB";
