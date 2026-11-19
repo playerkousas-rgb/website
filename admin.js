@@ -730,8 +730,8 @@ function itemRowHTML(a) {
     ${tags ? `<span class="mini-tag-row">${tags}</span>` : ""}
     <span class="u" title="${esc(a.note || "")}">${esc(a.url)}${!a.slug ? " · 未設代號" : ""}${a.note ? " · " + svgIcon("pin") : ""}${a.clicks ? ` · ${svgIcon("flame")} ${a.clicks} 次` : ""}${a.stars ? ` · ${svgIcon("star")} ${a.stars}` : ""}${a.hearts ? ` · ${svgIcon("heart")} ${a.hearts}` : ""}</span>
     <div class="admin-app-actions">
+      <button class="mini-btn primary" data-act="item-open" data-id="${a._id}" title="直連開啟這個 App（不受「隱藏」／分頁開關影響，只係後台見到）">${svgIcon("external")} 直連</button>
       <button class="mini-btn" data-act="item-copy" data-id="${a._id}" title="${a.visible === false ? "複製深層連結（注意：目前隱藏中，公開後先開到）" : "複製呢個項目嘅 APP STORE 分享連結"}">${svgIcon("link")} 連結</button>
-      <button class="mini-btn" data-act="item-open" data-id="${a._id}" title="直連開啟這個 App（不受「隱藏」／分頁開關影響，只係後台見到）">${svgIcon("external")} 直連</button>
       <button class="mini-btn${a.featured ? " primary" : ""}" data-act="item-feature" data-id="${a._id}" data-dir="${a.featured ? 0 : 1}" title="${a.featured ? "取消今期推廣" : "設為今期推廣（會喺公開版頂部做大圖推薦）"}">${a.featured ? svgIcon("check") + " 推廣中" : svgIcon("sparkle") + " 今期推廣"}</button>
       <button class="mini-btn iconish" data-act="item-move" data-id="${a._id}" data-dir="-1" title="上移">▲</button>
       <button class="mini-btn iconish" data-act="item-move" data-id="${a._id}" data-dir="1" title="下移">▼</button>
