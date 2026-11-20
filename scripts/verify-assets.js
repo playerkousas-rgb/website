@@ -50,7 +50,8 @@ const DEV_ONLY = [
   "test/market.test.js", "test/notify-admin.test.js", "test/report.test.js",
   "test/favicon.test.js", "test/icon-fallback.test.js", "test/labels.test.js", "test/boot-order.test.js",
   "test/analytics.test.js", "test/deeplink.test.js", "test/announcement.test.js",
-  "test/slug-seed.test.js", "test/a-group-slugs.test.js", "test/retired.test.js"
+  "test/slug-seed.test.js", "test/a-group-slugs.test.js", "test/retired.test.js",
+  "test/dialog-close.test.js"
 ];
 
 const kb = (n) => (n / 1024).toFixed(1) + " KB";

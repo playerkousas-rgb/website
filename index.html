@@ -613,7 +613,7 @@
   .foot-edit:active { transform: scale(.94); }
 
   /* ── QR Modal ── */
-  .modal { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: calc(20px + var(--safe-t)) 20px calc(20px + var(--safe-b)); }
   .modal[hidden] { display: none; }
   .modal-backdrop { position: absolute; inset: 0; background: color-mix(in srgb, var(--bg) 60%, transparent); backdrop-filter: blur(6px); }
   .modal-card {
@@ -621,7 +621,7 @@
     background: var(--bg-elevated); border: 1px solid var(--border-strong);
     border-radius: 22px; padding: 22px; text-align: center; box-shadow: var(--shadow);
   }
-  .modal-x { position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%;
+  .modal-x { position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; border-radius: 50%;
     border: 1px solid var(--border); background: var(--bg-card); color: var(--muted); font-size: 16px; cursor: pointer; }
   .ig-qr-img { width: 100%; max-width: 240px; margin: 0 auto; border-radius: 14px; background: #fff; padding: 8px; }
   .modal-title { font-weight: 800; margin-top: 14px; }
@@ -1503,7 +1503,8 @@
   /* emoji picker */
   .emoji-panel {
     position: fixed; inset: 0; z-index: 300; display: flex;
-    align-items: center; justify-content: center; padding: 20px;
+    align-items: center; justify-content: center;
+    padding: calc(20px + var(--safe-t)) 20px calc(20px + var(--safe-b));
     background: rgba(0,0,0,.4); backdrop-filter: blur(2px);
   }
   .emoji-panel[hidden] { display: none; }
@@ -1747,19 +1748,25 @@
     position: relative; z-index: 1; width: min(560px, 100%);
     background: var(--bg-elevated); border: 1px solid var(--border);
     border-radius: 22px 22px 0 0;
-    padding: 22px 18px calc(18px + var(--safe-b));
+    /* 手機直向：呢個 sheet 可以長過半個畫面，頂部（連 ✕）一定要避開狀態欄 */
+    padding: calc(22px + var(--safe-t)) 18px calc(18px + var(--safe-b));
+    max-height: calc(100dvh - var(--safe-t) - 8px);
+    overflow-y: auto; overscroll-behavior: contain;
     animation: sheetIn .22s var(--ease) both;
     outline: none;
   }
   @media (min-width: 620px) {
     .sheet { align-items: center; }
-    .sheet-panel { border-radius: 20px; box-shadow: 0 24px 60px rgba(0, 0, 0, .35); }
+    .sheet-panel {
+      border-radius: 20px; box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+      padding-top: 22px; max-height: 86dvh;
+    }
   }
   @keyframes sheetIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) { .sheet-panel { animation: none; } }
   .sheet-x {
     position: absolute; top: 10px; right: 10px;
-    width: 34px; height: 34px; border-radius: 50%;
+    width: 40px; height: 40px; border-radius: 50%;
     border: 1px solid var(--border); background: var(--bg-card);
     color: var(--muted); font-size: 19px; line-height: 1; cursor: pointer;
   }
@@ -2044,7 +2051,11 @@
 <script src="admin.js"></script>
 <script src="app.js"></script>
 <dialog id="submit-dialog" class="submit-dialog" aria-labelledby="submit-title">
-  <button type="button" class="dialog-close" onclick="document.getElementById('submit-dialog').close()" aria-label="關閉投稿">×</button>
+  <!-- 關閉掣要喺手機一定撳得到：唔再 absolute 釘喺 dialog 右上角
+       （dialog 高過視窗時「右上角」會捲出畫面外），改成 sticky 喺頂部一條 bar。 -->
+  <div class="dialog-head">
+    <button type="button" class="dialog-close" onclick="document.getElementById('submit-dialog').close()" aria-label="關閉投稿">×</button>
+  </div>
   <h2 id="submit-title">分享你的作品</h2>
   <p id="submit-intro">填上作品連結及標籤。提交後會寫入商店資料庫，並同時登記到管理員嘅投稿表＋電郵通知管理員；批核後才會公開上架。</p>
   <div class="submit-tabs" role="tablist" aria-label="分享類型">
@@ -2052,7 +2063,7 @@
     <button type="button" id="submit-tab-link" class="submit-tab" role="tab" aria-selected="false" data-submit-kind="link"><span data-icon="globe"></span> 網站分享</button>
     <button type="button" id="submit-tab-material" class="submit-tab" role="tab" aria-selected="false" data-submit-kind="material"><span data-icon="book"></span> 教材分享</button>
   </div>
-  <div class="submit-tip" id="submit-tip">適合分享你開發或製作嘅童軍網頁小工具、電子進度紀錄、計分器或小遊戲。想分享一般網站或雲端教材？可切換上方「網站分享」或「教材分享」。</div>
+  <div class="submit-tip" id="submit-tip">分享你開發或製作嘅童軍小工具。想分享一般網站或雲端教材？可切換上方「網站分享」或「教材分享」。</div>
   <form id="submit-form">
     <label><span id="submit-name-label">作品名稱</span><input id="submit-name" name="name" maxlength="80" required placeholder="例如：露營裝備清單" /></label>
     <label><span id="submit-url-label">作品連結</span><input id="submit-url" name="url" type="url" maxlength="2048" required placeholder="https://…" /></label>
@@ -2083,7 +2094,9 @@
   </form>
 </dialog>
 <dialog id="report-dialog" class="submit-dialog report-dialog" aria-labelledby="report-title">
-  <button type="button" class="dialog-close" onclick="document.getElementById('report-dialog').close()" aria-label="關閉回報表格">×</button>
+  <div class="dialog-head">
+    <button type="button" class="dialog-close" onclick="document.getElementById('report-dialog').close()" aria-label="關閉回報表格">×</button>
+  </div>
   <h2 id="report-title">問題回報 / 意見回饋</h2>
   <p class="report-intro">送到 Scout Admin，管理員會盡快跟進。可匿名提交，聯絡資料均為選填。</p>
   <p class="report-source">來源 APP：<b>SCOUT APP STORE</b></p>
@@ -2610,6 +2623,36 @@ window.addEventListener("scroll", () => {
   if (!_sectionsBlurred || !heroEl || heroEl.hidden) return;
   if ((window.scrollY || 0) > heroEl.offsetTop + heroEl.offsetHeight - 120) revealSections();
 }, { passive: true });
+
+/* ── iPhone 安全區保險閘 ────────────────────────────────────────
+   <dialog> 喺瀏覽器 top layer，定位由畫面最頂起計。iPhone 主畫面 App
+   （black-translucent 狀態欄）＋ viewport-fit=cover 之下，Safari／WebKit
+   有機會將 env(safe-area-inset-top) 報成 0px —— 咁彈窗頂部（連 ✕）就會
+   縮入狀態欄（WiFi／電量嗰排）底下：見到粒 ✕，但俾狀態欄食咗個觸控，撳唔到。
+   呢度實測一次；量到 0 就補一個保守安全值，令 ✕ 永遠喺狀態欄之下。 */
+function syncSafeInsets() {
+  const root = document.documentElement;
+  const probe = document.createElement("div");
+  probe.style.cssText = "position:fixed;top:0;left:0;width:0;height:0;visibility:hidden;pointer-events:none;" +
+    "padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)";
+  document.body.appendChild(probe);
+  const cs = getComputedStyle(probe);
+  const top = parseFloat(cs.paddingTop) || 0;
+  const bottom = parseFloat(cs.paddingBottom) || 0;
+  probe.remove();
+  const mm = (q) => (typeof window.matchMedia === "function" && window.matchMedia(q).matches);
+  const standalone = window.navigator.standalone === true || mm("(display-mode: standalone)");
+  // 觸控機（iPhone／iPad／Android）先需要補；桌面滑鼠機靠 CSS env() 就得
+  const touch = standalone || mm("(hover: none) and (pointer: coarse)") || Math.min(window.innerWidth, window.innerHeight) < 500;
+  if (!touch) { root.style.removeProperty("--safe-t"); root.style.removeProperty("--safe-b"); return; }
+  root.style.setProperty("--safe-t", top > 0 ? top + "px" : (standalone ? "48px" : "20px"));
+  root.style.setProperty("--safe-b", bottom > 0 ? bottom + "px" : "16px");
+}
+try {
+  syncSafeInsets();
+  window.addEventListener("resize", syncSafeInsets);
+  window.addEventListener("orientationchange", () => setTimeout(syncSafeInsets, 250));
+} catch { /* 量唔到就算：CSS 本身仲有 env() 同 10px 邊距兜底 */ }
 
 // 路由：管理面板 / 公開版面
 function goRoute() {

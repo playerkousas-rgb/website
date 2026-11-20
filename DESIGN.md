@@ -119,6 +119,8 @@
 | 貨架 | `.shelf-sec`（帶 `data-catn`）→ `.sec-head`（分類色線稿 icon 22 + h2 + 數量 + `全部 ›`）＋ `.shelf` | 手機橫滑（`grid-auto-flow: column`、`scroll-snap-type: x proximity`）；≥700px 2 欄；≥1000px 3 欄，唔再橫滑 |
 | 卡 | `.card`：icon 62（圓角 17、**分類色底盤**）＋名（2 行封頂）＋描述（2 行封頂）＋`›` | 卡**唔載**動作掣；邊框用分類色 22%，hover 55% |
 | 詳情 sheet | `.sheet`：icon 76、名稱、分類、描述、支部 tag、真數字、`開啟`＋`☆ 收藏`／`♡ 讚好`／`↗ 分享` | 手機由底升起（圓角 22/22/0/0），≥620px 居中卡片；`Esc`／撳背景／✕ 都可閂；閂完 focus 返去嗰張卡 |
+| 彈窗（投稿／回報） | `.submit-dialog`：✕ 放喺 `.dialog-head` 入面 | **✕ 必須 sticky 喺頂、44×44px 圓掣**；彈窗自己捲動時都撳得到，唔准用 `position:absolute`；撳背景亦可閂（2026-11-20 手機撳唔到 ✕ 嘅回歸） |
+| iPhone 安全區 | 彈窗／sheet／modal 一律留 `--safe-t`／`--safe-b` | `<dialog>` 喺 top layer，由畫面最頂計，`margin:auto` 會縮入狀態欄（WiFi／電量）→ 見到 ✕ 但撳唔到。上下用 `margin:calc(var(--safe-t) + 10px)`、高度用 `100dvh - safe-t - safe-b`，並由 `syncSafeInsets()` 實測 env()（量到 0 補保守值） |
 | 排行榜 | `.chart-list` 直立列表：排名數字（tabular-nums）＋icon 52＋名／描述＋數量 | 頭三名排名用 `--accent-text`；≥1000px 先分兩欄 |
 
 分類圖標（`CAT_PATHS`，24×24 視框、`stroke-width 1.6`、`currentColor`）：
