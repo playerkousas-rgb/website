@@ -7,7 +7,7 @@ const SUBMIT_MODES = {
   app: {
     title: '分享你的作品',
     intro: '填上作品連結及標籤。提交後會寫入商店資料庫，並同時登記到管理員嘅投稿表＋電郵通知管理員；批核後才會公開上架。',
-    tip: '適合分享你開發或製作嘅童軍網頁小工具、電子進度紀錄、計分器或小遊戲。想分享一般網站或雲端教材？可切換上方「網站分享」或「教材分享」。',
+    tip: '分享你開發或製作嘅童軍小工具。想分享一般網站或雲端教材？可切換上方「網站分享」或「教材分享」。',
     examples: '',
     nameLabel: '作品名稱',
     namePlaceholder: '例如：露營裝備清單',
@@ -31,7 +31,7 @@ const SUBMIT_MODES = {
   link: {
     title: '網站分享',
     intro: '發現對童軍活動、集會、露營或訓練有用嘅網站？唔使自己寫 App，貼條連結就可以推薦畀大家！批核後會公開上架。',
-    tip: '門檻極低：唔使係網站擁有者！只要覺得個網站對童軍有用，貼條 Link 加句簡單介紹就分享得。',
+    tip: '只要覺得個網站對童軍有用，貼條 Link 加句簡單介紹就分享得。',
     examples: '常見分享：童軍／總會網站 · 營地／行山天氣資訊 · 繩結／步操／急救教學網 · 集會互動遊戲網',
     nameLabel: '網站名稱',
     namePlaceholder: '例如：香港天文台九天天氣預報／繩結動畫教學網',
@@ -54,7 +54,7 @@ const SUBMIT_MODES = {
   },
   material: {
     title: '教材分享',
-    intro: '唔使自己整網站！將你整好或常用嘅 Google Drive 教材、Canva 簡報、PDF 學習圖卡、工作紙或教學影片連結貼上嚟，同全港童軍領袖共享資源。',
+    intro: '將你整好或常用嘅 Google Drive 教材、Canva 簡報、PDF 學習圖卡、工作紙或教學影片連結貼上嚟，同全港童軍領袖共享資源。',
     tip: '支援各類雲端及網頁連結：Google Drive（請設為「知道連結的任何人可檢視」）、Canva、Google Slides / PPT、OneDrive、Dropbox、YouTube、Notion 等。',
     examples: '支援連結：Google Drive · Canva · Google Slides / PPT · OneDrive / Dropbox · YouTube · Notion',
     nameLabel: '教材名稱',
@@ -219,6 +219,13 @@ function submissionOpen(kind) {
   if (dialog && typeof dialog.showModal === 'function') dialog.showModal();
 }
 
+/* 撳 backdrop／空白位都可以閂，唔使一定要篤中個 ✕（手機細螢幕更保險） */
+const submitDialogEl = document.getElementById('submit-dialog');
+if (submitDialogEl) {
+  submitDialogEl.addEventListener('click', event => {
+    if (event.target === submitDialogEl) submitDialogEl.close();
+  });
+}
 document.querySelectorAll('.submit-tab').forEach(button => {
   button.addEventListener('click', () => submissionSetKind(button.dataset.submitKind));
 });

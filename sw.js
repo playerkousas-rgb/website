@@ -48,7 +48,9 @@
 //      v47 = 置頂公告細條（書架位置有限，鼓勵讚好／收藏鍾意嘅 App，ANNOUNCEMENT 控制文案）
 //      v48 = 「已下架」專區（管理員後台逐個 SET，必要條件：曾經上過架）＋
 //            舊 ?app= 連結自動帶去該說明，唔再淨係「搵唔到呢個 App」
-const CACHE = 'scout-tools-v48';
+//      v49 = 修「投稿／回報彈窗閂唔到」：✕ 由 absolute 改做 sticky 標題列 44px 圓掣
+//            （彈窗高過視窗時舊位置會捲出畫面外，手機完全撳唔到）＋撳背景都可閂
+const CACHE = 'scout-tools-v49';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

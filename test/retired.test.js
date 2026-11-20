@@ -70,7 +70,8 @@ assert.ok(/for select to anon, authenticated using \(true\)/.test(migration), "a
 assert.ok(/for all to authenticated[\s\S]*is_store_admin\(\)/.test(migration), "寫入只限管理員");
 assert.ok(/listed_at\s+timestamptz not null/.test(migration), "listed_at 係「曾經上架」嘅憑據欄");
 assert.ok(/notify pgrst/.test(migration), "要 reload PostgREST schema cache");
-assert.ok(/scout-tools-v48/.test(read("sw.js")), "sw.js cache 要 +1（用戶即刻用新版）");
+const retiredCacheV = Number((read("sw.js").match(/const CACHE = 'scout-tools-v(\d+)'/) || [])[1]);
+assert.ok(Number.isFinite(retiredCacheV) && retiredCacheV >= 48, "sw.js cache 要 +1（用戶即刻用新版；大過等於 v48 就得）");
 
 /* ── 3) 動態：fake DOM 真跑一次 boot ─────────────────────────── */
 const lines = html.split("\n");

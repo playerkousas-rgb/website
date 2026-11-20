@@ -2044,7 +2044,11 @@
 <script src="admin.js"></script>
 <script src="app.js"></script>
 <dialog id="submit-dialog" class="submit-dialog" aria-labelledby="submit-title">
-  <button type="button" class="dialog-close" onclick="document.getElementById('submit-dialog').close()" aria-label="關閉投稿">×</button>
+  <!-- 關閉掣要喺手機一定撳得到：唔再 absolute 釘喺 dialog 右上角
+       （dialog 高過視窗時「右上角」會捲出畫面外），改成 sticky 喺頂部一條 bar。 -->
+  <div class="dialog-head">
+    <button type="button" class="dialog-close" onclick="document.getElementById('submit-dialog').close()" aria-label="關閉投稿">×</button>
+  </div>
   <h2 id="submit-title">分享你的作品</h2>
   <p id="submit-intro">填上作品連結及標籤。提交後會寫入商店資料庫，並同時登記到管理員嘅投稿表＋電郵通知管理員；批核後才會公開上架。</p>
   <div class="submit-tabs" role="tablist" aria-label="分享類型">
@@ -2052,7 +2056,7 @@
     <button type="button" id="submit-tab-link" class="submit-tab" role="tab" aria-selected="false" data-submit-kind="link"><span data-icon="globe"></span> 網站分享</button>
     <button type="button" id="submit-tab-material" class="submit-tab" role="tab" aria-selected="false" data-submit-kind="material"><span data-icon="book"></span> 教材分享</button>
   </div>
-  <div class="submit-tip" id="submit-tip">適合分享你開發或製作嘅童軍網頁小工具、電子進度紀錄、計分器或小遊戲。想分享一般網站或雲端教材？可切換上方「網站分享」或「教材分享」。</div>
+  <div class="submit-tip" id="submit-tip">分享你開發或製作嘅童軍小工具。想分享一般網站或雲端教材？可切換上方「網站分享」或「教材分享」。</div>
   <form id="submit-form">
     <label><span id="submit-name-label">作品名稱</span><input id="submit-name" name="name" maxlength="80" required placeholder="例如：露營裝備清單" /></label>
     <label><span id="submit-url-label">作品連結</span><input id="submit-url" name="url" type="url" maxlength="2048" required placeholder="https://…" /></label>
@@ -2083,7 +2087,9 @@
   </form>
 </dialog>
 <dialog id="report-dialog" class="submit-dialog report-dialog" aria-labelledby="report-title">
-  <button type="button" class="dialog-close" onclick="document.getElementById('report-dialog').close()" aria-label="關閉回報表格">×</button>
+  <div class="dialog-head">
+    <button type="button" class="dialog-close" onclick="document.getElementById('report-dialog').close()" aria-label="關閉回報表格">×</button>
+  </div>
   <h2 id="report-title">問題回報 / 意見回饋</h2>
   <p class="report-intro">送到 Scout Admin，管理員會盡快跟進。可匿名提交，聯絡資料均為選填。</p>
   <p class="report-source">來源 APP：<b>SCOUT APP STORE</b></p>
