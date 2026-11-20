@@ -50,7 +50,10 @@
 //            舊 ?app= 連結自動帶去該說明，唔再淨係「搵唔到呢個 App」
 //      v49 = 修「投稿／回報彈窗閂唔到」：✕ 由 absolute 改做 sticky 標題列 44px 圓掣
 //            （彈窗高過視窗時舊位置會捲出畫面外，手機完全撳唔到）＋撳背景都可閂
-const CACHE = 'scout-tools-v49';
+//      v50 = 修 iPhone 上 ✕ 縮入狀態欄（WiFi／電量）撳唔到：彈窗、詳情 sheet、
+//            設定／分享 modal 全部扣住 safe-area（dvh + margin），
+//            ＋ syncSafeInsets() 實測 env()，量到 0 就補保守值
+const CACHE = 'scout-tools-v50';
 const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/store.js', '/admin.js', '/app.js', '/market.js', '/market.css', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

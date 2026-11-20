@@ -24,9 +24,10 @@ for (const id of ["submit-dialog", "report-dialog"]) {
 assert.strictEqual((html.match(/class="dialog-head"/g) || []).length, 2, "兩個彈窗各一個 .dialog-head");
 
 /* ── 2) CSS：sticky 標題列＋≥44px 觸控目標，唔准 absolute ──────── */
+/* 同一條 selector 可能出現幾次（base + 後期覆蓋），全部砌埋一齊檢查 */
 const rule = sel => {
-  const m = css.match(new RegExp(`(?:^|[},])${sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\{([^}]*)\\}`));
-  return m ? m[1] : "";
+  const re = new RegExp(`(?:^|[},;\\s])${sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\{([^}]*)\\}`, "g");
+  return [...css.matchAll(re)].map(m => m[1]).join(";");
 };
 const head = rule(".dialog-head");
 assert.ok(/position:sticky/.test(head), ".dialog-head 要 position:sticky");
@@ -36,8 +37,24 @@ assert.ok(!/position:absolute/.test(close), "✕ 唔可以再用 position:absolu
 assert.ok(/width:44px/.test(close) && /height:44px/.test(close), "✕ 觸控目標最少 44×44px");
 assert.ok(/flex:0 0 auto/.test(close), "✕ 唔可以被 flex 壓細");
 
-/* ── 3) 撳背景／空白位都可以閂（多一條後路） ─────────────────── */
+/* ── 3) iPhone 狀態欄唔可以食咗粒 ✕ ───────────────────────────
+   <dialog> 喺 top layer，定位由畫面最頂起計；iPhone 主畫面 App 有時將
+   env(safe-area-inset-top) 報 0px → 彈窗頂部縮入狀態欄（WiFi／電量）底下，
+   見到 ✕ 但撳唔到。所以：彈窗上下硬性留安全區，並有 JS 實測補值。 */
+const dialogBox = rule(".submit-dialog");
+assert.ok(/margin:\s*calc\(var\(--safe-t,0px\) \+ 10px\) auto calc\(var\(--safe-b,0px\) \+ 10px\)/.test(dialogBox),
+  "彈窗要用 margin 扣住上下安全區（唔好靠 margin:auto 自己居中）");
+assert.ok(/max-height:calc\(100dvh - var\(--safe-t,0px\) - var\(--safe-b,0px\) - 20px\)/.test(dialogBox),
+  "彈窗高度要用 dvh 減安全區，Safari 工具列出現／收起都唔會頂入狀態欄");
+assert.match(html, /function syncSafeInsets\(\)/, "要有實測安全區嘅保險閘");
+assert.match(html, /padding-top:env\(safe-area-inset-top,0px\)/, "保險閘要用 CSS env() 實測，唔准靠猜機型");
+assert.match(html, /root\.style\.setProperty\("--safe-t"/, "量到 0 時要補返保守值落 --safe-t");
+/* 其他 fixed 疊層（設定／分享／QR／詳情 sheet）都要避開狀態欄 */
+assert.match(html, /\.modal \{[^}]*padding: calc\(20px \+ var\(--safe-t\)\)/, "設定／分享 modal 要避開狀態欄");
+assert.match(html, /\.sheet-panel \{[^}]*calc\(22px \+ var\(--safe-t\)\)/, "詳情 sheet 頂部要避開狀態欄");
+
+/* ── 4) 撳背景／空白位都可以閂（多一條後路） ─────────────────── */
 assert.match(market, /submitDialogEl\.addEventListener\('click', event => \{\s*if \(event\.target === submitDialogEl\) submitDialogEl\.close\(\);/, "投稿彈窗撳背景要閂得返");
 assert.match(market, /if \(event\.target === reportDialog\) reportDialog\.close\(\);/, "回報彈窗撳背景要閂得返");
 
-console.log("✓ 投稿／回報彈窗：✕ 喺 sticky 標題列、44px 觸控目標、撳背景可閂（手機一定閂得到）");
+console.log("✓ 投稿／回報彈窗：✕ 喺 sticky 標題列、44px 觸控目標、iPhone 狀態欄之下、撳背景可閂（手機一定閂得到）");
